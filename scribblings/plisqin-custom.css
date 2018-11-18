@@ -1,0 +1,21 @@
+.labelledCode {
+	display: block;
+	font-size: 0.75em;
+	font-family: sans-serif;
+	text-align: center;
+	background: #eee;
+}
+.plisqin-labelHolder.SIntrapara {
+	margin-bottom: 0px;
+	border: 1px solid black;
+	border-bottom: none;
+}
+.plisqin-codeHolder > .SCodeFlow {
+	margin-top: 0;
+	margin-right: 0;
+	max-height: 500px;
+	overflow-y: auto;
+	border: 1px solid black;
+	border-top: none;
+}
+	
