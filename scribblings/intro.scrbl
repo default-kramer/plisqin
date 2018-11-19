@@ -17,17 +17,12 @@
 
 @title[#:tag "intro"]{Introduction}
 
-@bold{TODO}
-@itemlist[@item{Search all docs for 'TODO'"}
-          @item{Review all code}
-          @item{Review all docs}
-          @item{Test all SQL in PG and MSSQL}
-          @item{Link to github}]
-
 I love relational databases, but SQL usually leaves me disappointed.
 Plisqin is an SQL generator written in Racket.
 It is intended to demonstrate some shortcomings of SQL
 and explore how a better database query language could be designed.
+
+Code is available @hyperlink["https://github.com/default-kramer/plisqin"]{on GitHub}.
 
 @subsubsub*section{@larger{Reading Racket Code}}
 This document will contain a lot of Racket code:
@@ -52,7 +47,8 @@ Here is an (almost) equivalent query:
 When you see upper-case identifiers such as @(racket Rental) and @(racket RentalId),
 they almost certainly refer to part of the @secref{Video_Rental_Example_Schema}.
 This schema models a brick-and-mortar video rental store (think pre-Netflix).
-Keep @bold{TODO this ERD diagram} handy while reading this document.
+Keep @hyperlink["https://github.com/default-kramer/plisqin/raw/master/examples/video-rental-diagram.PNG"]{this
+ database diagram} handy while reading this document.
 
 @heading{Appendable Queries}
 The @(racket from) macro is used to create queries.

@@ -68,8 +68,10 @@ The other is to use procedures, like this:
         (where (RentalId r)" > 100")))
 
 But we haven't really looked at how these procedures are defined.
-This section will walk you through how to recreate the definitions used by the Video Rental
-example schema. This walkthrough will be heavily influenced by my personal convention for
+This section will walk you through how to recreate the definitions of the @secref{Video_Rental_Example_Schema}.
+(Procedures like @(racket RentalId) are not hyperlinked in this section because we are
+not using those definitions; we are recreating them.)
+The code we write will be heavily influenced by my personal convention for
 naming and organizing the procedures that represent the database schema.
 
 We will be constructing a file called "video-rental-schema.rkt".

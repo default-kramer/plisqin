@@ -9,9 +9,13 @@
 @title{Video Rental Example Schema}
 @(defmodule plisqin/examples/video-rental-schema)
 
-This page documents an example database schema that models a brick-and-mortar
+This section documents an example database schema that models a brick-and-mortar
 video rental store.
-TODO link to ERD diagram here.
+Each table has an explanation of what it means.
+Joins and fields typically just show the code.
+
+@hyperlink["https://github.com/default-kramer/plisqin/raw/master/examples/video-rental-diagram.PNG"]{This diagram}
+shows the database model.
 
 @(define-syntax-rule (def-tableN TABLE TABLE? BODY ...)
    (deftogether(

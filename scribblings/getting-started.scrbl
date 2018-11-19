@@ -30,8 +30,14 @@ store (think pre-Netflix). When you see an upper-case identifier such as @(racke
 it almost certainly links to the documentation of this example schema, which might
 help you if you don't understand a query.
 
-TODO link to ERD.
-TODO link to scripts (and fiddles, if applicable).
+@hyperlink["https://github.com/default-kramer/plisqin/raw/master/examples/video-rental-diagram.PNG"]{This database diagram}
+might be useful to have while reading this document.
+
+If you want to follow along using a local database, the following scripts will create the tables:
+@itemlist[
+ @item{@hyperlink["https://github.com/default-kramer/plisqin/blob/master/examples/video-rental-schema.pg.sql"]{Scripts for PostgreSQL}}
+ @item{@hyperlink["https://github.com/default-kramer/plisqin/blob/master/examples/video-rental-schema.ms.sql"]{Scripts for Microsoft SQL Server}}
+ ]
 
 @section{Strings vs Procedures}
 Here is a simple query in Plisqin:

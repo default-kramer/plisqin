@@ -16,6 +16,8 @@
 
 First time here? Go read the @seclink["intro"]{Introduction} instead.
 
+Code is available @hyperlink["https://github.com/default-kramer/plisqin"]{on GitHub}.
+
 @(local-table-of-contents)
 
 @(include-section "intro.scrbl")
