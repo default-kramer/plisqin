@@ -54,7 +54,18 @@ The details of this 2nd style won't be explained until the @secref["schema-as-pr
 but any section of this guide might use either style, depending on what is convenient.
 
 @section[#:tag "environment-setup"]{Environment Setup}
-TODO it should be a simple matter of
-1) install Racket
-2) raco pkg install plisqin
-3) start DrRacket and paste in a query
+To try out Plisqin, you need Racket installed.
+You can download Racket @hyperlink["https://download.racket-lang.org/"]{here}.
+
+Once you have Racket installed, run @racketplainfont{raco pkg install plisqin} from your command line.
+This should download and setup the plisqin package.
+
+Now start DrRacket.
+You should have a file that contains one line: @racketplainfont{#lang racket}.
+This line should be at the top of every Racket file you write.
+Now paste the following code below @racketplainfont{#lang racket}
+@(racketblock
+  (require plisqin)
+  (display (to-sql (from f "Foo"))))
+When you run the program (Ctrl+R), you should see an SQL query:
+@racketresultfont{select f.* from Foo f}
