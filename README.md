@@ -1,3 +1,3 @@
 plisqin
 =======
-README text here.
+Documentation: https://docs.racket-lang.org/plisqin/index.html
