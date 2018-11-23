@@ -1,4 +1,4 @@
-#lang at-exp racket
+#lang racket
 (provide auto-inject)
 
 (require "core.rkt" "util.rkt")
@@ -11,42 +11,40 @@
 (define-syntax-rule (C FORMS ...)
   (void))
 
-@C{
- Consider this manual injection:
- 
- @(racketblock
-   (join j "J"
-         (group-by (scalar j".SOMETHING"))
-         (join-on (inject j (scalar j".SOMETHING"))" = 42")))
+; Consider this manual injection:
+(C (racketblock
+    (join j "J"
+          (group-by (scalar j".SOMETHING"))
+          (join-on (inject j (scalar j".SOMETHING"))" = 42"))))
 
- This is such a common pattern, it would be nice to handle it automatically.
- I think we can - it seems that in a join-on clause we always want to inject:
- 1) The largest possible scalar
- 2) That encloses a self-reference to the current grouped-join
- 3) That does not contain aggregates or injections, ignoring subqueries
- (except maybe subqueries' join-on clauses?
- 4) That is resolved relative to the current grouped-join
+; This is such a common pattern, it would be nice to handle it automatically.
+; I think we can - it seems that in a join-on clause we always want to inject:
+; 1) The largest possible scalar
+; 2) That encloses a self-reference to the current grouped-join
+; 3) That does not contain aggregates or injections, ignoring subqueries
+;     (except maybe subqueries' join-on clauses?)
+; 4) That is resolved relative to the current grouped-join
+;
+; What does it mean for a token to be "resolved relative to" a given query?
+; Perhaps it is easier to defined "unresolved" instead.
+; Given a query Q, a source S is "unresolved relative to Q" if it was created
+; outside of Q. For example, consider:
+(C (racketblock
+    (define (Rentals-of/g customer)
+      (join r "Rental"
+            (group-by (CustomerId r))
+            (join-on (CustomerId r)" = "(CustomerId customer))))))
 
- What does it mean for a token to be "resolved relative to" a given query?
- Perhaps it is easier to defined "unresolved" instead.
- Given a query Q, a source S is "unresolved relative to Q" if it was created
- outside of Q. For example, consider:
+; In this example, the scalar @(CustomerId r) is resolved relative to the Rental join,
+; because the source "r" was created inside the Rental join. If there are any inline joins
+; hiding in this expression, they are probably resolved too! We can see that the only "foreign source"
+; is @customer and that does not go into @(CustomerId r) - so any other sources in the expansion
+; of @(CustomerId r) must have been created within the Rental join.
 
- @(racketblock
-   (define (Rentals-of/g customer)
-     (join r "Rental"
-           (group-by (CustomerId r))
-           (join-on (CustomerId r)" = "(CustomerId customer)))))
+; However, the scalar @(CustomerId customer) is obviously not resolved relative to the Rental join.
+; We can see that @customer must have been created outside the Rental join.
 
- In this example, the scalar @(CustomerId r) is resolved relative to the Rental join,
- because the source "r" was created inside the Rental join. If there are any inline joins
- hiding in this expression, they are probably resolved too! We can see that the only "foreign source"
- is @customer and that does not go into @(CustomerId r) - so any other sources in the expansion
- of @(CustomerId r) must have been created within the Rental join.
 
- However, the scalar @(CustomerId customer) is obviously not resolved relative to the Rental join.
- We can see that @customer must have been created outside the Rental join.
-}
 (struct source-info (source resolved?) #:transparent)
    
 (define/contract (get-sources token queries)
@@ -213,7 +211,7 @@
    (from x "X"
          (join b "B"
                (define (A-of/s b) (join a "A"
-                                       (join-on a".BID = "b".BID")))
+                                        (join-on a".BID = "b".BID")))
                (define (foo b)
                  (scalar (A-of/s b)".FOO"))
                (group-by (foo b))
@@ -222,7 +220,7 @@
    (from x "X"
          (join b "B"
                (define (A-of/s b) (join a "A"
-                                       (join-on a".BID = "b".BID")))
+                                        (join-on a".BID = "b".BID")))
                (define (foo b)
                  (scalar (A-of/s b)".FOO"))
                (group-by (foo b))

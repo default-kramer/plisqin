@@ -6,15 +6,13 @@
           plisqin
           rackunit
           "helpers.rkt"
-          (except-in pict table)
           "racket.rkt")
 
 @title{Tests}
 This section is just a dumping ground for tests that might be educational.
 
 @(define (test)
-   (let ([e (filled-ellipse 4 4)])
-     (centered (hc-append 20 e e e))))
+   @centered{----------})
 
 @(test)
 Aliases are made to be unique if needed.

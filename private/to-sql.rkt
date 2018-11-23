@@ -1,4 +1,4 @@
-#lang at-exp racket
+#lang racket
 (require "core.rkt" "util.rkt" "ordered-joins.rkt" "deduplicate.rkt")
 (require "auto-inject.rkt" "auto-inject-aggregates.rkt" "make-unique-aliases.rkt" "resolve-injections.rkt")
 (module+ test
