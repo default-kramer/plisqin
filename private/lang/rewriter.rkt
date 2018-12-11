@@ -1,56 +1,8 @@
 #lang racket
-(require (for-syntax racket)
+(require (for-syntax racket "rewrite-lib.rkt")
          (prefix-in racket/ racket))
 (provide (for-syntax rewrite)
          #%app)
-
-;(define-type Stx (Syntaxof Any))
-;(define-type Rewriter (-> Stx (U Stx #f)))
-(module rewrite-lib racket
-  (provide apply-rules paren-shape-equal? braced?
-           /or /filter)
-
-  (define rewriter? procedure?)
-
-  (define/contract (copy-props orig-stx new-stx)
-    (-> syntax? syntax? syntax?)
-    (datum->syntax orig-stx
-                   (syntax-e new-stx)
-                   orig-stx orig-stx))
-
-  (define/contract (apply-rules rules stx)
-    (-> rewriter? syntax? syntax?)
-    (let ([result (rules stx)])
-      (match result
-        [s #:when (syntax? s)
-           (apply-rules rules result)]
-        [#f (match (syntax->list stx)
-              [(list a rest ...)
-               (begin
-                 (define a1 (apply-rules rules a))
-                 (define rest1 (apply-rules rules (copy-props stx #`(#,@rest))))
-                 (copy-props stx #`(#,a1 . #,rest1)))]
-              [else stx])]
-        [else stx])))
-
-  (define/contract (paren-shape-equal? shape stx)
-    (-> (or/c #\( #\{ #\[) syntax? any/c)
-    (equal? (syntax-property stx 'paren-shape) shape))
-  (define/contract (braced? stx)
-    (-> syntax? any/c)
-    (paren-shape-equal? #\{ stx))
-
-  (define/contract (/filter pred rules)
-    (-> (-> syntax? any/c) rewriter? rewriter?)
-    (λ(stx) (and (pred stx)
-                 (rules stx))))
-
-  (define/contract (/or . rules)
-    (->* () #:rest (listof rewriter?) rewriter?)
-    (λ(stx) (ormap (λ(rule) (rule stx)) rules))))
-
-; the test submodule needs this required not-for-syntax
-(require (for-syntax 'rewrite-lib) 'rewrite-lib)
 
 ; Need to define our custom #%app here so that it gets attached
 ; to the rewritten syntax objects
@@ -82,6 +34,8 @@
   (begin
     (begin-for-syntax forms ...)
     (module+ test forms ...)))
+
+(module+ test (require "rewrite-lib.rkt"))
 
 (make-testable
  (define/contract (undot stx)
