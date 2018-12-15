@@ -1,83 +1,117 @@
 #lang racket
 (require (for-syntax racket "rewrite-lib.rkt")
-         (prefix-in racket/ racket))
-(provide (for-syntax rewrite)
-         #%app)
+         "rewrite-lib.rkt")
+(provide (for-syntax rewrite) rewrite)
 
-; Need to define our custom #%app here so that it gets attached
-; to the rewritten syntax objects
-(define-syntax (#%app stx)
-  (syntax-case stx ()
-    [{_ val}
-     (if (braced? stx)
-         #'(app-or-return val)
-         #'(racket/#%app val))]
-    [(_ stuff ...)
-     #'(racket/#%app stuff ...)]))
-
-(define-syntax-rule (app-or-return val)
-  (let ([x val])
-    (if (procedure? x)
-        (x)
-        x)))
-
-(define-syntax-rule (do-dot val func args ...)
-  (let ([v val]
-        [f func])
-    (if (procedure? v)
-        (raise-syntax-error #f "left side of dot cannot be a procedure" #'val)
-        (f v args ...))))
-
-; These definitions need to live inside a (begin-for-syntax ...) but that makes them
-; hard to test. So duplicate the definitions into the test submodule.
-(define-syntax-rule (make-testable forms ...)
+; Duplicate the definitions into begin-for-syntax and the test submodule.
+(define-syntax-rule (define-everywhere forms ...)
   (begin
     (begin-for-syntax forms ...)
+    forms ...
     (module+ test forms ...)))
 
 (module+ test (require "rewrite-lib.rkt"))
 
-(make-testable
- (define/contract (undot stx)
-   (-> syntax? (or/c syntax? #f))
-   (if (and (identifier? stx)
-            (equal? #\. (string-ref (~a (syntax->datum stx)) 0)))
-       (datum->syntax stx
-                      (string->symbol (substring (~a (syntax->datum stx)) 1))
-                      stx stx)
-       #f))
+(define-everywhere
+  (define/contract (undot stx)
+    (-> syntax? (or/c syntax? #f))
+    (if (and (identifier? stx)
+             (equal? #\. (string-ref (~a (syntax->datum stx)) 0)))
+        (datum->syntax stx
+                       (string->symbol (substring (~a (syntax->datum stx)) 1))
+                       stx stx)
+        #f))
 
- (define (rule1 stx)
-   (syntax-case stx ()
-     [{val func rest ...}
-      (cond [;(and (undot #'val) (undot #'func))
-             (undot #'val)
-             (raise-syntax-error #f "Requires a value on the left side" #'val)]
-            [(undot #'func)
-             #`{(do-dot val #,(undot #'func)) rest ...}]
-            [else #f])]
-     [else #f]))
+  (define/contract (make-infix-rewriter symbols)
+    (-> (listof symbol?) procedure?)
+    (λ(stx)
+      (syntax-case stx ()
+        [{a op b rest ...}
+         (begin
+           (define loc (second (syntax->list stx)))
+           (cond [(member (syntax-e #'op) symbols)
+                  ;#`{(op a b) rest ...}
+                  (datum->syntax stx
+                                 (cons
+                                  (datum->syntax stx
+                                                 (list #'op #'a #'b)
+                                                 loc stx)
+                                  (syntax->list #'(rest ...)))
+                                 loc stx)]
+                 [else #f]))]
+        [else #f])))
 
- (define (rule2 stx)
-   (syntax-case stx ()
-     [{val {func . args} . rest}
-      (cond [(undot #'func)
-             #`{(do-dot val #,(undot #'func) . args) . rest}]
-            [else #f])]
-     [else #f]))
+  (define (dot-id stx)
+    ; rewrite a.b to (#%do-dot a b)
+    (syntax-case stx ()
+      [{val func rest ...}
+       (cond [(undot #'func)
+              (define loc (second (syntax->list stx)))
+              ;#`{(#%do-dot val #,(undot #'func)) rest ...}
+              (datum->syntax stx
+                             (cons
+                              (datum->syntax stx
+                                             (list
+                                              (datum->syntax stx '#%do-dot loc stx)
+                                              #'val
+                                              (undot #'func))
+                                             loc stx)
+                              (syntax->list #'(rest ...)))
+                             loc stx)]
+             [else #f])]
+      [else #f]))
 
- (define the-rules
-   (/filter braced?
-            (/or rule2 rule1)))
+  (define (valueless-dot stx)
+    ; detect ".foo" without a value to the left of it
+    (syntax-case stx ()
+      [{dotted rest ...}
+       (cond [(undot #'dotted)
+              (raise-syntax-error #f "Dotted expression missing a value on the left side" #'dotted)]
+             [else #f])]
+      [else #f]))
 
- (define/contract (rewrite stx)
-   (-> syntax? syntax?)
-   (apply-rules the-rules stx)))
+  (define (dot-list stx)
+    ; rewrite a(.foo bar ...) to (#%do-dot a foo bar ...)
+    (syntax-case stx ()
+      [{val {func args ...} rest ...}
+       (cond [(undot #'func)
+              ;#`{(#%do-dot val #,(undot #'func) args ...) rest ...}
+              (define expr (second (syntax->list stx)))
+              (datum->syntax stx
+                             (cons (datum->syntax expr
+                                                  (list* '#%do-dot #'val (undot #'func)
+                                                         (syntax->list #'(args ...)))
+                                                  expr expr)
+                                   (syntax->list #'(rest ...)))
+                             stx stx)]
+             [else #f])]
+      [else #f]))
+
+  (define-syntax-rule (/pass rules ...)
+    (/pass-ltr (/filter braced? (/or rules ...))))
+
+  (define the-rewriter
+    (/all
+     (/pass valueless-dot
+            dot-list
+            dot-id)
+     (/pass (make-infix-rewriter '(* /)))
+     (/pass (make-infix-rewriter '(+ -)))
+     (/pass (make-infix-rewriter '(=)))))
+
+  (define/contract (rewrite stx)
+    (-> syntax? syntax?)
+    (or (the-rewriter stx) stx)))
 
 (module+ test
-  (require rackunit)
+  (require rackunit "runtime.rkt")
+  ; This is needed for eval-syntax to work
+  (dynamic-require "runtime.rkt" 0)
+
   (define (check/eval stx expected)
     (check-equal? (eval-syntax (rewrite stx)) expected))
+  (check/eval #'{10 .add1}
+              11)
   (check/eval #'{10 .add1 .add1}
               12)
   (check/eval #'{if 10 .add1 (.equal? 11) 'yep 'nope}
@@ -85,4 +119,10 @@
   ; If we don't use braces, it should be a no-op:
   (define stx #'(if 10 .add1 (.equal? 11) 'yep 'nope))
   (check-equal? (syntax->datum (rewrite stx))
-                (syntax->datum stx)))
+                (syntax->datum stx))
+  (check/eval #'{10 + 9}
+              19)
+  (check/eval #'{9 .add1 * 41 .add1}
+              420)
+  (check/eval #'{* 3 4}
+              12))

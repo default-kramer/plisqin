@@ -1,12 +1,14 @@
 #lang racket
 (require (for-syntax racket))
-(require (prefix-in rewriter/ "rewriter.rkt"))
+(require (prefix-in rewriter/ "rewriter.rkt")
+         (prefix-in runtime/ "runtime.rkt"))
 
 (provide (except-out (all-from-out racket)
                      #%module-begin read-syntax #%app)
          (rename-out [module-begin #%module-begin]
                      [read-syn read-syntax]
-                     [rewriter/#%app #%app]))
+                     [runtime/#%app #%app]
+                     [runtime/#%do-dot #%do-dot]))
 
 (read-accept-dot #f)
 (read-accept-infix-dot #f)
@@ -58,9 +60,11 @@
   (if (not (eof-object? result))
       (reader source-name in (cons result accum))
       (begin
-        (set! result `(module my-mod "lang-test.rkt"
+        (set! result `(module my-mod plisqin/private/lang/reader
                         ,@(reverse accum)))
         (set! result (datum->syntax #f result))
+        ;(set! result (quick-rewrite result))
+        (set! result (rewriter/rewrite result))
         result)))
 
 (define (read-syn source-name in)
@@ -72,6 +76,6 @@
     (syntax-case stx ()
       [(_ rest ...)
        #`(#%module-begin rest ...)]))
-  (define transformed (rewriter/rewrite result))
+  (define transformed result); (rewriter/rewrite result))
   ;(println transformed)
   transformed)

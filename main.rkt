@@ -38,3 +38,7 @@
 (module+ main
   ;; Main entry point, executed when run with the `racket` executable or DrRacket.
   )
+
+(module reader racket
+  (require "private/lang/reader.rkt")
+  (provide read-syntax))
