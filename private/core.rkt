@@ -23,43 +23,20 @@
          statement? statement-expr? queryable?
          token? metadata-get metadata-set fragment-contract
          (struct-out exn:fail:plisqin)
-         (struct-out exn:fail:plisqin:invalid-aggregate))
-
-(define/contract (token-flatten x)
-  (-> token-list? (listof sql-token?))
-  ; the contract does the conversion for us
-  x)
-
-; Contract for a fragment constructor
-(define (fragment-contract return-contract)
-  (->* () () #:rest token-list? return-contract))
-
-(define-syntax-rule (define-frag SYMBOL CTOR TESTER)
-  (begin
-    (define (TESTER x)
-      (and (fragment? x)
-           (equal? SYMBOL (fragment-kind x))))
-    
-    (define/contract (CTOR . tokens)
-      (fragment-contract TESTER)
-      (fragment (empty-metadata) SYMBOL (token-flatten tokens)))
-
-    (provide CTOR TESTER)))
-
-(define-frag 'Select select select?)
-(define-frag 'Where where where?)
-(define-frag 'JoinOn join-on join-on?)
-(define-frag 'GroupBy group-by group-by?)
-(define-frag 'OrderBy order-by order-by?)
-(define-frag 'Having having having?)
-(define-frag 'Scalar scalar scalar?)
-(define-frag 'Aggregate make-aggregate aggregate?)
-(define-frag 'Bool bool bool?)
-(define-frag 'Subquery subquery subquery?)
-(define-frag 'Sql sql sql?)
-; Silence allows you to put a token into an expression but not render it to SQL.
-; Designed to solve (count x) evaluating to (sql "count(*)" (silence x)).
-(define-frag 'Silence silence silence?)
+         (struct-out exn:fail:plisqin:invalid-aggregate)
+         ; fragments
+         select select?
+         where where?
+         join-on join-on?
+         group-by group-by?
+         order-by order-by?
+         having having?
+         scalar scalar?
+         make-aggregate aggregate?
+         bool bool?
+         subquery subquery?
+         sql sql?
+         silence silence?)
 
 (module+ test
   (check-true (fragment? (where (make-source "x" "X")".FIELD > 100"))))
@@ -110,8 +87,6 @@
 
 (define (reset-uid-for-testing!)
   (void))
-
-(define (empty-metadata) '())
 
 (define/contract (make-source alias table #:uid [uid #f])
   (->* (string? (or/c string? subquery?))

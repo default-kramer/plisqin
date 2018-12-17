@@ -6,7 +6,7 @@
           plisqin
           scribble/eval
           "racket.rkt"
-          (prefix-in doc: (submod "../private/contracts.rkt" docs))
+          (prefix-in doc: (submod "../private/model.rkt" all docs))
           (prefix-in doc: (submod "../private/core.rkt" docs)))
 @(module label-help racket
    (require scribble/manual/lang (for-label racket))
