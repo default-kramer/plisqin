@@ -13,6 +13,8 @@
     ; https://docs.racket-lang.org/reference/Printer_Extension.html#%28def._%28%28lib._racket%2Fprivate%2Fbase..rkt%29._gen~3acustom-write%29%29
     (define (to-list x)
       (match x
+        [(dateadd _ date interval)
+         `(dateadd ,(to-list date) ,interval)]
         [(fragment _ kind tokens)
          (list kind (to-list tokens))]
         [(source _ alias table uid)
@@ -166,7 +168,29 @@
 
   ; In the from and join macros, we allow lists of statements.
   (def-contract statement-expr?
-    (or/c statement? (listof statement?))))
+    (or/c statement? (listof statement?)))
+
+  ; for date math
+  (define time-unit?
+    (or/c
+     'year
+     'month
+     'week
+     'day
+     'hour
+     'minute
+     'second
+     'millisecond
+     'microsecond))
+
+  ; Intervals are not tokens because we can't render them to SQL
+  (struct interval (added-to qty unit) #:transparent
+    #:guard (build-guard-proc [added-to (or/c interval? #f)]
+                              [qty real?]
+                              [unit time-unit?]))
+
+  (def-token dateadd dateadd? ([date sql-token?]
+                               [interval interval?])))
 
 ; Provide everything except the constructor
 (require 'all)

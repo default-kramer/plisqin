@@ -9,11 +9,13 @@
   (begin
     (provide (prefix-out s: (struct-out struct-id)))
     ...))
-(provide-struct source fragment query join binding injection)
-(provide source? fragment? query? join? binding? injection?)
+(provide-struct source fragment query join binding injection interval dateadd)
+(provide source? fragment? query? join? binding? injection? interval? dateadd?)
 (provide (rename-out [make-source source]
                      [make-binding binding]
-                     [make-injection injection]))
+                     [make-injection injection]
+                     [make-dateadd dateadd]
+                     [make-interval interval]))
 
 (provide add-statement add-join join? is-simple-join? grouped-join? query-fragments
          make-query make-join join-type? sql-token? change-kind
@@ -24,6 +26,7 @@
          token? metadata-get metadata-set fragment-contract
          (struct-out exn:fail:plisqin)
          (struct-out exn:fail:plisqin:invalid-aggregate)
+         interval-plus interval-minus interval-negate
          ; fragments
          select select?
          where where?
@@ -87,6 +90,41 @@
 
 (define (reset-uid-for-testing!)
   (void))
+
+(define/contract (interval-negate iv)
+  (-> interval? interval?)
+  (define child-iv (interval-added-to iv))
+  (struct-copy interval iv
+               [qty (- (interval-qty iv))]
+               [added-to (if child-iv
+                             (interval-negate child-iv)
+                             #f)]))
+
+(define/contract (interval-plus iv1 iv2)
+  (-> interval? interval? interval?)
+  (if (not (interval-added-to iv1))
+      (struct-copy interval iv1
+                   [added-to iv2])
+      (struct-copy interval iv1
+                   [added-to (interval-plus
+                              (interval-added-to iv1)
+                              iv2)])))
+
+(define/contract (interval-minus iv1 iv2)
+  (-> interval? interval? interval?)
+  (interval-plus iv1 (interval-negate iv2)))
+
+(define/contract (make-dateadd date-token interval)
+  (-> token? interval? dateadd?)
+  (if (dateadd? date-token)
+      (struct-copy dateadd date-token
+                   [interval (interval-plus (dateadd-interval date-token)
+                                            interval)])
+      (dateadd (empty-metadata) date-token interval)))
+
+(define/contract (make-interval qty unit [added-to #f])
+  (->* [number? time-unit?] [(or/c interval? #f)] interval?)
+  (interval added-to qty unit))
 
 (define/contract (make-source alias table #:uid [uid #f])
   (->* (string? (or/c string? subquery?))

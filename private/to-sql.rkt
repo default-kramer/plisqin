@@ -1,6 +1,7 @@
 #lang racket
-(require "core.rkt" "util.rkt" "ordered-joins.rkt" "deduplicate.rkt")
-(require "auto-inject.rkt" "auto-inject-aggregates.rkt" "make-unique-aliases.rkt" "resolve-injections.rkt")
+(require "core.rkt" "util.rkt" "ordered-joins.rkt" "deduplicate.rkt"
+         "auto-inject.rkt" "auto-inject-aggregates.rkt" "make-unique-aliases.rkt"
+         "resolve-injections.rkt" "dialect.rkt")
 (module+ test
   (require rackunit)
   (require "macros.rkt")
@@ -31,24 +32,94 @@
 ; on the root query or not.
 (define root-query? (make-parameter #t))
 
-(define/contract (render-token tok)
-  (-> sql-token? string?)
+; A Reduction is an unflattened list of strings (or a single string).
+; The symbol 'SP represents a space that can be collapsed.
+(define reduction? (or/c string? 'SP (recursive-contract (listof reduction?))))
+
+(define/contract (reduce x dialect)
+  (-> sql-token? dialect? reduction?)
+  ; helpers to recurse
+  (define/contract (recurse1 x)
+    (-> (or/c sql-token? reduction?) reduction?)
+    (cond
+      [(list? x) x] ; Do we know this is fully reduced?
+      [else (reduce x dialect)]))
+  (define/contract (recurseM things)
+    (-> (listof (or/c sql-token? reduction?)) reduction?)
+    (map recurse1 things))
+  (define/contract (go . args)
+    (->* () #:rest (listof (or/c sql-token? reduction?)) reduction?)
+    (recurseM args))
+  ; main body
   (cond
-    [(silence? tok) ""]
-    [(binding? tok) (render-token (get-src tok))]
-    [(join? tok) (render-token (get-src tok))]
-    [(string? tok) tok]
-    [(source? tok) (s:source-alias tok)]
-    [(subquery? tok) (string-append "(" (render-token (change-kind 'Sql tok)) ")")]
-    [(fragment? tok) (apply string-append (map render-token (s:fragment-tokens tok)))]
-    [(query? tok)
+    [(equal? 'SP x) 'SP]
+    [(number? x) (~a x)]
+    [(string? x) x]
+    [(silence? x) ""]
+    [(or (binding? x)
+         (join? x))
+     (recurse1 (get-src x))]
+    [(source? x) (s:source-alias x)]
+    [(subquery? x) (go "("(change-kind 'Sql x)")")]
+    [(fragment? x)
+     (recurseM (s:fragment-tokens x))]
+    [(query? x)
      (if (root-query?)
          (parameterize ([root-query? #f])
-           (render-query (rewrite tok)))
-         (indent (string-append "\n" (render-query tok))))]
-    [(number? tok) (format "~a" tok)]
+           (render-query (rewrite x)))
+         (indent (string-append "\n" (render-query x))))]
+    ; dateadd, postgres
+    [(and (dateadd? x)
+          (postgres? dialect))
+     (begin
+       (define (recurse expr interval)
+         (if (not interval)
+             expr
+             (recurse
+              (go expr 'SP "+" 'SP
+                  (format "interval '~a ~a'"
+                          (s:interval-qty interval)
+                          (s:interval-unit interval)))
+              (s:interval-added-to interval))))
+       (go 'SP "(" (recurse (s:dateadd-date x) (s:dateadd-interval x)) ")"))]
+    ; dateadd, mssql
+    [(and (dateadd? x)
+          (mssql? dialect))
+     (begin
+       (define/contract (help iv)
+         (-> interval? reduction?)
+         (let ([child-iv (s:interval-added-to iv)])
+           (go "dateadd("
+               (~a (s:interval-unit iv))
+               "," 'SP (s:interval-qty iv)
+               "," 'SP (if child-iv
+                           (help child-iv)
+                           (s:dateadd-date x))
+               ")")))
+       (go 'SP (help (s:dateadd-interval x))))]
+    [(dateadd? x)
+     (error "cannot render date math for dialect:" dialect)]
     ; We do not expect joins or injections here
-    [#t (error "got unexpected token: " tok)]))
+    [else (error "got unexpected token: " x)]))
+
+(define/contract (render-token tok)
+  (-> sql-token? string?)
+  (define (skip-opening-SPs lst)
+    (match lst
+      [(list 'SP rest ...)
+       (skip-opening-SPs rest)]
+      [else lst]))
+  (define (collapse-SPs lst)
+    (match lst
+      [(list 'SP 'SP rest ...)
+       (collapse-SPs (cons 'SP rest))]
+      [(list 'SP rest ...)
+       (cons " " (collapse-SPs rest))]
+      [(list a rest ...)
+       (cons a (collapse-SPs rest))]
+      [(list) (list)]))
+  (define flattened (flatten (reduce tok (current-dialect))))
+  (string-join (collapse-SPs (skip-opening-SPs flattened)) ""))
 
 (define/contract (render-clauses frags intro joiner if-empty)
   (-> (listof fragment?) string? string? string? string?)
@@ -118,6 +189,7 @@
   (render-token token))
 
 (module+ test
+  (require (prefix-in op: "operators.rkt"))
   (check-sql
    (from a "A")
    "select a.* from A a")
@@ -201,4 +273,36 @@ select x.ONE
 from (
     select y.ONE from Y y) x
 HEREDOC
-   ))
+   )
+
+  (define-syntax-rule (with-MS forms ...)
+    (parameterize ([current-dialect (mssql)])
+      forms ...))
+  (define-syntax-rule (with-PG forms ...)
+    (parameterize ([current-dialect (postgres)])
+      forms ...))
+
+  (define frag (op:+ (sql "getdate()")
+                     (interval 3 'hour)
+                     (interval 1 'day)))
+  (with-MS
+      (check-equal?
+       (to-sql frag)
+       "dateadd(hour, 3, dateadd(day, 1, getdate()))"))
+  (with-PG
+      (check-equal?
+       (to-sql frag)
+       "(getdate() + interval '3 hour' + interval '1 day')"))
+  (set! frag (op:- (sql "getdate()")
+                   (interval 3 'hour)
+                   (interval 1 'day)))
+  (with-MS
+      (check-equal?
+       (to-sql frag)
+       "dateadd(hour, -3, dateadd(day, -1, getdate()))"))
+  (with-PG
+      (check-equal?
+       (to-sql frag)
+       "(getdate() + interval '-3 hour' + interval '-1 day')"))
+
+  (void "end test submodule"))
