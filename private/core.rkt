@@ -9,8 +9,8 @@
   (begin
     (provide (prefix-out s: (struct-out struct-id)))
     ...))
-(provide-struct source fragment query join binding injection interval dateadd)
-(provide source? fragment? query? join? binding? injection? interval? dateadd?)
+(provide-struct source fragment query join binding injection interval time-unit dateadd)
+(provide source? fragment? query? join? binding? injection? interval? time-unit? dateadd?)
 (provide (rename-out [make-source source]
                      [make-binding binding]
                      [make-injection injection]
@@ -27,6 +27,7 @@
          (struct-out exn:fail:plisqin)
          (struct-out exn:fail:plisqin:invalid-aggregate)
          interval-plus interval-minus interval-negate
+         db-now
          ; fragments
          select select?
          where where?
@@ -357,3 +358,35 @@
 ; A target is a grouped-join into which the aggregate could be injected.
 (struct exn:fail:plisqin exn:fail () #:transparent)
 (struct exn:fail:plisqin:invalid-aggregate exn:fail:plisqin () #:transparent)
+
+(define db-now (scalar 'db-now))
+
+; Define the time units. Plural will be a synonym for singular.
+(module time-units racket
+  (require (submod "model.rkt" all))
+  (define-syntax-rule (def-time-units [singular plural] ...)
+    (begin
+      (provide singular ...)
+      (provide plural ...)
+      (define singular (time-unit 'singular))
+      ...
+      (define plural singular)
+      ...
+      (define time-unit-symbol?
+        (or/c 'singular ...))))
+
+  (def-time-units
+    [year years]
+    [month months]
+    [week weeks]
+    [day days]
+    [hour hours]
+    [minute minutes]
+    [second seconds]
+    [millisecond milliseconds]
+    [microsecond microseconds]))
+(require 'time-units)
+; TODO Warning! "second" conflicts with Racket's built-in "second".
+; Error is very surprising if you do (second list) and get a contract failure
+; from time-unit. What would be best here?
+(provide (prefix-out : (all-from-out 'time-units)))

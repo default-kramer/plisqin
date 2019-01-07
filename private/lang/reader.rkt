@@ -1,7 +1,8 @@
 #lang racket
 (require (for-syntax racket))
 (require (prefix-in rewriter/ "rewriter.rkt")
-         (prefix-in runtime/ "runtime.rkt"))
+         (prefix-in runtime/ "runtime.rkt")
+         syntax/strip-context)
 
 (provide (except-out (all-from-out racket)
                      #%module-begin read-syntax #%app)
@@ -61,9 +62,11 @@
       (reader source-name in (cons result accum))
       (begin
         (set! result `(module my-mod plisqin/private/lang/reader
+                        (require plisqin/private/lang/default-require)
                         ,@(reverse accum)))
         (set! result (datum->syntax #f result))
-        ;(set! result (quick-rewrite result))
+        ; strip-context per https://groups.google.com/forum/#!topic/racket-users/DFBnCqLg0Xk
+        (set! result (strip-context result))
         (set! result (rewriter/rewrite result))
         result)))
 

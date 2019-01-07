@@ -45,7 +45,8 @@
   (def-contract sql-token?
     (or/c token?
           string?
-          number?))
+          number?
+          'db-now))
 
   ; It's convenient for the API to allow unflattened lists of tokens.
   ; This contract will accept an unflattened list of tokens and automatically flatten it.
@@ -170,24 +171,21 @@
   (def-contract statement-expr?
     (or/c statement? (listof statement?)))
 
-  ; for date math
-  (define time-unit?
-    (or/c
-     'year
-     'month
-     'week
-     'day
-     'hour
-     'minute
-     'second
-     'millisecond
-     'microsecond))
+  ; Use prop:procedure so that the time units can be procedures or values.
+  ; For example, if "day" is a time-unit instance,
+  ; we can do (interval #f 1 day) or (day 1)
+  (struct time-unit (symbol) #:transparent
+    #:property prop:procedure (λ(me num) (apply-time-unit me num)))
 
   ; Intervals are not tokens because we can't render them to SQL
   (struct interval (added-to qty unit) #:transparent
     #:guard (build-guard-proc [added-to (or/c interval? #f)]
                               [qty real?]
                               [unit time-unit?]))
+
+  (define/contract (apply-time-unit me num)
+    (-> time-unit? real? interval?)
+    (interval #f num me))
 
   (def-token dateadd dateadd? ([date sql-token?]
                                [interval interval?])))

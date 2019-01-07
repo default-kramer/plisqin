@@ -5,7 +5,7 @@
 (module+ test
   (require rackunit)
   (require "macros.rkt")
-  (define-syntax-rule (check-sql q str)
+  (define (check-sql q str)
     (check-equal?
      (string-normalize-spaces (to-sql q))
      (string-normalize-spaces str))))
@@ -50,9 +50,19 @@
   (define/contract (go . args)
     (->* () #:rest (listof (or/c sql-token? reduction?)) reduction?)
     (recurseM args))
+  ; helper to format the time unit
+  (define/contract (interval-unit iv)
+    (-> interval? string?)
+    (~a (s:time-unit-symbol (s:interval-unit iv))))
   ; main body
   (cond
     [(equal? 'SP x) 'SP]
+    [(equal? 'db-now x)
+     (cond
+       [(postgres? dialect) "current_timestamp"]
+       [(mssql? dialect) "getdate()"]
+       [(sqlite? dialect) "datetime('now')"]
+       [else (error "cannot render db-now for dialect: " dialect)])]
     [(number? x) (~a x)]
     [(string? x) x]
     [(silence? x) ""]
@@ -79,24 +89,37 @@
               (go expr 'SP "+" 'SP
                   (format "interval '~a ~a'"
                           (s:interval-qty interval)
-                          (s:interval-unit interval)))
+                          (interval-unit interval)))
               (s:interval-added-to interval))))
        (go 'SP "(" (recurse (s:dateadd-date x) (s:dateadd-interval x)) ")"))]
+    ; dateadd, sqlite
+    [(and (dateadd? x)
+          (sqlite? dialect))
+     (define (recurse interval)
+       (if (not interval)
+           ""
+           (let ([qty (s:interval-qty interval)]
+                 [child (s:interval-added-to interval)])
+             (format ", '~a~a ~a'~a"
+                     (if (negative? qty) "" "+")
+                     qty
+                     (interval-unit interval)
+                     (recurse child)))))
+     (go 'SP "datetime(" (s:dateadd-date x) (recurse (s:dateadd-interval x)) ")")]
     ; dateadd, mssql
     [(and (dateadd? x)
           (mssql? dialect))
      (begin
-       (define/contract (help iv)
-         (-> interval? reduction?)
-         (let ([child-iv (s:interval-added-to iv)])
-           (go "dateadd("
-               (~a (s:interval-unit iv))
-               "," 'SP (s:interval-qty iv)
-               "," 'SP (if child-iv
-                           (help child-iv)
-                           (s:dateadd-date x))
-               ")")))
-       (go 'SP (help (s:dateadd-interval x))))]
+       (define/contract (help iv operand)
+         (-> (or/c interval? #f) any/c reduction?)
+         (if iv
+             (help (s:interval-added-to iv)
+                   (go "dateadd("
+                       (~a (interval-unit iv))
+                       "," 'SP (s:interval-qty iv)
+                       "," 'SP operand ")"))
+             operand))
+       (go 'SP (help (s:dateadd-interval x) (s:dateadd-date x))))]
     [(dateadd? x)
      (error "cannot render date math for dialect:" dialect)]
     ; We do not expect joins or injections here
@@ -283,23 +306,23 @@ HEREDOC
       forms ...))
 
   (define frag (op:+ (sql "getdate()")
-                     (interval 3 'hour)
-                     (interval 1 'day)))
+                     (interval 3 :hours)
+                     (interval 1 :day)))
   (with-MS
       (check-equal?
        (to-sql frag)
-       "dateadd(hour, 3, dateadd(day, 1, getdate()))"))
+       "dateadd(day, 1, dateadd(hour, 3, getdate()))"))
   (with-PG
       (check-equal?
        (to-sql frag)
        "(getdate() + interval '3 hour' + interval '1 day')"))
   (set! frag (op:- (sql "getdate()")
-                   (interval 3 'hour)
-                   (interval 1 'day)))
+                   (interval 3 :hours)
+                   (interval 1 :day)))
   (with-MS
       (check-equal?
        (to-sql frag)
-       "dateadd(hour, -3, dateadd(day, -1, getdate()))"))
+       "dateadd(day, -1, dateadd(hour, -3, getdate()))"))
   (with-PG
       (check-equal?
        (to-sql frag)
