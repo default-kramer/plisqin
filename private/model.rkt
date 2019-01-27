@@ -188,7 +188,27 @@
     (interval #f num me))
 
   (def-token dateadd dateadd? ([date sql-token?]
-                               [interval interval?])))
+                               [interval interval?]))
+
+  ; Special nothing for use by "appendable"
+  (define nothing (gensym "nothing"))
+  (define (nothing? x)
+    (eq? nothing x))
+
+  ; An "appendable" means a cond-like proc that can be appended to.
+  ; The proc always takes 1 argument - a list "arglist"
+  ; TODO it might be nice to maintain a list of syntax objects for debugging purposes,
+  ; so that you can "see" what the proc is
+  (struct appendable ([proc #:mutable])
+    #:property prop:procedure
+    (λ(me . arglist)
+      (let ([result ((appendable-proc me) arglist)])
+        (if (nothing? result)
+            (error (format "Could not apply ~v\nNo matching case for args: ~v" me arglist))
+            result))))
+
+  (struct table appendable (name default-alias) #:transparent)
+  (struct proc appendable (name) #:transparent))
 
 ; Provide everything except the constructor
 (require 'all)
