@@ -104,6 +104,7 @@
     [(def-table ctor:id TABLE-NAME DEFAULT-ALIAS tester?:id)
      #:declare TABLE-NAME (expr/c #'(or/c #f string?))
      #:declare DEFAULT-ALIAS (expr/c #'(or/c #f string?))
+     (hash-set! fields-defined (syntax->datum #'ctor) #t)
      #'(begin
          (define table-name (or TABLE-NAME.c
                                 (format "~a" 'ctor)))
@@ -145,4 +146,9 @@
                    (Foo? (Foo "f"))
                    (Foo? (from f Foo))
                    (Foo? (join f Foo))
-                   (Foo? (join f "Foo")))))
+                   (Foo? (join f "Foo"))))
+
+  ; regression: def/append! can follow def-table
+  (def-table table92)
+  (def/append! (table92 a b c)
+    [#t (list a b c)]))
