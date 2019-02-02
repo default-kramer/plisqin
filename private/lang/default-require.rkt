@@ -5,6 +5,9 @@
 (require "../api.rkt")
 (provide (all-from-out "../api.rkt"))
 
+(require "../schema.rkt")
+(provide (all-from-out "../schema.rkt"))
+
 (require "../operators.rkt")
 (provide (all-from-out "../operators.rkt"))
 

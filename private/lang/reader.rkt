@@ -30,44 +30,48 @@
 (define (raise-dot-error stx)
   (raise-syntax-error #f "Dot must be followed by an identifier" stx))
 
+; A readtable extension that gets invoked when the reader encounters a dot.
+; We have to decide if the dot is
+; 1) chained to the next token, like ".foo"
+; 2) unchained, like ". foo"
+; 3) multiple dots, like "..."
+; This should return one syntax object in all cases
 (define (read-dot char port name line col pos)
   (define this-dot (datum->syntax #f '|.| (list name line col pos 1)))
   (define next-char (peek-char port))
+  (define (make-single-dot chained?)
+    (let ([stx (datum->syntax #f '|.|
+                              (list name line col pos 1))])
+      (syntax-property stx rewriter/stx-prop-chained chained?)))
   (if (or (char-whitespace? next-char)
           (member next-char non-id-starters))
-      (raise-dot-error this-dot)
+      ; return single dot, unchained
+      (make-single-dot #f)
       ; else
       (let ([dot-count (read-dots port)])
         ; If we have more than 1 consecutive dot, treat it literally (useful for ellipsis)
         (if (dot-count . > . 1)
+            ; return multiple dots
             (datum->syntax #f (string->symbol (make-string dot-count #\.))
                            (list name line col pos dot-count))
-            ; else
-            (let ([next (read-syntax name port)])
-              (cond
-                [(eof-object? next)
-                 (raise-dot-error this-dot)]
-                [(not (identifier? next))
-                 (raise-dot-error this-dot)]
-                [else
-                 (datum->syntax next
-                                (string->symbol (format ".~a" (syntax->datum next)))
-                                next next)]))))))
+            ; else return single dot, chained
+            (make-single-dot #t)))))
 
 (define (customize-readtable)
   (make-readtable (current-readtable) #\. 'terminating-macro read-dot))
 
 ; Returns list of syntax objects
-(define (read-all source-name in accum)
-  (define result (read-syntax source-name in))
-  (if (not (eof-object? result))
-      (read-all source-name in (cons result accum))
-      (reverse accum)))
+(define (read-all source-name in)
+  (define (helper source-name in accum)
+    (define result (read-syntax source-name in))
+    (if (not (eof-object? result))
+        (helper source-name in (cons result accum))
+        (reverse accum)))
+  (parameterize ([current-readtable (customize-readtable)])
+    (helper source-name in '())))
 
 (define (reader source-name in)
-  (define stxs
-    (parameterize ([current-readtable (customize-readtable)])
-      (read-all source-name in '())))
+  (define stxs (read-all source-name in))
   (define result `(module my-mod plisqin/private/lang/reader
                     (require plisqin/private/lang/default-require)
                     (module configure-runtime racket
@@ -77,7 +81,6 @@
   (set! result (datum->syntax #f result))
   ; strip-context per https://groups.google.com/forum/#!topic/racket-users/DFBnCqLg0Xk
   (set! result (strip-context result))
-  (set! result (rewriter/rewrite result))
   result)
 
 (define (read-repl source-name in)
@@ -100,7 +103,7 @@
     (syntax-case stx ()
       [(_ rest ...)
        #`(#%module-begin rest ...)]))
-  (define transformed result); (rewriter/rewrite result))
+  (define transformed (rewriter/rewrite result))
   ;(println transformed)
   transformed)
 
