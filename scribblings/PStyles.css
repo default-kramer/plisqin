@@ -1,35 +1,9 @@
-.noselect {
-  -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none; /* Safari */
-     -khtml-user-select: none; /* Konqueror HTML */
-       -moz-user-select: none; /* Firefox */
-        -ms-user-select: none; /* Internet Explorer/Edge */
-            user-select: none; /* Non-prefixed version, currently
-                                  supported by Chrome and Opera */
-}
-.PExamples > p {
-	margin: 0.1em 0;
-}
-.PExamples > p.PRes {
-	margin: 0.3em 0;
-}
-body.plisqin .if-racket {
-	display: none;
-}
-body.racket .if-plisqin {
-	display: none;
-}
-.PDualLang {
-	border-left: 1px dotted black;
-}
-.PDualLang .SCodeFlow {
-	border-left: none;
-}
-.PLangToggle {
-	font-family: 'Fira-Mono', monospace;
+.PQueryResults {
 	font-size: 0.8em;
-	margin-left: 1em;
 }
-.toggler {
-	margin: 0 0.2em 0 1em;
+.PQueryResults tr:first-child {
+	font-weight: bold;
+}
+.PQueryResults td {
+	padding: 0em 1.3em 0 0;
 }

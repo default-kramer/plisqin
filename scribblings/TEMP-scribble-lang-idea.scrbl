@@ -1,78 +1,127 @@
 #lang scribble/manual
 @(require scribble/core
-          scribble/example
           scribble/html-properties
-          racket
-          (for-label racket))
+          "TEMP-fork-scribble-code-examples.rkt"
+          "racket.rkt"
+          "../examples/cities/city-connection.rkt"
+          (except-in db statement?))
 
-@(define PRes
-   (make-style "PRes noselect"
+@(define PQueryResults
+   (make-style "PQueryResults SCodeFlow" ; SCodeFlow for the left border
                (list (make-css-addition "PStyles.css"))))
-@(define PlisqinExamples
-   (make-style "PExamples if-plisqin SCodeFlow"
-               (list (make-css-addition "PStyles.css")
-                     (make-js-addition "PScript.js"))))
-@(define RacketExamples
-   (make-style "PExamples if-racket SCodeFlow"
-               (list (make-css-addition "PStyles.css")
-                     (make-js-addition "PScript.js"))))
 
-@(define/contract (typeset eval stx)
-   (-> any/c syntax? (listof block?))
-   (let* ([col (syntax-column stx)]
-          ; If stx is "(+ a b)" subtracting 2 from the column should give us
-          ;         "> (+ a b)"
-          [col (cond
-                 [(false? col) #f]
-                 [(col . >= . 2) (col . - . 2)]
-                 [else 0])]
-          [prompt (datum->syntax #f '>
-                                 (list (syntax-source stx)
-                                       (syntax-line stx)
-                                       col
-                                       #f
-                                       #f))]
-          ; Actually the prompt is just clutter I think...
-          ;[rb (racketblock0 #,prompt #,stx)]
-          [rb (racketblock0 #,stx)]
-          [result (eval stx)])
-     (if (void? result)
-         (list rb)
-         (list rb
-               (paragraph PRes (racketresult #,result))))))
+@(define/contract (to-table result)
+   (-> rows-result? table?) ; db result -> scribble table
 
-@(define-syntax-rule (examples-eval eval style forms ...)
-   (let* ([e eval]
-          [items (map (curry typeset e)
-                      (syntax->list #'(forms ...)))])
-     (nested-flow style (flatten items))))
+   ; First element is column name, second is scribble properties
+   (define col-info? (list/c string? any/c))
 
-@(define-syntax-rule (plisqin-eval forms ...)
-   (examples-eval (make-base-eval) PlisqinExamples forms ...))
+   (define/contract (get-column-info result)
+     (-> rows-result? (listof col-info?))
+     (map (λ(props)
+            (let ([col-name (assq 'name props)]
+                  [decltype (assq 'decltype props)])
+              (list
+               ; first - column name:
+               (if col-name
+                   (cdr col-name)
+                   "[no column name]")
+               ; second - scribble props:
+               (if (and decltype
+                        (string? (cdr decltype))
+                        (member (string-downcase (cdr decltype)) '("integer" "real")))
+                   ; numeric types align right:
+                   'right
+                   ; otherwise no style:
+                   '()))))
+          (rows-result-headers result)))
 
-@(define-syntax-rule (racket-eval forms ...)
-   (examples-eval (make-base-eval) RacketExamples forms ...))
+   (define/contract (get-rows result)
+     (-> rows-result? (listof (listof content?)))
+     (define rows (map vector->list (rows-result-rows result)))
+     (map (λ(row) (map ~a row)) rows))
 
-@(define-syntax-rule
-   (dual-lang (plisqin ...) (racket ...))
-   (table
-    (make-style "PDualLang" '())
-    (list (list (paragraph (make-style "PLangToggle" '()) ""))
-          (list (plisqin-eval plisqin ...))
-          (list (racket-eval racket ...)))))
+   (let ([col-info (get-column-info result)])
+     (tabular
+      #:style PQueryResults
+      #:column-properties (map cdr col-info)
+      (list* (map car col-info)
+             (get-rows result)))))
 
-Blah blah blah, here's some code:
-@(dual-lang
-  [(+ 3 4)]
-  [(* 8 8)])
+@(define (make-eval)
+   (define eval (make-code-eval #:lang "plisqin"))
+   (eval '(require (for-label plisqin "racket.rkt")))
+   eval)
+@(define ex-eval (make-eval))
+@(define ex-here (ex-eval "#'here"))
 
-Look! More code:
-@(dual-lang
-  [{define j 3}
-   (if {equal? j 3}
-       "j is 3"
-       "j is not 3")]
-  [(define j 3)
-   (if (equal? j 3)
-       "j is 3"
-       "j is not 3")])
+@(define (codex str)
+   ; Use define to force immediate evaluation!
+   (define result
+     (code-examples str #:lang "plisqin" #:context ex-here #:eval ex-eval))
+   result)
+
+@(define (get-sql code-query)
+   ; Use define to force immediate evaluation!
+   (define result
+     (get-evaluation-results #:lang "plisqin" #:eval ex-eval
+                             (format "(to-sql ~a)" code-query)))
+   (match result
+     [(list a) a]
+     [else #f]))
+
+@(define-syntax-rule (show-query str)
+   ; 1) Show the code example.
+   ; 2) Execute query against SQLite.
+   ; 3) Show table of query result.
+   (begin
+     (codex str)
+     (let ([sql (get-sql str)])
+       (if (not (string? sql))
+           (begin
+             (displayln "WARNING to-sql failed")
+             (displayln str)
+             (void))
+           (let* ([conn (connect-cities)]
+                  [result (query conn sql)]
+                  [_ (disconnect conn)])
+             (to-table result))))))
+
+First define the schema:
+
+@(codex #<<CODE
+(def-table Country)
+(def-table City)
+(def-fields-of Country
+  CountryId
+  CountryName
+  CountryPopulation)
+(def-fields-of City
+  CityId
+  CountryId
+  CityName
+  CityPopulation)
+CODE
+        )
+
+Now write a query:
+
+@(show-query #<<CODE
+{from ct City
+      {where ct.CityPopulation" > " 20 * 1000 * 1000}}
+CODE
+             )
+
+Testing:
+
+@(codex #<<CODE
+(+ 1 2)
+{if 41.add1 = 42
+    "it sure does"
+    'nope}
+"another line of code"
+CODE
+        )
+@(codex "{identity 41.add1}")
+@(codex "{41.add1}")
+@(codex "{3 + 4}")
