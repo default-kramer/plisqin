@@ -7,12 +7,29 @@
   (require rackunit)
   (require "api.rkt"))
 
-(provide def-table append! def/append!
+(provide def/append! append!
+         def-table def-fields-of
          ; legacy compatibility:
          (rename-out [def/append! field-cases]
                      [def-table table]))
 
 (define empty-proc (λ(arglist) nothing))
+
+(define/contract (is-table? t x)
+  (-> (or/c table? string?) any/c any/c)
+  (if (table? t)
+      (is-table? (table-name t) x)
+      (cond [(or (query? x)
+                 (join? x)
+                 (binding? x))
+             (is-table? t (get-src x))]
+            [(table? x)
+             (is-table? t (table-name x))]
+            [(source? x)
+             (is-table? t (source-table x))]
+            [(string? x)
+             (equal? t x)]
+            [else #f])))
 
 ; Replaces (syntax else) with (syntax #t)
 (define-syntax (de-else stx)
@@ -73,6 +90,17 @@
                   [test-expr then-body]
                   ...))]))
 
+(define-syntax (def-fields-of stx)
+  (syntax-parse stx
+    [(_ TABLE fields:id ...)
+     #:declare TABLE (expr/c #'(or/c string? table?))
+     #`(begin
+         (define table TABLE.c)
+         (def/append! (fields x)
+           [(is-table? table x)
+            (scalar x (format ".~a" 'fields))])
+         ...)]))
+
 (define/contract (make-default-alias table-name)
   (-> string? string?)
   (format "_~a"
@@ -120,14 +148,7 @@
                   [(string? alias)
                    (make-source alias table-name)])
          (define (tester? x)
-           (cond [(or (query? x)
-                      (join? x)
-                      (binding? x))
-                  (tester? (get-src x))]
-                 [(table? x) (tester? (table-name x))]
-                 [(source? x) (tester? (source-table x))]
-                 [(string? x) (equal? x table-name)]
-                 [else #f])))]))
+           (is-table? table-name x)))]))
 
 (module+ test
   (def-table Foo)
