@@ -108,7 +108,13 @@ Now write a query:
 
 @(show-query #<<CODE
 {from ct City
-      {where ct.CityPopulation" > " 20 * 1000 * 1000}}
+      {where ct.CityPopulation > 20 * 1000 * 1000}}
+CODE
+             )
+
+@(show-query #<<CODE
+{from ct City
+      {where ct.CityName like "aa%"}}
 CODE
              )
 

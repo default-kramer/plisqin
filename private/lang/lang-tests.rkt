@@ -43,7 +43,11 @@
 (define (check frag
                #:pg [pg-expected #f]
                #:ms [ms-expected #f]
-               #:lite [lite-expected #f])
+               #:lite [lite-expected #f]
+               #:all [all-expected #f])
+  (set! pg-expected (or pg-expected all-expected))
+  (set! ms-expected (or ms-expected all-expected))
+  (set! lite-expected (or lite-expected all-expected))
   (when pg-expected
     (parameterize ([current-dialect (postgres)])
       (check-equal? (to-sql frag) pg-expected)))
@@ -72,3 +76,58 @@
  #:pg "(current_timestamp + interval '29 day' + interval '1 month')"
  #:ms "dateadd(month, 1, dateadd(day, 29, getdate()))"
  #:lite "datetime(datetime('now'), '+29 day', '+1 month')")
+
+; These operators are binary with regard to SQL:
+(check
+ {{scalar "foo"} + {scalar "bar"}}
+ #:all "(foo + bar)")
+(check
+ {{scalar "foo"} - {scalar "bar"}}
+ #:all "(foo - bar)")
+(check
+ {{scalar "foo"} * {scalar "bar"}}
+ #:all "(foo * bar)")
+(check
+ {{scalar "foo"} / {scalar "bar"}}
+ #:all "(foo / bar)")
+(check
+ {{scalar "foo"} = "bar"}
+ #:all "(foo = 'bar')")
+(check
+ {"foo" <> {scalar "bar"}}
+ #:all "('foo' <> bar)")
+(check
+ {{scalar "foo"} like "bar"}
+ #:all "(foo like 'bar')")
+(check
+ {"foo" not-like {scalar "bar"}}
+ #:all "('foo' not like bar)")
+(check
+ {{scalar "foo"} < "bar"}
+ #:all "(foo < 'bar')")
+(check
+ {"foo" <= {scalar "bar"}}
+ #:all "('foo' <= bar)")
+(check
+ {{scalar "foo"} > "bar"}
+ #:all "(foo > 'bar')")
+(check
+ {"foo" >= {scalar "bar"}}
+ #:all "('foo' >= bar)")
+; But if there is no SQL involved, it falls back to the built-in Racket
+; version which allows more than 2 arguments.
+; Add some tests to make sure I haven't broken it somehow.
+(check-equal? (+ 1 2 3) 6)
+(check-equal? (- 10 1 2) 7)
+(check-equal? (* 2 3 4) 24)
+(check-equal? (/ 1000 10 2) 50)
+(check-true (= 1 1 1))
+(check-false (= 1 1 2))
+(check-true (< 1 2 3))
+(check-false (< 1 2 2))
+(check-true (<= 3 4 4))
+(check-false (<= 3 4 3))
+(check-true (> 9 8 7))
+(check-false (> 9 8 8))
+(check-true (>= 9 9 8))
+(check-false (>= 9 9 10))

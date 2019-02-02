@@ -96,7 +96,7 @@
             dot-id)
      (/pass (make-infix-rewriter '(* /)))
      (/pass (make-infix-rewriter '(+ -)))
-     (/pass (make-infix-rewriter '(=)))))
+     (/pass (make-infix-rewriter '(= < > <= >= <> like not-like)))))
 
   (define/contract (rewrite stx)
     (-> syntax? syntax?)
