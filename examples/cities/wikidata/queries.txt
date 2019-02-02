@@ -1,0 +1,39 @@
+# Largest cities of the world
+# produces top-10000-cities.csv
+SELECT DISTINCT ?cityLabel ?countryLabel ?population # ?gps
+WHERE
+{
+  ?city wdt:P31/wdt:P279* wd:Q515 .
+  ?city wdt:P1082 ?population .
+  # ?city wdt:P625 ?gps .
+  ?city wdt:P17 ?country .
+  SERVICE wikibase:label {
+    bd:serviceParam wikibase:language "en" .
+  }
+}
+ORDER BY DESC(?population) LIMIT 10000
+
+
+# Countries with largest city
+# produces countries.csv
+SELECT DISTINCT ?countryLabel ?countryPop ?nominal_GDP ?cityLabel ?population WHERE {
+  {
+    SELECT (MAX(?population) AS ?population) ?country WHERE {
+      ?city (wdt:P31/wdt:P279*) wd:Q515.
+      ?city wdt:P1082 ?population.
+      ?city wdt:P17 ?country.
+    }
+    GROUP BY ?country
+    ORDER BY DESC(?population)
+  }
+  ?city (wdt:P31/wdt:P279*) wd:Q515.
+  ?city wdt:P1082 ?population.
+  ?country wdt:P1082 ?countryPop.
+  ?city wdt:P17 ?country.
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+  OPTIONAL { ?country wdt:P2131 ?nominal_GDP. }
+}
+ORDER BY DESC(?countryPop)
+
+
+# Note - I manually created orgs.csv from Wikipedia pages
