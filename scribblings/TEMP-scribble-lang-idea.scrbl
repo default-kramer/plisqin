@@ -1,7 +1,8 @@
 #lang scribble/manual
 @(require scribble/core
           scribble/html-properties
-          "TEMP-fork-scribble-code-examples.rkt"
+          racket/sandbox
+          "scribble-code-examples-lib/main.rkt"
           "racket.rkt"
           "../examples/cities/city-connection.rkt"
           (except-in db statement?))
@@ -51,6 +52,8 @@
 @(define (make-eval)
    (define eval (make-code-eval #:lang "plisqin"))
    (eval '(require (for-label plisqin "racket.rkt")))
+   ; TODO override the real show-table which doesn't exist yet
+   (eval '(define show-table void))
    eval)
 @(define ex-eval (make-eval))
 @(define ex-here (ex-eval "#'here"))
@@ -64,28 +67,29 @@
 @(define (get-sql code-query)
    ; Use define to force immediate evaluation!
    (define result
-     (get-evaluation-results #:lang "plisqin" #:eval ex-eval
-                             (format "(to-sql ~a)" code-query)))
+     (eval-only ex-eval
+                (format "#lang plisqin \n (to-sql ~a)" code-query)))
    (match result
-     [(list a) a]
-     [else #f]))
+     [(list a)
+      #:when (string? a)
+      a]
+     [else
+      (println "WARNING to-sql failed")
+      (println (get-error-output ex-eval))
+      #f]))
 
-@(define-syntax-rule (show-query str)
-   ; 1) Show the code example.
+@(define-syntax-rule (show-table str)
+   ; NOPE) Show the code example.
    ; 2) Execute query against SQLite.
    ; 3) Show table of query result.
    (begin
-     (codex str)
+     ;(codex str)
      (let ([sql (get-sql str)])
-       (if (not (string? sql))
-           (begin
-             (displayln "WARNING to-sql failed")
-             (displayln str)
-             (void))
-           (let* ([conn (connect-cities)]
-                  [result (query conn sql)]
-                  [_ (disconnect conn)])
-             (to-table result))))))
+       (when (string? sql)
+         (let* ([conn (connect-cities)]
+                [result (query conn sql)]
+                [_ (disconnect conn)])
+           (to-table result))))))
 
 First define the schema:
 
@@ -106,17 +110,24 @@ CODE
 
 Now write a query:
 
-@(show-query #<<CODE
-{from ct City
-      {where ct.CityPopulation > 20 * 1000 * 1000}}
+@(codex #<<CODE
+(define (big-cities)
+  {from ct City
+        {where ct.CityPopulation > 20 * 1000 * 1000}})
+(show-table (big-cities))
 CODE
-             )
+        )
+@(show-table "(big-cities)")
 
-@(show-query #<<CODE
-{from ct City
-      {where ct.CityName like "aa%"}}
+Write a different query:
+@(codex #<<CODE
+(define (aa-cities)
+  {from ct City
+        {where ct.CityName like "aa%"}})
+(show-table (aa-cities))
 CODE
-             )
+        )
+@(show-table "(aa-cities)")
 
 Testing:
 

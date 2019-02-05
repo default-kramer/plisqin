@@ -57,8 +57,8 @@
             ; else return single dot, chained
             (make-single-dot #t)))))
 
-(define (customize-readtable)
-  (make-readtable (current-readtable) #\. 'terminating-macro read-dot))
+(define plisqin-readtable
+  (make-readtable #f #\. 'terminating-macro read-dot))
 
 ; Returns list of syntax objects
 (define (read-all source-name in)
@@ -67,7 +67,7 @@
     (if (not (eof-object? result))
         (helper source-name in (cons result accum))
         (reverse accum)))
-  (parameterize ([current-readtable (customize-readtable)])
+  (parameterize ([current-readtable plisqin-readtable])
     (helper source-name in '())))
 
 (define (reader source-name in)
@@ -85,7 +85,7 @@
 
 (define (read-repl source-name in)
   (define result
-    (parameterize ([current-readtable (customize-readtable)]
+    (parameterize ([current-readtable plisqin-readtable]
                    [read-accept-lang #f])
       (read-syntax source-name in)))
   (if (eof-object? result)

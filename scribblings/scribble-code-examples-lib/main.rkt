@@ -1,8 +1,13 @@
 #lang racket/base
+; This is a private fork of
+; https://github.com/AlexKnauth/scribble-code-examples/tree/bef0d817bf29fd70abae7528531c03f5d2a2d0fc/scribble-code-examples-lib
+; that is tailored to #lang plisqin.
+; It *might* work for other similar languages, but it's complicated.
+; See discussion on https://github.com/AlexKnauth/scribble-code-examples/pull/10
 
 (provide code-examples
          make-code-eval
-         get-evaluation-results
+         eval-only
          )
 
 (require racket/list
@@ -12,6 +17,7 @@
          scribble/manual
          (only-in scribble/decode pre-flow?)
          syntax/parse ; for run-time
+         "util/srcloc-position-char-index.rkt"
          )
 
 (define (make-code-eval #:lang lang)
@@ -22,23 +28,6 @@
                     [sandbox-propagate-exceptions #f]
                     [sandbox-propagate-breaks #f])
        (make-module-evaluator (string-append "#lang " lang "\n"))))))
-
-(define (get-evaluation-results #:lang lang-line-ish
-                                #:eval [evaluator (make-code-eval #:lang lang-line-ish)]
-                                . str-args)
-  (define lang-line (string-append "#lang " lang-line-ish "\n"))
-  (define full-str (apply string-append lang-line str-args))
-  (define m (str-w/-lang->module-syntax full-str))
-  (define-values [m-lang forms]
-    (split-module-syntax m))
-
-  ;(println forms)
-  (define results
-    (map (λ(f) (do-eval evaluator f)) forms))
-  ;(println results)
-  ;(println (get-error-output evaluator))
-  ;(println "---\n\n")
-  (filter (λ(x) (not (void? x))) (apply append results)))
 
 ;; example use of code-examples:
 ;; @code-examples[#:lang "at-exp racket" #:context #'here]|{
@@ -58,31 +47,15 @@
   (define-values [m-lang forms]
     (split-module-syntax m))
 
-  (define strs
-    (source-location-strs full-str (string-length lang-line) forms))
-  ;(println strs)
-  ;(println forms)
+  (define mapped-forms (find-substrings full-str forms))
 
-  (define str-list strs)
-  ;; interactions will be (listof (or/c #f scribblestuff))
-  (define interactions
-    (for/list ([form (in-list forms)])
-      ; always evaluate the form ...
-      (let ([results (evaluation-results evaluator form)])
-        ; ... but only show code if syntax-original?
-        (if (syntax-original? form)
-            ; TODO don't just assume str-list is non-empty!
-            (let ([str (car str-list)])
-              (set! str-list (cdr str-list))
-              (evaluation-interaction str form results
-                                      #:lang-line lang-line
-                                      #:context context))
-            #f))))
-
-  (define identity (λ(x) x))
   (define interaction
     (above*
-     (append* (filter identity interactions))))
+     (append*
+      (for/list ([mapped-form (in-list mapped-forms)])
+        (evaluation-interaction mapped-form evaluator
+                                #:lang-line lang-line
+                                #:context context)))))
   (cond [(or show-lang-line lang-line?)
          (define lang-line-to-show
            (cond [(boolean? show-lang-line)
@@ -102,25 +75,29 @@
 ;; ---------------------------------------------------------
 
 ;; evaluation-interaction :
-;;   String Stx Any #:lang String #:context Stx
+;;   [Pairof Stx [Maybe String]] Evaluator #:lang String #:context Stx
 ;;   ->
 ;;   [Listof ScribbleStuff]
-(define (evaluation-interaction str form results
+(define (evaluation-interaction mapped-form evaluator
                                 #:lang-line lang-line
                                 #:context context)
-  (define code
-    (codeblock0 #:keep-lang-line? #f #:context context
-                (string-append lang-line str)))
-  (cons
-   (beside/baseline (tt ">") code #:sep (hspace 1))
-   results))
-
-(define (do-eval evaluator form)
-  (call-with-values (λ () (evaluator form)) list))
+  (define form (car mapped-form))
+  (define str (cdr mapped-form))
+  (define results
+    (evaluation-results evaluator form))
+  (if (not str)
+      '()
+      (let ([code
+             (codeblock0 #:keep-lang-line? #f #:context context
+                         (string-append lang-line str))])
+        (cons
+         (beside/baseline (tt ">") code #:sep (hspace 1))
+         results))))
 
 ;; evaluation-results : Evaluator Stx -> [Listof Scribble-Stuff]
 (define (evaluation-results evaluator form)
-  (define results (do-eval evaluator form))
+  (define results
+    (call-with-values (λ () (evaluator form)) list))
   (define output (get-output evaluator))
   (define error-output (get-error-output evaluator))
   (append*
@@ -174,27 +151,27 @@
     [(module _ m-lang:expr stuff ...)
      (values (syntax->datum #'m-lang) (syntax->list #'(stuff ...)))]))
 
-;; source-location-strs : String Natural [Listof Stx] -> [Listof String]
-(define (source-location-strs full-str first-start forms)
-  ;(println full-str)
 
-  ;; zero-indexed end positions in the full-str string
-  (define end-positions
-    (for/list ([form (in-list forms)]
-               #:when (syntax-end-position form))
-      ; syntax-positions are one-indexed, so use sub1
-      (sub1 (syntax-end-position form))))
-
-  ;; zero-indexed start positions in the full-str string
-  ;; Each form "starts" from the end-position of the
-  ;; previous one so that comments written before a form are
-  ;; included in that form
-  (define start-positions
-    (cons first-start (drop-right end-positions 1)))
-
-  (for/list ([start (in-list start-positions)]
-             [end (in-list end-positions)])
-    (string-trim (substring full-str start end) #:left? #true #:right? #false)))
+;; find-substrings : String [Listof Stx] -> [Listof [Pairof Stx [Maybe String]]]
+;; Given the full source code and the list of syntax objects,
+;; return a list of each syntax object optionally mapped to the corresponding
+;; substring from the full source code. Syntax objects that are not original
+;; will be mapped to #f.
+(define (find-substrings full-str forms)
+  ;; pos->index : PosInt -> Natural
+  (define pos->index (srcloc-position->char-index full-str))
+  ;; find-substring : Stx -> [Maybe String]
+  (define (find-substring form)
+    (if (not (syntax-original? form))
+        #f
+        (let ([pos (syntax-position form)])
+          (when (not pos)
+            (error "scribble-code-examples: Assertion failed: original syntax object lacks position."))
+          (define start (pos->index pos))
+          (define end (pos->index (syntax-end-position form)))
+          (string-trim (substring full-str start end) #:left? #true #:right? #false))))
+  (map (λ(form) (cons form (find-substring form)))
+       forms))
 
 ;; syntax-end-position : Syntax -> [Maybe PositiveInteger]
 ;; Produces the 1-indexed position of the end of the syntax object
@@ -203,3 +180,35 @@
   (define span (syntax-span stx))
   (and pos span (+ pos span)))
 
+
+(define nothing  (gensym 'nothing))
+
+;; eval-only : Evaluator String [#:keep-void? Bool] -> [Listof Any]
+;; Returns the results of evaluation. No typesetting.
+;; Only the results from original syntax objects are included.
+;; If any evaluation produces multiple values, they will be returned
+;; as a sublist.
+(define (eval-only eval str #:keep-void? [keep-void? #f])
+  (define module-stx (str-w/-lang->module-syntax str))
+  (define-values [m-lang forms]
+    (split-module-syntax module-stx))
+  ; The result of evaluation might produce multiple values
+  (define (handle-values . results)
+    (cond
+      ; I don't think results can be null, but handle it anyway:
+      [(null? results) nothing]
+      ; If list is length 1, return the only result:
+      [(null? (cdr results))
+       (car results)]
+      ; Else return the list of results:
+      [else results]))
+  (define results
+    (for/list ([form (in-list forms)])
+      (let ([result
+             (call-with-values (λ () (eval form)) handle-values)])
+        (if (syntax-original? form)
+            result
+            nothing))))
+  (filter (λ(x) (and (not (eq? nothing x))
+                     (or keep-void? (not (void? x)))))
+          results))

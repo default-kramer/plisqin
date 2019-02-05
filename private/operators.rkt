@@ -10,7 +10,7 @@
 ;; Token -> Token
 (define (format token)
   (if (string? token)
-      (sql "'"token"'")
+      (scalar "'"token"'")
       token))
 
 (define (do-binop symbol a b fragment-ctor)
