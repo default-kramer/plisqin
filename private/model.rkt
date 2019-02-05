@@ -19,8 +19,8 @@
          (list kind (to-list tokens))]
         [(source _ alias table uid)
          `(source ,(to-list alias) ,(to-list table) ,(to-list uid))]
-        [(query _ source clauses joins)
-         `(query ,(to-list source) ,(to-list clauses) ,(to-list joins))]
+        [(query _ source clauses joins options)
+         `(query ,(to-list source) ,(to-list clauses) ,(to-list joins) ,options)]
         [(join _ type query clauses)
          `(join ,(to-list type) ,(to-list query) ,(to-list clauses))]
         [(binding _ join)
@@ -125,12 +125,19 @@
           'Sql
           'Silence))
 
+  (struct limit (num) #:transparent)
+  (struct offset (num) #:transparent)
+  (struct distinct (flag) #:transparent)
+
   (def-contract query-clause?
     (or/c select?
           where?
           group-by?
           order-by?
-          having?))
+          having?
+          limit?
+          offset?
+          distinct?))
 
   (def-contract clause?
     (or/c query-clause?
@@ -142,7 +149,8 @@
 
   (def-token query query? ([source source?]
                            [clauses (listof query-clause?)]
-                           [joins (listof join?)]))
+                           [joins (listof join?)]
+                           [options (and/c hash? immutable?)]))
 
   (def-token join join? ([type join-type?]
                          [query query?]

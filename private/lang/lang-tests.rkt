@@ -48,15 +48,18 @@
   (set! pg-expected (or pg-expected all-expected))
   (set! ms-expected (or ms-expected all-expected))
   (set! lite-expected (or lite-expected all-expected))
+  (define (check expected)
+    (check-equal? (string-normalize-spaces (to-sql frag))
+                  (string-normalize-spaces expected)))
   (when pg-expected
     (parameterize ([current-dialect (postgres)])
-      (check-equal? (to-sql frag) pg-expected)))
+      (check pg-expected)))
   (when ms-expected
     (parameterize ([current-dialect (mssql)])
-      (check-equal? (to-sql frag) ms-expected)))
+      (check ms-expected)))
   (when lite-expected
     (parameterize ([current-dialect (sqlite)])
-      (check-equal? (to-sql frag) lite-expected))))
+      (check lite-expected))))
 
 (check
  {db-now + 3.hours - 1.day}
@@ -76,6 +79,7 @@
  #:pg "(current_timestamp + interval '29 day' + interval '1 month')"
  #:ms "dateadd(month, 1, dateadd(day, 29, getdate()))"
  #:lite "datetime(datetime('now'), '+29 day', '+1 month')")
+
 
 ; These operators are binary with regard to SQL:
 (check
@@ -131,3 +135,33 @@
 (check-false (> 9 8 8))
 (check-true (>= 9 9 8))
 (check-false (>= 9 9 10))
+
+
+; Test combinations of limit, offset, and distinct.
+; SQL Server with no offset uses "top" instead of "limit"
+(check
+ (from x "X"
+       (limit 5))
+ #:all "select x.* from X x limit 5"
+ #:ms "select top 5 x.* from X x")
+; If offset and limit are both set, then SQL Server can't use "top"
+(check
+ (from x "X"
+       (limit 5)
+       (offset 9))
+ #:all "select x.* from X x limit 5 offset 9"
+ #:ms "select x.* from X x offset 9 rows fetch next 5 rows only")
+; Repeat the tests with distinct added
+(check
+ (from x "X"
+       (distinct #t)
+       (limit 5))
+ #:all "select distinct x.* from X x limit 5"
+ #:ms "select distinct top 5 x.* from X x")
+(check
+ (from x "X"
+       (distinct #t)
+       (limit 5)
+       (offset 9))
+ #:all "select distinct x.* from X x limit 5 offset 9"
+ #:ms "select distinct x.* from X x offset 9 rows fetch next 5 rows only")

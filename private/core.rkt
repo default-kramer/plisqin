@@ -1,7 +1,7 @@
 #lang racket
 (module+ test
   (require rackunit))
-(require (submod "model.rkt" all) "contracts.rkt" "util.rkt")
+(require (submod "model.rkt" all) "util.rkt")
 
 ; Provide all struct stuff with a prefix.
 ; Also, provide all struct members (but not the constructor) without a prefix.
@@ -15,7 +15,10 @@
                      [make-binding binding]
                      [make-injection injection]
                      [make-dateadd dateadd]
-                     [make-interval interval]))
+                     [make-interval interval]
+                     [make-limit limit]
+                     [make-offset offset]
+                     [make-distinct distinct]))
 
 (provide add-statement add-join join? is-simple-join? grouped-join? query-fragments
          make-query make-join join-type? sql-token? change-kind
@@ -28,6 +31,7 @@
          (struct-out exn:fail:plisqin:invalid-aggregate)
          interval-plus interval-minus interval-negate
          db-now
+         query-limit query-offset query-distinct?
          ; fragments
          select select?
          where where?
@@ -44,6 +48,19 @@
 
 (module+ test
   (check-true (fragment? (where (make-source "x" "X")".FIELD > 100"))))
+
+(define limit-val? (or/c #f (and/c integer? positive?)))
+(define offset-val? limit-val?)
+
+(define/contract (make-limit x)
+  (-> limit-val? limit?)
+  (limit x))
+(define/contract (make-offset x)
+  (-> offset-val? offset?)
+  (offset x))
+(define/contract (make-distinct x)
+  (-> any/c distinct?)
+  (distinct (and x #t)))
 
 ; What can be used to start a query
 (def-contract queryable?
@@ -154,10 +171,49 @@
                                    [clauses (append (join-clauses x) (list frag))])]
            [else (error "TODO got join-on in query")])]
     [else
-     (cond [(query? x) (struct-copy query x
-                                    [clauses (append (query-clauses x) (list frag))])]
-           [(join? x) (struct-copy join x
-                                   [query (add-single-statement (join-query x) frag)])])]))
+     (cond
+       [(join? x) (struct-copy join x
+                               [query (add-single-statement (join-query x) frag)])]
+       ; else x must be a query
+       [(fragment? frag)
+        (struct-copy query x
+                     [clauses (append (query-clauses x) (list frag))])]
+       [(limit? frag)
+        (set-option x 'limit (limit-num frag))]
+       [(offset? frag)
+        (set-option x 'offset (offset-num frag))]
+       [(distinct? frag)
+        (set-option x 'distinct (distinct-flag frag))]
+       )]))
+
+;; set-option
+;; If val is #f the hash entry will be cleared.
+;; This matters for equality, for example
+#; (from x "X")
+;; should be equal to
+#; (from x "X"
+         (distinct #t)
+         (distinct #f))
+(define/contract (set-option q key val)
+  (-> query? any/c any/c query?)
+  (struct-copy query q
+               [options (if val
+                            (hash-set (query-options q) key val)
+                            (hash-remove (query-options q) key))]))
+
+(define/contract (get-option q key)
+  (-> query? any/c any/c)
+  (hash-ref (query-options q) key #f))
+
+(define/contract (query-limit q)
+  (-> query? limit-val?)
+  (get-option q 'limit))
+(define/contract (query-offset q)
+  (-> query? offset-val?)
+  (get-option q 'offset))
+(define/contract (query-distinct? q)
+  (-> query? any/c)
+  (get-option q 'distinct))
 
 (define/contract (add-statement q frag)
   (-> (or/c query? join?) statement-expr? (or/c query? join?))
@@ -168,7 +224,7 @@
 
 (define/contract (make-query src)
   (-> source? query?)
-  (query (empty-metadata) src '() '()))
+  (query (empty-metadata) src '() '() (make-immutable-hash)))
 
 (define/contract (make-join type x)
   (-> join-type? (or/c source? query? join?) join?)

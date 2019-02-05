@@ -182,12 +182,32 @@
   (let* ([src (s:query-source q)]
          [table-str (if (string? (s:source-table src))
                         (s:source-table src)
-                        (render-token (s:source-table src)))])
+                        (render-token (s:source-table src)))]
+         [is-ms? (mssql? (current-dialect))]
+         [limit ; (or/c number? #f)
+          (query-limit q)]
+         [offset ; (or/c number? #f)
+          (query-offset q)]
+         [distinct? ; boolean
+          (query-distinct? q)]
+         ; for SQL Server, if there is no offset use "top" instead
+         [top ; (or/c number? #f)
+          (if (and is-ms? limit (not offset))
+              limit
+              #f)]
+         [select-intro ; will be "select [distinct] [top N]"
+          (string-append "select"
+                         (if distinct?
+                             " distinct"
+                             "")
+                         (if top
+                             (format " top ~a" top)
+                             ""))])
     (string-append
      (render-clauses (query-fragments q 'Select)
-                     "select\n  "
+                     (string-append select-intro "\n  ")
                      "\n  , "
-                     (render-token (sql "select "src".*")))
+                     (render-token (sql select-intro" "src".*")))
      "\nfrom "table-str" "(s:source-alias src)
      (string-join (map render-join (ordered-joins q)) "")
      (render-clauses (query-fragments q 'Where)
@@ -205,7 +225,21 @@
      (render-clauses (query-fragments q 'OrderBy)
                      "\norder by "
                      ", "
-                     ""))))
+                     "")
+     ; non-MS uses "limit" and "offset"
+     (if (and (not is-ms?) limit)
+         (format "\nlimit ~a" limit)
+         "")
+     (if (and (not is-ms?) offset)
+         (format "\noffset ~a" offset)
+         "")
+     ; MS uses "offset" and "fetch next"
+     (if (and is-ms? offset)
+         (format "\noffset ~a rows" offset)
+         "")
+     (if (and is-ms? limit (not top))
+         (format "\nfetch next ~a rows only" limit)
+         ""))))
 
 (define/contract (to-sql token)
   (-> sql-token? string?)
