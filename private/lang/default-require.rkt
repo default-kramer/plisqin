@@ -15,5 +15,10 @@
 (require (submod "../core.rkt" time-units))
 (provide (all-from-out (submod "../core.rkt" time-units)))
 
+; TODO and "count" overrides Racket's count
+; Should make a token-aware version
+(require "../aggregates.rkt")
+(provide (all-from-out "../aggregates.rkt"))
+
 (require "../dialect.rkt")
 (provide (all-from-out "../dialect.rkt"))
