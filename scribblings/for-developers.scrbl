@@ -6,10 +6,8 @@ might find something useful anyway.
 
 @section{What Next?}
 There are a lot of things I could try to do next.
-What I @italic{should} do is finally take a good look at prior work,
-then take a nice break for some Hammock-Driven Development.
-The questions I need to answer include
 @itemlist[
+ @item{Work on parameters (see notes below).}
  @item{Can Plisqin be designed in such a way that it can generate SQL or directly integrate with Postgres?}
  @item{Is the previous question important enough to care about right now?}
  @item{Should I try direct integration with SQLite before trying Postgres?}

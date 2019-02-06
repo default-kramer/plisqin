@@ -113,7 +113,8 @@ Now write a query:
 @(codex #<<CODE
 (define (big-cities)
   {from ct City
-        {where ct.CityPopulation > 20 * 1000 * 1000}})
+        {order-by ct.CityPopulation" desc"}
+        {limit 10}})
 (show-table (big-cities))
 CODE
         )
