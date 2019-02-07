@@ -96,6 +96,15 @@
                               (cons (or A #'a)
                                     (syntax->list (looper REST)))
                               stx stx))]
+            [{a . b}
+             (begin
+               (define A #'a)
+               (set! A ((/pass-ltr rule) A))
+               (when A (set! any-success? #t))
+               (datum->syntax stx
+                              (cons (or A #'a)
+                                    (looper #'b))
+                              stx stx))]
             [else stx])))
     (define result (looper stx))
     (if any-success? result #f)))

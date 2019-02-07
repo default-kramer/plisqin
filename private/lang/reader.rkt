@@ -39,14 +39,15 @@
 (define (read-dot char port name line col pos)
   (define this-dot (datum->syntax #f '|.| (list name line col pos 1)))
   (define next-char (peek-char port))
-  (define (make-single-dot chained?)
+  (define (make-single-dot dot-type)
     (let ([stx (datum->syntax #f '|.|
                               (list name line col pos 1))])
-      (syntax-property stx rewriter/stx-prop-chained chained?)))
-  (if (or (char-whitespace? next-char)
+      (syntax-property stx rewriter/stx-prop-dot-type dot-type)))
+  (if (or (eof-object? next-char)
+          (char-whitespace? next-char)
           (member next-char non-id-starters))
-      ; return single dot, unchained
-      (make-single-dot #f)
+      ; return delimited dot
+      (make-single-dot 'delimited)
       ; else
       (let ([dot-count (read-dots port)])
         ; If we have more than 1 consecutive dot, treat it literally (useful for ellipsis)
@@ -54,8 +55,8 @@
             ; return multiple dots
             (datum->syntax #f (string->symbol (make-string dot-count #\.))
                            (list name line col pos dot-count))
-            ; else return single dot, chained
-            (make-single-dot #t)))))
+            ; else return chained dot
+            (make-single-dot 'chained)))))
 
 (define plisqin-readtable
   (make-readtable #f #\. 'terminating-macro read-dot))

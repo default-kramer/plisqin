@@ -5,6 +5,26 @@
 (define |a.b| "hi")
 (check-equal? |a.b| "hi")
 
+; Make sure rest args work
+(define (test-rest-args a . rest)
+  rest)
+(check-equal? (test-rest-args 1 2 3 4)
+              '(2 3 4))
+(check-equal? (test-rest-args 1)
+              '())
+
+; Using |.| should bypass the "rest arg rewrite" rule
+(define (test-not-rest a |.| c)
+  (list a |.| c))
+(check-equal? (test-not-rest 4 5 6)
+              '(4 5 6))
+
+; Make sure ellipses work
+(define-syntax-rule (ellipsis-test args ...)
+  (list args ...))
+(check-equal? (ellipsis-test 9 8 7)
+              '(9 8 7))
+
 (check-true {equal? 10.add1 11})
 
 (check-equal? {42} 42)
@@ -13,6 +33,7 @@
 {check-equal? '(1 2 3).length.add1 4}
 
 ; These correctly error. How to test?
+;(define a.b 3)
 ;{identity .procedure-arity}
 ;{(identity identity) .procedure-arity}
 ;{.add1 10}

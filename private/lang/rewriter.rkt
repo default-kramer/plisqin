@@ -1,8 +1,11 @@
 #lang racket
-(require (for-syntax racket "rewrite-lib.rkt")
-         "rewrite-lib.rkt")
+(require (for-syntax racket
+                     "rewrite-lib.rkt"
+                     syntax/readerr)
+         "rewrite-lib.rkt"
+         syntax/readerr)
 (provide (for-syntax rewrite) rewrite
-         stx-prop-chained)
+         stx-prop-dot-type)
 
 ; Duplicate the definitions into begin-for-syntax.
 (define-syntax-rule (define-everywhere forms ...)
@@ -11,15 +14,24 @@
     forms ...))
 
 (define-everywhere
-  ; If the reader determines that a dot is chained to the next symbol,
-  ; it should set this property to let us know.
-  ; For example in ".bar" the dot is considered chained.
-  ; In ". bar" the dot is not considered chained.
-  (define stx-prop-chained 'plisqin-chained)
+  ; This property will be set by the reader to one of two values:
+  ; 1) 'delimited means that the dot is surrouned by whitespace.
+  ;    The default reader gives special treatment to delimited dots,
+  ;    see "1.3.6 Reading Pairs and Lists" of the Reference.
+  ;    IMO, rest args are the most important use case here.
+  ;    I don't care too much if plisqin doesn't support the other patterns.
+  ; 2) 'chained means that the dot is immediately to the left of another
+  ;    token. For example in {foo .bar} and {foo.bar} both dots are chained.
+  ;    And we want to rewrite both to (bar foo)
+  (define stx-prop-dot-type 'plisqin-dot-type)
 
   ;; Syntax -> Any
   (define (chained? stx)
-    (syntax-property stx stx-prop-chained))
+    (eq? 'chained
+         (syntax-property stx stx-prop-dot-type)))
+  (define (delimited? stx)
+    (eq? 'delimited
+         (syntax-property stx stx-prop-dot-type)))
 
   (define/contract (make-infix-rewriter symbols)
     (-> (listof symbol?) procedure?)
@@ -39,6 +51,35 @@
                                  loc stx)]
                  [else #f]))]
         [else #f])))
+
+  ; Because we customized the read of the dot, (a b c . d)
+  ; will read as (list a b c literally-a-dot d)
+  ; We need to rewrite it to (cons a (cons b (cons c d)))
+  (define (rest-args-pattern stx)
+    (syntax-case stx ()
+      [(args ... dot last)
+       (if (delimited? #'dot)
+           (datum->syntax stx
+                          (append (syntax->list #'(args ...))
+                                  #'last)
+                          stx stx)
+           #f)]
+      [else #f]))
+
+  ; Raises an error if any unresolved dots remain
+  (define (dot-misuse stx)
+    (if (or (delimited? stx)
+            (chained? stx))
+        ; #lang racket calls this a read error.
+        ; For #lang plisqin, this happens in the expander (rewriter).
+        ; Does it matter?
+        (raise-read-error "plisqin: illegal use of `.`"
+                          (syntax-source stx)
+                          (syntax-line stx)
+                          (syntax-column stx)
+                          (syntax-position stx)
+                          (syntax-span stx))
+        #f))
 
   (define (dot-id stx)
     ; rewrite a.b to (#%do-dot a b)
@@ -91,12 +132,18 @@
 
   (define the-rewriter
     (/all
+     ; Dont filter braced for this one:
+     (/pass-ltr rest-args-pattern)
+     ; OK, now do our real rewriting work
      (/pass valueless-dot
             dot-list
             dot-id)
      (/pass (make-infix-rewriter '(* /)))
      (/pass (make-infix-rewriter '(+ -)))
-     (/pass (make-infix-rewriter '(= < > <= >= <> like not-like)))))
+     (/pass (make-infix-rewriter '(= < > <= >= <> like not-like)))
+     ; Now we're done. If there are any unresolved dots, it is a syntax error.
+     ; Don't filter braced for this one:
+     (/pass-ltr dot-misuse)))
 
   (define/contract (rewrite stx)
     (-> syntax? syntax?)
