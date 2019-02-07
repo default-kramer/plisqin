@@ -1,6 +1,6 @@
 #lang racket/base
 ; This is a private fork of
-; https://github.com/AlexKnauth/scribble-code-examples/tree/bef0d817bf29fd70abae7528531c03f5d2a2d0fc/scribble-code-examples-lib
+; https://github.com/AlexKnauth/scribble-code-examples/tree/42f7cd362bd6c009d244cbc5dcfecc8d2dab3849/scribble-code-examples-lib
 ; that is tailored to #lang plisqin.
 ; It *might* work for other similar languages, but it's complicated.
 ; See discussion on https://github.com/AlexKnauth/scribble-code-examples/pull/10
