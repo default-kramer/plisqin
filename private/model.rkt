@@ -100,7 +100,7 @@
   (define-frag 'Where where where?)
   (define-frag 'JoinOn join-on join-on?)
   (define-frag 'GroupBy group-by group-by?)
-  (define-frag 'OrderBy order-by order-by?)
+  (define-frag 'OrderBy order-by-raw order-by?)
   (define-frag 'Having having having?)
   (define-frag 'Scalar scalar scalar?)
   (define-frag 'Aggregate make-aggregate aggregate?)

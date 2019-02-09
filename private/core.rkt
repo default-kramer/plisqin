@@ -62,6 +62,30 @@
   (-> any/c distinct?)
   (distinct (and x #t)))
 
+(define/contract (order-by a . tokens)
+  (->* [(or/c 'asc 'desc sql-token? (listof sql-token?))]
+       []
+       #:rest token-list?
+       order-by?)
+  (match a
+    ['asc (order-by-raw tokens" asc")]
+    ['desc (order-by-raw tokens" desc")]
+    [else (order-by-raw a tokens)]))
+
+(module+ test
+  (check-equal? (order-by "foo")
+                (order-by-raw "foo"))
+  (check-equal? (order-by 'desc "foo")
+                (order-by-raw "foo"" desc"))
+  (check-equal? (order-by 'asc "foo" ".bar")
+                (order-by-raw "foo"".bar"" asc"))
+  (check-equal? (order-by (list "a") (list "b" "c"))
+                (order-by-raw "a""b""c"))
+  (check-equal? (order-by (list "a" "b") (list "c" "d"))
+                (order-by-raw "a""b""c""d"))
+  (check-equal? (order-by (list) 1 2 3)
+                (order-by-raw 1 2 3)))
+
 ; What can be used to start a query
 (def-contract queryable?
   (or/c source?

@@ -193,7 +193,6 @@ The fragment kind tells Plisqin what part of an SQL query it is.
    [where where?]
    [join-on join-on?]
    [group-by group-by?]
-   [order-by order-by?]
    [having having?]
    [scalar scalar?]
    [aggregate aggregate?]
@@ -201,6 +200,16 @@ The fragment kind tells Plisqin what part of an SQL query it is.
    [subquery subquery?]
    [sql sql?])
 Constructs an SQL fragment.
+
+@defproc[(order-by [maybe-dir (or/c 'asc 'desc sql-token? (listof sql-token?))]
+                   [tokens token-list?]
+                   ...)
+         order-by?]{
+ A clause that controls how rows are sorted in the result set.
+ The first argument is allowed to be @(racket 'asc) or @(racket 'desc)
+ meaning "ascending" or "descending" respectively.
+ If the sort direction is not specified, is defaults to ascending.
+}
 
 @(define-syntax-rule (define-frag-testers tester ...)
    (deftogether [

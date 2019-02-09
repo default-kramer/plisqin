@@ -186,3 +186,15 @@
        (offset 9))
  #:all "select distinct x.* from X x limit 5 offset 9"
  #:ms "select distinct x.* from X x offset 9 rows fetch next 5 rows only")
+
+
+; Order-by
+(check
+ {order-by 'desc "foo" ".bar"}
+ #:all "foo.bar desc")
+(check
+ {order-by 'asc "foo" ".bar"}
+ #:all "foo.bar asc")
+(check
+ {order-by "a" "b" "c"}
+ #:all "abc")
