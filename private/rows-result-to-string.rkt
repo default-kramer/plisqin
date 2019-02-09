@@ -78,7 +78,7 @@ HEREDOC
            ))
 
   (define str (rows-result->string result))
-  (check-equal? str #<<HEREDOC
+  (define expected #<<HEREDOC
 CountryName             	CountryPopulation
 ---                     	---              
 Uganda                  	37578876.0       
@@ -88,6 +88,9 @@ United States of America	325145963.0
 Uruguay                 	3407062.0        
 Uzbekistan              	31576400.0       
 HEREDOC
-                )
+    )
+  ; This may pass in DrRacket but fail in raco unless we remove \r
+  (check-equal? (string-replace str "\r" "")
+                (string-replace expected "\r" ""))
 
   (disconnect conn))
