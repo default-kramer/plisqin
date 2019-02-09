@@ -2,14 +2,8 @@
 
 ; This module is required by #lang plisqin by default.
 
-(require plisqin/private/api)
-(provide (all-from-out plisqin/private/api))
-
-(require plisqin/private/schema)
-(provide (all-from-out plisqin/private/schema))
-
-(require plisqin/private/aggregates)
-(provide (all-from-out plisqin/private/aggregates))
+(require plisqin)
+(provide (all-from-out plisqin))
 
 (require plisqin/private/operators)
 (provide (all-from-out plisqin/private/operators))

@@ -1,5 +1,5 @@
 #lang scribble/manual
-@(require (for-label plisqin)
+@(require (for-label plisqin/private/lang/default-require)
           scribble/core
           scribble/html-properties
           racket/sandbox
