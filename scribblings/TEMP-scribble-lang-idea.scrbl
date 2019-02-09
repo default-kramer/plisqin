@@ -8,12 +8,21 @@
           "../examples/cities/city-connection.rkt"
           (except-in db statement?))
 
+@(define P-props (list (make-css-addition "PStyles.css")
+                       (make-js-addition "PScripts.js")))
 @(define PQueryResults
-   (make-style "PQueryResults SCodeFlow" ; SCodeFlow for the left border
-               (list (make-css-addition "PStyles.css"))))
+   (make-style "PQueryResults" P-props))
+@(define PTableWrapper
+   (make-style "PTableWrapper show-results" P-props))
+@(define PSql
+   (make-style "PSql" P-props))
+@(define PShowSql
+   (make-style "PShowSql" P-props))
+@(define PShowTable
+   (make-style "PShowTable" P-props))
 
-@(define/contract (to-table result)
-   (-> rows-result? table?) ; db result -> scribble table
+@(define/contract (to-table result sql)
+   (-> rows-result? string? table?) ; db result -> scribble table
 
    ; First element is column name, second is scribble properties
    (define col-info? (list/c string? any/c))
@@ -45,10 +54,19 @@
 
    (let ([col-info (get-column-info result)])
      (tabular
-      #:style PQueryResults
-      #:column-properties (map cdr col-info)
-      (list* (map car col-info)
-             (get-rows result)))))
+      #:style PTableWrapper
+      (list
+       (list (elem
+              (elem #:style PShowTable "Show Table")
+              (elem #:style PShowSql "Show SQL")))
+       (list (tabular #:style PSql
+                      (list (list (verbatim sql)))))
+       (list
+        (tabular
+         #:style PQueryResults
+         #:column-properties (map cdr col-info)
+         (list* (map car col-info)
+                (get-rows result))))))))
 
 @(define (make-eval)
    (define eval (make-code-eval #:lang "plisqin"))
@@ -90,149 +108,198 @@
          (let* ([conn (connect-cities)]
                 [result (query conn sql)]
                 [_ (disconnect conn)])
-           (to-table result))))))
+           (to-table result sql))))))
 
-@section{Query Fundamentals}
-
-First define the schema:
+@section{Setup and Schema}
 
 @margin-note{
- Plisqin doesn't require you to define your schema up front.
- This is just the fastest way to demonstrate the coolest features.
+ Plisqin doesn't require you to define your schema up front,
+ but this is the fastest way to demonstrate the coolest features.
 }
+TODO explain.
+
 @(codex #<<CODE
 (def-table Country)
 (def-table City)
+(def-table Organization)
+; a mapping table for the Many:Many relationship of Country:Organization
+(def-table CountryOrganization)
+
 (def-fields-of Country
   CountryId
   CountryName
   CountryPopulation)
+
 (def-fields-of City
   CityId
   CountryId
   CityName
   CityPopulation)
+
+(def-fields-of Organization
+  OrgId
+  OrgShortName)
+
+(def-fields-of CountryOrganization
+  CountryId
+  OrgId)
 CODE
         )
 
-Now write a query:
+@section{Query Fundamentals}
 
+The @(racket from) macro is used to create a query.
+The following code defines a function called @(racket big-cities) which
+takes no arguments and returns a query:
 @margin-note{
- If you prefer, you can write @(racket (CityPopulation ct))
- instead of @(racket ct.CityPopulation).
+ Love S-expressions? Don't worry, the syntactic sugar is optional.
+ You can write @(racket (CityName city)) instead.
 }
 @(codex #<<CODE
 (define (big-cities)
-  {from ct City
-        {order-by ct.CityPopulation" desc"}
+  {from city City
+        {order-by city.CityPopulation" desc"}
         {limit 10}
-        {select ct.CityName}
-        {select ct.CityPopulation}})
-(show-table (big-cities))
+        {select city.CityName}
+        {select city.CityPopulation}})
 CODE
         )
+
+The above query has 4 clauses: an @(racket order-by) clause, a @(racket limit)
+clause, and 2 @(racket select) clauses.
+
+You can pass a query into @(racket show-table) and it will print the results:
+@(codex "(show-table (big-cities))")
 @(show-table "(big-cities)")
 
-Add a join:
+Queries are appendable. This means you can add more clauses to
+a query you already defined elsewhere.
+For example, let's start with @(racket big-cities) and append a
+@(racket where) clause that excludes cities with a population over 20 million:
+
+@(codex #<<CODE
+(show-table
+  {from city (big-cities)
+        {where city.CityPopulation <= 20 * 1000 * 1000}})
+CODE
+        )
+@(show-table "{from city (big-cities) {where city.CityPopulation < 20 * 1000 * 1000}}")
+
+It's important to understand that the above query has 5 clauses in total:
+the @(racket where) clause plus the 4 clauses from @(racket big-cities).
+You might be able to foresee that appendable queries can greatly reduce code duplication.
+
+@section{Joins}
+
+Every City has exactly one Country.
+Relationships between tables are represented using @(racket join).
+The following query appends to @(racket big-cities), joins the Country table,
+and adds a @(racket select) clause.
 
 @(codex #<<CODE
 (define (TEMP-typeset-only)
-  {from ct (big-cities)
-        {join co Country
-              {join-on co.CountryId = ct.CountryId}}
-        {select co.CountryName}})
+  {from city (big-cities)
+        {join country Country
+              {join-on country.CountryId = city.CountryId}}
+        {select country.CountryName}})
 CODE
         )
 
-Let's make the join reusable:
+The above query would work just fine, but joining the Country
+of a City is something we will be doing often.
+So let's make it reusable:
 
 @(codex #<<CODE
-(def/append! (Country x)
-  [(City? x)
-   {join co Country
-         {join-on co.CountryId = x.CountryId}}])
+(def/append! (Country x)  ; the Country of x ...
+  [(City? x)              ; if x is a City ...
+   ; ... is this join:
+   {join country Country
+         {join-on country.CountryId = x.CountryId}}])
 CODE
         )
 
-Now use it
+The definition of @(racket Country) has been expanded.
+In addition to being a table, @(racket Country) can now be used as
+a function that takes a City and returns a join to the City's Country.
+So now we can use @(racket {city.Country}) in our queries:
 @(codex #<<CODE
 (define (big-cities-with-country)
-  {from ct (big-cities)
-        {select ct.Country.CountryName}})
+  {from city (big-cities)
+        {select city.Country.CountryName}})
 (show-table (big-cities-with-country))
 CODE
         )
 @(show-table "(big-cities-with-country)")
 
-Make CountryName available to Cities.
+That's pretty nice, but we can do even better.
+Do we really want to say @(racket {city.Country.CountryName}) every time?
+Can we just say @(racket {city.CountryName}) instead?
+Yes, by expanding the definition of @(racket CountryName):
+
 @(codex #<<CODE
-(def/append! (CountryName x)
-  [(City? x)
+(def/append! (CountryName x)  ; the CountryName of x ...
+  [(City? x)                  ; if x is a City ...
+   ; ... is this expression:
    {x.Country.CountryName}])
 CODE
         )
 
-Filter using where
+And that should do it. Let's try it out:
 @(codex #<<CODE
 (define (big-cities-outside-china)
-  {from ct (big-cities-with-country)
-        {where ct.CountryName not-like "%china"}})
+  {from city (big-cities-with-country)
+        {where city.CountryName not-like "%china"}})
 (show-table (big-cities-outside-china))
 CODE
         )
 @(show-table "(big-cities-outside-china)")
 
-@section{Plural Joins}
+@section{Timeout for more Schema}
+Let's take a peek at the Organization table:
+@(codex "(show-table {from org Organization})")
+@(show-table "{from org Organization}")
+
+A Country can have multiple Organizations.
+For example, Belgium is a member of both the EU and NATO.
+Obviously, an Organization can have multiple Countries.
+This many-to-many relationship requires a mapping table, CountryOrganization.
+
 @(codex #<<CODE
-(def-table Organization)
-(def-fields-of Organization
-  OrgId
-  OrgShortName)
-
-(def-table CountryOrganization)
-(def-fields-of CountryOrganization
-  CountryId
-  OrgId)
-
-(def/append! (Countries x)
+(def/append! (CountryOrganizations x)
+  [(Country? x)
+   {join co CountryOrganization
+         {join-on co.CountryId = x.CountryId}}]
   [(Organization? x)
-(begin ; TODO fix!
-   (define mappers
-     {join map CountryOrganization
-           {join-on map.OrgId = x.OrgId}})
-   {join co Country
-         {join-on co.CountryId = mappers.CountryId}}
-)])
-
+   {join co CountryOrganization
+         {join-on co.OrgId = x.OrgId}}])
 (def/append! (Organizations x)
   [(Country? x)
-(begin ; TODO fix!
-   (define mappers
-     {join map CountryOrganization
-           {join-on map.CountryId = x.CountryId}})
    {join org Organization
-         {join-on org.OrgId = mappers.OrgId}}
-)])
+         {join-on org.OrgId = x.CountryOrganizations.OrgId}}])
+(def/append! (Countries x)
+  [(Organization? x)
+   {join country Country
+         {join-on country.CountryId = x.CountryOrganizations.CountryId}}])
 CODE
         )
 
+Now we are able to use @(racket {country.Organizations}) and
+@(racket {organization.Countries}) in our queries.
+Let me just prove what I said about Belgium is true:
 @(codex #<<CODE
-(define (countries-and-orgs)
+(define (belgium-orgs)
   {from co Country
-        {join orgs co.Organizations}
+        {where co.CountryName = "Belgium"}
         {select co.CountryName}
-        {select orgs.OrgShortName}
-        {order-by co.CountryName}
-        {order-by orgs.OrgShortName}
-        {limit 10}})
-(show-table (countries-and-orgs))
+        {select co.Organizations.OrgShortName}})
+(show-table (belgium-orgs))
 CODE
         )
-@(show-table "(countries-and-orgs)")
+@(show-table "(belgium-orgs)")
 
 @section{Grouped Joins and Aggregates}
 
-Define a grouped join:
+Consider this code:
 
 @margin-note{
  @(racket CitiesG) means "a Group of Cities."
@@ -241,17 +308,26 @@ Define a grouped join:
 @(codex #<<CODE
 (def/append! (CitiesG x)
   [(Country? x)
-   {join ct City
-         {group-by ct.CountryId}
-         {join-on ct.CountryId = x.CountryId}}])
+   {join city City
+         {group-by city.CountryId}
+         {join-on city.CountryId = x.CountryId}}])
 CODE
         )
 
-Now use it:
+I call @(racket CitiesG) a "grouped join."
+An important quality of a grouped join is that it does not increase the cardinality
+of the result set with respect to its argument(s).
+In the above example, the argument @(racket x) is tested to be a Country.
+The join is grouped by CountryId.
+Therefore, there will be at most 1 group per Country.
+
+Grouped joins are used with aggregate functions.
+In the following example, @(racket count) and @(racket sum) are the aggregates.
+Notice that @(racket CitiesG) always occurs inside an aggregate:
 
 @margin-note{
- This query illustrates the reason for the @italic{PluralNounsG} naming convention.
- When you see a Group, it should be enclosed in an aggregate such as @(racket count) or @(racket sum).
+ TODO it would probably be good to mention that grouping and aggregating
+ is compatible with the SQL way of doing it.
 }
 @(codex #<<CODE
 (define (city-stats-by-country)
@@ -266,7 +342,11 @@ CODE
         )
 @(show-table "(city-stats-by-country)")
 
-An Organization can also have a group of Cities.
+OK, so we are seeing aggregated City information by Country.
+Could we not also see aggregated City information by Organization?
+Yes, because just like a Country, an Organization also has a group of Cities.
+So first, let's extend the definition of @(racket CitiesG):
+
 @(codex #<<CODE
 (def/append! (CitiesG x)
   [(Organization? x)
@@ -276,27 +356,16 @@ An Organization can also have a group of Cities.
 CODE
         )
 
-Now we can show similar state
-@(codex #<<CODE
-(define (city-stats-by-org)
-  {from org Organization
-        {select org.OrgShortName}
-        {select {count org.CitiesG}" as CountCitiesG"}
-        {select {sum org.CitiesG.CityPopulation}" as SumCityPopulation"}
-        {order-by {count org.CitiesG}" desc"}
-        {limit 10}})
-(show-table (city-stats-by-org))
-CODE
-        )
-@(show-table "(city-stats-by-org)")
+The above join is a valid grouped join because it will return at most one
+group of Cities per Organization. (Note that a single City might belong to
+more than one Organization, but that is fine.)
 
-@section{A Taste of Power}
-Point out the similarities between both versions.
-Combine them into this one:
-
+Now if we review @(racket city-stats-by-country), we see that the only
+Country-specific clause is @(racket {select co.CountryName}).
+Let's remove that clause to make a reusable version:
 @(codex #<<CODE
-(define (city-stats table)
-  {from x table
+(define (city-stats X)
+  {from x X
         {select {count x.CitiesG}" as CountCitiesG"}
         {select {sum x.CitiesG.CityPopulation}" as SumCityPopulation"}
         {order-by {count x.CitiesG}" desc"}
@@ -304,22 +373,24 @@ Combine them into this one:
 CODE
         )
 
+Now @(racket city-stats) should work on any X for which @(racket CitiesG) is defined!
+Which makes it easy to implement the "by Country" and "by Organization" variants:
+
 @(codex #<<CODE
 (define (city-stats-by-country)
   {from co (city-stats Country)
-        {select co.CountryName}})
-(show-table (city-stats-by-country))
-CODE
-        )
-
-@(show-table "(city-stats-by-country)")
-@(codex #<<CODE
+        {select co.CountryName}
+        {select co.CountryId}})
 (define (city-stats-by-org)
   {from org (city-stats Organization)
         {select org.OrgShortName}})
-(show-table (city-stats-by-org))
 CODE
         )
+
+@(codex "(show-table (city-stats-by-country))")
+@(show-table "(city-stats-by-country)")
+
+@(codex "(show-table (city-stats-by-org))")
 @(show-table "(city-stats-by-org)")
 
 TODO guide what to read next.

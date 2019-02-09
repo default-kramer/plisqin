@@ -1,9 +1,39 @@
+.PShowSql, .PShowTable {
+	cursor: pointer;
+	border: 1px solid black;
+	border-bottom: none;
+	padding: 2px;
+	margin-left: 1px;
+	margin-right: 2px;
+}
+.PTableWrapper.show-results .PShowTable,
+.PTableWrapper.show-sql .PShowSql {
+	background: #f5f5f5;
+}
+
+.PTableWrapper.show-results .PSql,
+.PTableWrapper.show-sql .PQueryResults {
+	display: none;
+}
+
+.PSql {
+	background: #f5f5f5;
+	padding: 0.5rem;
+}
+
 .PQueryResults {
+	background: #f5f5f5;
 	font-size: 0.8em;
+	padding: 0.4em 1em;
+	z-index: 1;
 }
 .PQueryResults tr:first-child {
 	font-weight: bold;
 }
-.PQueryResults td {
+.PQueryResults td:not(:last-child) {
 	padding: 0em 1.3em 0 0;
+}
+
+.PSql .stt {
+	font-size: 0.9rem;
 }
