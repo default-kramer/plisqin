@@ -70,7 +70,7 @@
 
 @(define (make-eval)
    (define eval (make-code-eval #:lang "plisqin"))
-   (eval '(require (for-label plisqin "racket.rkt")))
+   ;(eval '(require (for-label "racket.rkt" plisqin/private/lang/default-require)))
    ; TODO override the real show-table which doesn't exist yet
    (eval '(define show-table void))
    eval)
@@ -109,6 +109,12 @@
                 [result (query conn sql)]
                 [_ (disconnect conn)])
            (to-table result sql))))))
+
+@(codex #<<CODE
+(require (for-label "racket.rkt" plisqin/private/lang/default-require))
+(void select + syntax->datum)
+CODE
+        )
 
 @section{Setup and Schema}
 

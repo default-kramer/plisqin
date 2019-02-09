@@ -198,3 +198,9 @@
 (check
  {order-by "a" "b" "c"}
  #:all "abc")
+
+
+; Make sure group-by doesn't somehow revert to racket's version
+(check
+ {group-by "foo"}
+ #:all "foo")
