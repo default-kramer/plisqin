@@ -43,6 +43,14 @@
                        . str-args)
   (define lang-line (string-append "#lang " lang-line-ish "\n"))
   (define full-str (apply string-append lang-line str-args))
+
+  ; WTF I was sure Alex fixed the carriage return issue.
+  ; https://github.com/AlexKnauth/scribble-code-examples/commit/bef0d817bf29fd70abae7528531c03f5d2a2d0fc
+  ; But now when I run "raco setup" it still miscounts carriage returns.
+  ; Either I never tested the fix properly or I've broke it since then.
+  ; Well, this hack works for both "raco setup" and DrRacket "Scribble HTML":
+  (set! full-str (string-replace full-str "\r\n" "\n"))
+
   (define m (str-w/-lang->module-syntax full-str))
   (define-values [m-lang forms]
     (split-module-syntax m))
