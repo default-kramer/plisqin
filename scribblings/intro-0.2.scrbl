@@ -8,8 +8,13 @@
           "../examples/cities/city-connection.rkt"
           (except-in db statement?))
 
-@(define P-props (list (make-css-addition "PStyles.css")
-                       (make-js-addition "PScripts.js")))
+@(define (path-from-here str)
+   (format "~a/../~a"
+           (syntax-source #'here)
+           str))
+@(define P-props
+   (list (make-css-addition (path-from-here "PStyles.css"))
+         (make-js-addition (path-from-here "PScripts.js"))))
 @(define PQueryResults
    (make-style "PQueryResults" P-props))
 @(define PTableWrapper
@@ -70,7 +75,8 @@
 
 @(define (make-eval)
    (define eval (make-code-eval #:lang "plisqin"))
-   (eval '(require (for-label "racket.rkt" plisqin/private/lang/default-require)))
+   (eval '(require (for-label plisqin/scribblings/racket
+                              plisqin/private/lang/default-require)))
    eval)
 @(define ex-eval (make-eval))
 @(define ex-here (ex-eval "#'here"))
@@ -117,10 +123,14 @@
            (to-table result sql))))))
 
 @(codex #<<CODE
+(require (for-label plisqin/scribblings/racket
+                    plisqin/private/lang/default-require))
 (void select + syntax->datum)
 (current-connection 'cities-example)
 CODE
         )
+
+@title{Preview of Plisqin 0.2}
 
 @section{Setup and Schema}
 
@@ -199,7 +209,7 @@ It's important to understand that the above query has 5 clauses in total:
 the @(racket where) clause plus the 4 clauses from @(racket big-cities).
 You might be able to foresee that appendable queries can greatly reduce code duplication.
 
-@section{Joins}
+@section[#:tag "joins0.2"]{Joins}
 
 Every City has exactly one Country.
 Relationships between tables are represented using @(racket join).

@@ -4,4 +4,4 @@
 ; that don't clash with plisqin/private/lang/default-require.
 ; This file simply tests that this does not error:
 (require (for-label plisqin/private/lang/default-require
-                    "racket.rkt"))
+                    plisqin/scribblings/racket))
