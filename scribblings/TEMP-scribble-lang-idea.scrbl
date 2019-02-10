@@ -70,24 +70,30 @@
 
 @(define (make-eval)
    (define eval (make-code-eval #:lang "plisqin"))
-   ;(eval '(require (for-label "racket.rkt" plisqin/private/lang/default-require)))
-   ; TODO override the real show-table which doesn't exist yet
-   (eval '(define show-table void))
+   (eval '(require (for-label "racket.rkt" plisqin/private/lang/default-require)))
    eval)
 @(define ex-eval (make-eval))
 @(define ex-here (ex-eval "#'here"))
 
-@(define (codex str)
+@(define (codex str #:eval [evaluator ex-eval])
    ; Use define to force immediate evaluation!
    (define result
-     (code-examples str #:lang "plisqin" #:context ex-here #:eval ex-eval))
+     (code-examples str #:lang "plisqin" #:context ex-here #:eval evaluator))
    result)
 
 @(define (get-sql code-query)
+   (set! code-query
+         (if (equal? "(show-table"
+                     (substring code-query 0 11))
+             ; Wrap "(show-table x)" inside a let form that redefines show-table as to-sql
+             (format "(let ([show-table to-sql]) ~a)"
+                     code-query)
+             ; Otherwise rewrite "x" to "(to-sql x)"
+             (format "(to-sql ~a)" code-query)))
    ; Use define to force immediate evaluation!
    (define result
      (eval-only ex-eval
-                (format "#lang plisqin \n (to-sql ~a)" code-query)))
+                (format "#lang plisqin \n ~a" code-query)))
    (match result
      [(list a)
       #:when (string? a)
@@ -98,11 +104,11 @@
       #f]))
 
 @(define-syntax-rule (show-table str)
-   ; NOPE) Show the code example.
+   ; 1) Show the code example.
    ; 2) Execute query against SQLite.
    ; 3) Show table of query result.
    (begin
-     ;(codex str)
+     (codex #:eval #f str)
      (let ([sql (get-sql str)])
        (when (string? sql)
          (let* ([conn (connect-cities)]
@@ -111,8 +117,8 @@
            (to-table result sql))))))
 
 @(codex #<<CODE
-(require (for-label "racket.rkt" plisqin/private/lang/default-require))
 (void select + syntax->datum)
+(current-connection 'cities-example)
 CODE
         )
 
@@ -175,21 +181,19 @@ The above query has 4 clauses: an @(racket order-by) clause, a @(racket limit)
 clause, and 2 @(racket select) clauses.
 
 You can pass a query into @(racket show-table) and it will print the results:
-@(codex "(show-table (big-cities))")
-@(show-table "(big-cities)")
+@(show-table "(show-table (big-cities))")
 
 Queries are appendable. This means you can add more clauses to
 a query you already defined elsewhere.
 For example, let's start with @(racket big-cities) and append a
 @(racket where) clause that excludes cities with a population over 20 million:
 
-@(codex #<<CODE
+@(show-table #<<CODE
 (show-table
   {from city (big-cities)
         {where city.CityPopulation <= 20 * 1000 * 1000}})
 CODE
-        )
-@(show-table "{from city (big-cities) {where city.CityPopulation < 20 * 1000 * 1000}}")
+             )
 
 It's important to understand that the above query has 5 clauses in total:
 the @(racket where) clause plus the 4 clauses from @(racket big-cities).
@@ -203,7 +207,7 @@ The following query appends to @(racket big-cities), joins the Country table,
 and adds a @(racket select) clause.
 
 @(codex #<<CODE
-(define (TEMP-typeset-only)
+(define (explicit-join-example)
   {from city (big-cities)
         {join country Country
               {join-on country.CountryId = city.CountryId}}
@@ -232,10 +236,9 @@ So now we can use @(racket {city.Country}) in our queries:
 (define (big-cities-with-country)
   {from city (big-cities)
         {select city.Country.CountryName}})
-(show-table (big-cities-with-country))
 CODE
         )
-@(show-table "(big-cities-with-country)")
+@(show-table "(show-table (big-cities-with-country))")
 
 That's pretty nice, but we can do even better.
 Do we really want to say @(racket {city.Country.CountryName}) every time?
@@ -255,15 +258,13 @@ And that should do it. Let's try it out:
 (define (big-cities-outside-china)
   {from city (big-cities-with-country)
         {where city.CountryName not-like "%china"}})
-(show-table (big-cities-outside-china))
 CODE
         )
-@(show-table "(big-cities-outside-china)")
+@(show-table "(show-table (big-cities-outside-china))")
 
 @section{Timeout for more Schema}
 Let's take a peek at the Organization table:
-@(codex "(show-table {from org Organization})")
-@(show-table "{from org Organization}")
+@(show-table "(show-table {from org Organization})")
 
 A Country can have multiple Organizations.
 For example, Belgium is a member of both the EU and NATO.
@@ -298,10 +299,9 @@ Let me just prove what I said about Belgium is true:
         {where co.CountryName = "Belgium"}
         {select co.CountryName}
         {select co.Organizations.OrgShortName}})
-(show-table (belgium-orgs))
 CODE
         )
-@(show-table "(belgium-orgs)")
+@(show-table "(show-table (belgium-orgs))")
 
 @section{Grouped Joins and Aggregates}
 
@@ -343,10 +343,9 @@ Notice that @(racket CitiesG) always occurs inside an aggregate:
         {select {sum co.CitiesG.CityPopulation}" as SumCityPopulation"}
         {order-by 'desc {count co.CitiesG}}
         {limit 10}})
-(show-table (city-stats-by-country))
 CODE
         )
-@(show-table "(city-stats-by-country)")
+@(show-table "(show-table (city-stats-by-country))")
 
 OK, so we are seeing aggregated City information by Country.
 Could we not also see aggregated City information by Organization?
@@ -393,10 +392,7 @@ Which makes it easy to implement the "by Country" and "by Organization" variants
 CODE
         )
 
-@(codex "(show-table (city-stats-by-country))")
-@(show-table "(city-stats-by-country)")
-
-@(codex "(show-table (city-stats-by-org))")
-@(show-table "(city-stats-by-org)")
+@(show-table "(show-table (city-stats-by-country))")
+@(show-table "(show-table (city-stats-by-org))")
 
 TODO guide what to read next.

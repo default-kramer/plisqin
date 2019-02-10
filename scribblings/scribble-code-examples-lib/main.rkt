@@ -75,7 +75,7 @@
 ;; ---------------------------------------------------------
 
 ;; evaluation-interaction :
-;;   [Pairof Stx [Maybe String]] Evaluator #:lang String #:context Stx
+;;   [Pairof Stx [Maybe String]] [Maybe Evaluator] #:lang String #:context Stx
 ;;   ->
 ;;   [Listof ScribbleStuff]
 (define (evaluation-interaction mapped-form evaluator
@@ -84,7 +84,9 @@
   (define form (car mapped-form))
   (define str (cdr mapped-form))
   (define results
-    (evaluation-results evaluator form))
+    (if evaluator
+        (evaluation-results evaluator form)
+        '()))
   (if (not str)
       '()
       (let ([code

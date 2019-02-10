@@ -14,3 +14,6 @@
 
 (require plisqin/private/dialect)
 (provide (all-from-out plisqin/private/dialect))
+
+(require plisqin/private/show-table)
+(provide (all-from-out plisqin/private/show-table))
