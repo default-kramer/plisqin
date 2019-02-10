@@ -26,3 +26,4 @@ Code is available @hyperlink["https://github.com/default-kramer/plisqin"]{on Git
 @(include-section "reference.scrbl")
 @(include-section "rental-doc.scrbl")
 @(include-section "for-developers.scrbl")
+@(include-section "intro-0.2.scrbl")

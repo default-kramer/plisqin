@@ -1,15 +1,105 @@
 #lang racket
-(require "core.rkt"
-         (for-syntax racket
-                     syntax/parse))
+(require (submod "model.rkt" all)
+         (only-in "core.rkt" get-src
+                  [source make-source])
+         (for-syntax racket syntax/parse))
 (module+ test
   (require rackunit)
   (require "api.rkt"))
 
-(provide table field-cases)
+(provide def/append! append!
+         def-table def-fields-of
+         ; legacy compatibility:
+         (rename-out [def/append! field-cases]
+                     [def-table table]))
 
-(define (is-table? src table-name)
-  (equal? (s:source-table src) table-name))
+(define empty-proc (λ(arglist) nothing))
+
+(define/contract (is-table? t x)
+  (-> (or/c table? string?) any/c any/c)
+  (if (table? t)
+      (is-table? (table-name t) x)
+      (cond [(or (query? x)
+                 (join? x)
+                 (binding? x))
+             (is-table? t (get-src x))]
+            [(table? x)
+             (is-table? t (table-name x))]
+            [(source? x)
+             (is-table? t (source-table x))]
+            [(string? x)
+             (equal? t x)]
+            [else #f])))
+
+; Replaces (syntax else) with (syntax #t)
+(define-syntax (de-else stx)
+  (syntax-case stx (else)
+    [(_ else) #'#t]
+    [(_ x) #'x]))
+
+; Appends more cond-like forms to the given appendable?
+(define-syntax (append! stx)
+  (syntax-parse stx
+    [(append! (APPENDABLE args:id ...)
+              [test-expr:expr then-body:expr]
+              ...)
+     #:declare APPENDABLE (expr/c #'appendable?)
+     (begin
+       (define arg-count (length (syntax->list #'(args ...))))
+       #`(let ([a APPENDABLE.c])
+           (define old-proc (appendable-proc a))
+           (define new-proc
+             (λ(arglist)
+               (let ([result
+                      (if (equal? (length arglist) #,arg-count)
+                          (apply (λ(args ...)
+                                   (cond
+                                     [(de-else test-expr) then-body]
+                                     ...
+                                     [#t nothing]))
+                                 arglist)
+                          nothing)])
+                 (if (nothing? result)
+                     (old-proc arglist)
+                     result))))
+           (set-appendable-proc! a new-proc)))]))
+
+; It would be better (I think) to use identifier-binding to know if something
+; is already defined. But, that breaks schema.scrbl. Why?
+(define-for-syntax fields-defined (make-hash))
+
+; Same as append! except that if the appendable does not yet exist, it gets defined.
+(define-syntax (def/append! stx)
+  (syntax-parse stx
+    [(def/append! (a args:id ...)
+       [test-expr:expr then-body:expr]
+       ...)
+     (define maybe-define-a
+       ;(if (not (identifier-binding #'a))
+       ;    #'(define a (proc empty-proc (~a 'a)))
+       ;    #'(void))
+       (let ([hashkey (syntax->datum #'a)])
+         (if (hash-has-key? fields-defined hashkey)
+             #'(void)
+             (begin
+               (hash-set! fields-defined hashkey #t)
+               #'(define a (proc empty-proc (~a 'a)))))))
+     #`(begin
+         #,maybe-define-a
+         (append! (a args ...)
+                  [test-expr then-body]
+                  ...))]))
+
+(define-syntax (def-fields-of stx)
+  (syntax-parse stx
+    [(_ TABLE fields:id ...)
+     #:declare TABLE (expr/c #'(or/c string? table?))
+     #`(begin
+         (define table TABLE.c)
+         (def/append! (fields x)
+           [(is-table? table x)
+            (scalar x (format ".~a" 'fields))])
+         ...)]))
 
 (define/contract (make-default-alias table-name)
   (-> string? string?)
@@ -27,110 +117,59 @@
      table-id
      (string->symbol (format "~a?" (syntax->datum table-id))))))
 
-(define-syntax (table stx)
+(define-syntax (def-table stx)
   (syntax-parse stx
     ; (table MyTable) -> (table MyTable #f)
-    [(table ctor:id)
-     #`(table ctor #f)]
+    [(def-table ctor:id)
+     #'(def-table ctor #f)]
     ; (table MyTable #f) -> (table MyTable #f #f)
-    [(table ctor:id table-name)
-     #'(table ctor table-name #f)]
+    [(def-table ctor:id table-name)
+     #'(def-table ctor table-name #f)]
     ; (table MyTable #f #f) -> (table MyTable #f #f MyTable?)
-    [(table ctor:id table-name default-alias)
+    [(def-table ctor:id table-name default-alias)
      (with-syntax ([tester? (make-tester #'ctor)])
-       #'(table ctor table-name default-alias tester?))]
-    [(table ctor:id TABLE-NAME DEFAULT-ALIAS tester?:id)
+       #'(def-table ctor table-name default-alias tester?))]
+    [(def-table ctor:id TABLE-NAME DEFAULT-ALIAS tester?:id)
      #:declare TABLE-NAME (expr/c #'(or/c #f string?))
      #:declare DEFAULT-ALIAS (expr/c #'(or/c #f string?))
+     (hash-set! fields-defined (syntax->datum #'ctor) #t)
      #'(begin
          (define table-name (or TABLE-NAME.c
                                 (format "~a" 'ctor)))
          (define default-alias (or DEFAULT-ALIAS.c
                                    (make-default-alias table-name)))
-         (define/contract (ctor [alias default-alias])
-           (->* () (string?) source?)
-           (source (or alias default-alias) table-name))
+         (define ctor
+           (table empty-proc table-name default-alias))
+         ; Append a rule that says (MyTable) returns a source
+         (append! (ctor)
+                  [#t (make-source default-alias table-name)])
+         ; Append a rule that says (MyTable "str") returns a source
+         (append! (ctor alias)
+                  [(string? alias)
+                   (make-source alias table-name)])
          (define (tester? x)
-           (cond [(query? x) (tester? (s:query-source x))]
-                 [(join? x) (tester? (s:join-query x))]
-                 [(binding? x) (tester? (s:binding-join x))]
-                 [(source? x) (is-table? x table-name)]
-                 [else #f])))]))
+           (is-table? table-name x)))]))
 
-; A field is just a symbol, like 'LOCATION_CODE
-(define field? symbol?)
+(module+ test
+  (def-table Foo)
 
-; something that can own a field
-(define (owner? x) (or (query? x) (source? x) (join? x)))
+  (define src (Foo))
+  (check-true (source? src))
+  (check-equal? (source-table src) "Foo")
+  (check-equal? (source-alias src) "_foo")
 
-; the result of a field lookup
-;(define-type Resolution SqlToken)
+  (set! src (Foo "asdf"))
+  (check-true (source? src))
+  (check-equal? (source-table src) "Foo")
+  (check-equal? (source-alias src) "asdf")
 
-; Assuming that we already know which field we are talking about, the resolver
-; is a function from source to SqlToken (because the same field might be spelled
-; differently based on which source we are referencing).
-;(define-type FieldResolver (-> Owner (U Resolution #f)))
+  (check-true (and (Foo? (Foo))
+                   (Foo? (Foo "f"))
+                   (Foo? (from f Foo))
+                   (Foo? (join f Foo))
+                   (Foo? (join f "Foo"))))
 
-; Mapping of field to resolver.
-; (: dispatch-table (Mutable-HashTable Field FieldResolver))
-(define dispatch-table (make-hash))
-
-;(: field-error (-> Field Owner Resolution))
-(define (field-error fieldname owner)
-  ;(error "Bad field lookup:" fieldname 'given (get-src owner))
-  (println (format "WARNING! Bad field lookup: ~a.~a" (s:source-table (get-src owner)) fieldname))
-  (sql (format "~a" fieldname)))
-
-;(: make-default-resolver (-> Field FieldResolver))
-(define (make-default-resolver field)
-  (lambda (src) #f))
-
-;(: get-resolver (-> Field FieldResolver))
-(define (get-resolver field)
-  (hash-ref dispatch-table field (lambda() (make-default-resolver field))))
-
-;(: dispatch (-> Field Owner Resolution))
-(define (dispatch field owner)
-  (let* ([resolver (get-resolver field)])
-    (or (resolver owner) (field-error field owner))))
-
-; This updates the resolver for the given field to be
-;   (λ(src) (or (new-resolver src) (existing-resolver src)))
-; Meaning that if the new resolver returns non-false, it overrides the existing resolver.
-; Otherwise it falls through. It kind of behaves like cond, but read bottom-to-top instead.
-; I think this is what we want... you could have your schema as-is in one module, then override
-; any definitions after you require it.
-;(: add-resolver (-> Field FieldResolver Void))
-(define (add-resolver field func)
-  (let* ([existing (get-resolver field)]
-         [new (λ(owner) (or (func owner) (existing owner)))])
-    (hash-set! dispatch-table field new)))
-
-; This keeps track (during macro expansion) of what fields we have already defined.
-; This allows field-case to specify multiple conditions for the same field, but only
-; the first occurrence will generate a (define ...) thus avoiding duplicates.
-(define-for-syntax fields-defined (make-hash))
-
-(define-syntax (field-case stx)
-  (syntax-case stx ()
-    [(field-case (field src) predicate result)
-     (let ([hashkey (syntax->datum #'field)])
-       (if (hash-has-key? fields-defined hashkey)
-           #'(add-field-case (field src) predicate result)
-           (begin
-             (hash-set! fields-defined hashkey #t)
-             #'(define-field-case (field src) predicate result))))]))
-
-(define-syntax-rule (define-field-case (field src) predicate result)
-  (begin
-    ; The definition of (FieldName x) is always (dispatch 'FieldName x)
-    (define (field src) (dispatch 'field src))
-    (add-field-case (field src) predicate result)))
-
-(define-syntax-rule (add-field-case (field src) predicate result)
-  (add-resolver 'field (λ(src) (if predicate result #f))))
-
-(define-syntax-rule (field-cases (field src) (predicate result) ...)
-  (begin
-    (field-case (field src) predicate result)
-    ...))
+  ; regression: def/append! can follow def-table
+  (def-table table92)
+  (def/append! (table92 a b c)
+    [#t (list a b c)]))

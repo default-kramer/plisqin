@@ -24,12 +24,12 @@
 ;; See the current version of the racket style guide here:
 ;; http://docs.racket-lang.org/style/index.html
 
-(require "private/api.rkt")
-(provide (all-from-out "private/api.rkt"))
-(require "private/schema.rkt")
-(provide (all-from-out "private/schema.rkt"))
-(require "private/aggregates.rkt")
-(provide (all-from-out "private/aggregates.rkt"))
+(require plisqin/private/api)
+(provide (all-from-out plisqin/private/api))
+(require plisqin/private/schema)
+(provide (all-from-out plisqin/private/schema))
+(require plisqin/private/aggregates)
+(provide (all-from-out plisqin/private/aggregates))
 
 (module+ test
   ;; Tests to be run with raco test
@@ -38,3 +38,7 @@
 (module+ main
   ;; Main entry point, executed when run with the `racket` executable or DrRacket.
   )
+
+(module reader racket
+  (require "private/lang/reader.rkt")
+  (provide read-syntax))

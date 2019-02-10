@@ -6,7 +6,7 @@
           plisqin
           scribble/eval
           "racket.rkt"
-          (prefix-in doc: (submod "../private/contracts.rkt" docs))
+          (prefix-in doc: (submod "../private/model.rkt" all docs))
           (prefix-in doc: (submod "../private/core.rkt" docs)))
 @(module label-help racket
    (require scribble/manual/lang (for-label racket))
@@ -78,7 +78,7 @@
                             (select foo".Bar")))))
 }
 
-@defform[(table constructor [table-name] [default-alias] [tester?])
+@defform[(def-table constructor [table-name] [default-alias] [tester?])
          #:grammar ([constructor id]
                     [tester? id])
          #:contracts ([table-name (or/c #f string?)]
@@ -87,7 +87,7 @@
  The @(racket constructor) takes an optional alias argument and constructs a @(racket source?):
  @(interaction
    #:eval my-eval
-   (table Foo)
+   (def-table Foo)
    (Foo)
    (Foo "custom-alias"))
 
@@ -95,7 +95,7 @@
  @(racket join?) or @(racket source?) with the correct table name:
  @(interaction
    #:eval my-eval
-   (table Foo)
+   (def-table Foo)
    (and (Foo? (Foo))
         (Foo? (Foo "f"))
         (Foo? (from f Foo))
@@ -108,15 +108,21 @@
  If @(racket default-alias) is @(racket #f), it will prepend an underscore to the table name, and
  maybe lowercase the first character. These declarations are all equivalent:
  @(racketblock
-   (table MyTable)
-   (table MyTable #f)
-   (table MyTable #f #f)
-   (table MyTable #f #f MyTable?)
-   (table MyTable "MyTable" "_myTable" MyTable?))
+   (def-table MyTable)
+   (def-table MyTable #f)
+   (def-table MyTable #f #f)
+   (def-table MyTable #f #f MyTable?)
+   (def-table MyTable "MyTable" "_myTable" MyTable?))
+}
+
+@defform[(table constructor [table-name] [default-alias] [tester?])]{
+ Depreacted. Alias of @(racket def-table).
 }
 
 @defform[(field-cases (id arg)
                       [test-expr then-body] ...)]{
+ TODO - deprecate and redocument as def/append!.
+
  This is kind of like @(racket cond) but with some important differences.
  It can only be used to define a 1-argument procedure.
  The @(racket test-expr)s are evaluated in reverse order and as soon as one returns
@@ -187,7 +193,6 @@ The fragment kind tells Plisqin what part of an SQL query it is.
    [where where?]
    [join-on join-on?]
    [group-by group-by?]
-   [order-by order-by?]
    [having having?]
    [scalar scalar?]
    [aggregate aggregate?]
@@ -195,6 +200,16 @@ The fragment kind tells Plisqin what part of an SQL query it is.
    [subquery subquery?]
    [sql sql?])
 Constructs an SQL fragment.
+
+@defproc[(order-by [maybe-dir (or/c 'asc 'desc sql-token? (listof sql-token?))]
+                   [tokens token-list?]
+                   ...)
+         order-by?]{
+ A clause that controls how rows are sorted in the result set.
+ The first argument is allowed to be @(racket 'asc) or @(racket 'desc)
+ meaning "ascending" or "descending" respectively.
+ If the sort direction is not specified, is defaults to ascending.
+}
 
 @(define-syntax-rule (define-frag-testers tester ...)
    (deftogether [

@@ -7,6 +7,7 @@
          group-by group-by?
          order-by order-by?
          having having?
+         limit offset distinct
          scalar scalar?
          bool bool?
          subquery subquery?
@@ -14,7 +15,8 @@
          fragment? exists reset-uid-for-testing!
          fragment-kind? join-type? sql-token? token-list?
          queryable? statement? statement-expr?
-         binding? join? source? query? injection?)
+         binding? join? source? query? injection?
+         db-now)
 
 (require "aggregate.rkt")
 (provide aggregate? aggregate)

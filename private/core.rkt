@@ -1,7 +1,7 @@
 #lang racket
 (module+ test
   (require rackunit))
-(require (submod "model.rkt" all) "contracts.rkt" "util.rkt")
+(require (submod "model.rkt" all) "util.rkt")
 
 ; Provide all struct stuff with a prefix.
 ; Also, provide all struct members (but not the constructor) without a prefix.
@@ -9,11 +9,16 @@
   (begin
     (provide (prefix-out s: (struct-out struct-id)))
     ...))
-(provide-struct source fragment query join binding injection)
-(provide source? fragment? query? join? binding? injection?)
+(provide-struct source fragment query join binding injection interval time-unit dateadd)
+(provide source? fragment? query? join? binding? injection? interval? time-unit? dateadd?)
 (provide (rename-out [make-source source]
                      [make-binding binding]
-                     [make-injection injection]))
+                     [make-injection injection]
+                     [make-dateadd dateadd]
+                     [make-interval interval]
+                     [make-limit limit]
+                     [make-offset offset]
+                     [make-distinct distinct]))
 
 (provide add-statement add-join join? is-simple-join? grouped-join? query-fragments
          make-query make-join join-type? sql-token? change-kind
@@ -23,46 +28,63 @@
          statement? statement-expr? queryable?
          token? metadata-get metadata-set fragment-contract
          (struct-out exn:fail:plisqin)
-         (struct-out exn:fail:plisqin:invalid-aggregate))
-
-(define/contract (token-flatten x)
-  (-> token-list? (listof sql-token?))
-  ; the contract does the conversion for us
-  x)
-
-; Contract for a fragment constructor
-(define (fragment-contract return-contract)
-  (->* () () #:rest token-list? return-contract))
-
-(define-syntax-rule (define-frag SYMBOL CTOR TESTER)
-  (begin
-    (define (TESTER x)
-      (and (fragment? x)
-           (equal? SYMBOL (fragment-kind x))))
-    
-    (define/contract (CTOR . tokens)
-      (fragment-contract TESTER)
-      (fragment (empty-metadata) SYMBOL (token-flatten tokens)))
-
-    (provide CTOR TESTER)))
-
-(define-frag 'Select select select?)
-(define-frag 'Where where where?)
-(define-frag 'JoinOn join-on join-on?)
-(define-frag 'GroupBy group-by group-by?)
-(define-frag 'OrderBy order-by order-by?)
-(define-frag 'Having having having?)
-(define-frag 'Scalar scalar scalar?)
-(define-frag 'Aggregate make-aggregate aggregate?)
-(define-frag 'Bool bool bool?)
-(define-frag 'Subquery subquery subquery?)
-(define-frag 'Sql sql sql?)
-; Silence allows you to put a token into an expression but not render it to SQL.
-; Designed to solve (count x) evaluating to (sql "count(*)" (silence x)).
-(define-frag 'Silence silence silence?)
+         (struct-out exn:fail:plisqin:invalid-aggregate)
+         interval-plus interval-minus interval-negate
+         db-now
+         query-limit query-offset query-distinct?
+         ; fragments
+         select select?
+         where where?
+         join-on join-on?
+         group-by group-by?
+         order-by order-by?
+         having having?
+         scalar scalar?
+         make-aggregate aggregate?
+         bool bool?
+         subquery subquery?
+         sql sql?
+         silence silence?)
 
 (module+ test
   (check-true (fragment? (where (make-source "x" "X")".FIELD > 100"))))
+
+(define limit-val? (or/c #f (and/c integer? positive?)))
+(define offset-val? limit-val?)
+
+(define/contract (make-limit x)
+  (-> limit-val? limit?)
+  (limit x))
+(define/contract (make-offset x)
+  (-> offset-val? offset?)
+  (offset x))
+(define/contract (make-distinct x)
+  (-> any/c distinct?)
+  (distinct (and x #t)))
+
+(define/contract (order-by a . tokens)
+  (->* [(or/c 'asc 'desc sql-token? (listof sql-token?))]
+       []
+       #:rest token-list?
+       order-by?)
+  (match a
+    ['asc (order-by-raw tokens" asc")]
+    ['desc (order-by-raw tokens" desc")]
+    [else (order-by-raw a tokens)]))
+
+(module+ test
+  (check-equal? (order-by "foo")
+                (order-by-raw "foo"))
+  (check-equal? (order-by 'desc "foo")
+                (order-by-raw "foo"" desc"))
+  (check-equal? (order-by 'asc "foo" ".bar")
+                (order-by-raw "foo"".bar"" asc"))
+  (check-equal? (order-by (list "a") (list "b" "c"))
+                (order-by-raw "a""b""c"))
+  (check-equal? (order-by (list "a" "b") (list "c" "d"))
+                (order-by-raw "a""b""c""d"))
+  (check-equal? (order-by (list) 1 2 3)
+                (order-by-raw 1 2 3)))
 
 ; What can be used to start a query
 (def-contract queryable?
@@ -111,7 +133,40 @@
 (define (reset-uid-for-testing!)
   (void))
 
-(define (empty-metadata) '())
+(define/contract (interval-negate iv)
+  (-> interval? interval?)
+  (define child-iv (interval-added-to iv))
+  (struct-copy interval iv
+               [qty (- (interval-qty iv))]
+               [added-to (if child-iv
+                             (interval-negate child-iv)
+                             #f)]))
+
+(define/contract (interval-plus iv1 iv2)
+  (-> interval? interval? interval?)
+  (if (not (interval-added-to iv1))
+      (struct-copy interval iv1
+                   [added-to iv2])
+      (struct-copy interval iv1
+                   [added-to (interval-plus
+                              (interval-added-to iv1)
+                              iv2)])))
+
+(define/contract (interval-minus iv1 iv2)
+  (-> interval? interval? interval?)
+  (interval-plus iv1 (interval-negate iv2)))
+
+(define/contract (make-dateadd date-token interval)
+  (-> token? interval? dateadd?)
+  (if (dateadd? date-token)
+      (struct-copy dateadd date-token
+                   [interval (interval-plus (dateadd-interval date-token)
+                                            interval)])
+      (dateadd (empty-metadata) date-token interval)))
+
+(define/contract (make-interval qty unit [added-to #f])
+  (->* [number? time-unit?] [(or/c interval? #f)] interval?)
+  (interval added-to qty unit))
 
 (define/contract (make-source alias table #:uid [uid #f])
   (->* (string? (or/c string? subquery?))
@@ -140,10 +195,49 @@
                                    [clauses (append (join-clauses x) (list frag))])]
            [else (error "TODO got join-on in query")])]
     [else
-     (cond [(query? x) (struct-copy query x
-                                    [clauses (append (query-clauses x) (list frag))])]
-           [(join? x) (struct-copy join x
-                                   [query (add-single-statement (join-query x) frag)])])]))
+     (cond
+       [(join? x) (struct-copy join x
+                               [query (add-single-statement (join-query x) frag)])]
+       ; else x must be a query
+       [(fragment? frag)
+        (struct-copy query x
+                     [clauses (append (query-clauses x) (list frag))])]
+       [(limit? frag)
+        (set-option x 'limit (limit-num frag))]
+       [(offset? frag)
+        (set-option x 'offset (offset-num frag))]
+       [(distinct? frag)
+        (set-option x 'distinct (distinct-flag frag))]
+       )]))
+
+;; set-option
+;; If val is #f the hash entry will be cleared.
+;; This matters for equality, for example
+#; (from x "X")
+;; should be equal to
+#; (from x "X"
+         (distinct #t)
+         (distinct #f))
+(define/contract (set-option q key val)
+  (-> query? any/c any/c query?)
+  (struct-copy query q
+               [options (if val
+                            (hash-set (query-options q) key val)
+                            (hash-remove (query-options q) key))]))
+
+(define/contract (get-option q key)
+  (-> query? any/c any/c)
+  (hash-ref (query-options q) key #f))
+
+(define/contract (query-limit q)
+  (-> query? limit-val?)
+  (get-option q 'limit))
+(define/contract (query-offset q)
+  (-> query? offset-val?)
+  (get-option q 'offset))
+(define/contract (query-distinct? q)
+  (-> query? any/c)
+  (get-option q 'distinct))
 
 (define/contract (add-statement q frag)
   (-> (or/c query? join?) statement-expr? (or/c query? join?))
@@ -154,7 +248,7 @@
 
 (define/contract (make-query src)
   (-> source? query?)
-  (query (empty-metadata) src '() '()))
+  (query (empty-metadata) src '() '() (make-immutable-hash)))
 
 (define/contract (make-join type x)
   (-> join-type? (or/c source? query? join?) join?)
@@ -344,3 +438,35 @@
 ; A target is a grouped-join into which the aggregate could be injected.
 (struct exn:fail:plisqin exn:fail () #:transparent)
 (struct exn:fail:plisqin:invalid-aggregate exn:fail:plisqin () #:transparent)
+
+(define db-now (scalar 'db-now))
+
+; Define the time units. Plural will be a synonym for singular.
+(module time-units racket
+  (require (submod "model.rkt" all))
+  (define-syntax-rule (def-time-units [singular plural] ...)
+    (begin
+      (provide singular ...)
+      (provide plural ...)
+      (define singular (time-unit 'singular))
+      ...
+      (define plural singular)
+      ...
+      (define time-unit-symbol?
+        (or/c 'singular ...))))
+
+  (def-time-units
+    [year years]
+    [month months]
+    [week weeks]
+    [day days]
+    [hour hours]
+    [minute minutes]
+    [second seconds]
+    [millisecond milliseconds]
+    [microsecond microseconds]))
+(require 'time-units)
+; TODO Warning! "second" conflicts with Racket's built-in "second".
+; Error is very surprising if you do (second list) and get a contract failure
+; from time-unit. What would be best here?
+(provide (prefix-out : (all-from-out 'time-units)))
