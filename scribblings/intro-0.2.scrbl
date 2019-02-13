@@ -9,9 +9,9 @@
           (except-in db statement?))
 
 @(define (path-from-here str)
-   (format "~a/../~a"
-           (syntax-source #'here)
-           str))
+   (simplify-path (build-path (syntax-source #'here)
+                              ".."
+                              str)))
 @(define P-props
    (list (make-css-addition (path-from-here "PStyles.css"))
          (make-js-addition (path-from-here "PScripts.js"))))
