@@ -63,6 +63,10 @@
        [(mssql? dialect) "getdate()"]
        [(sqlite? dialect) "datetime('now')"]
        [else (error "cannot render db-now for dialect: " dialect)])]
+    [(equal? 'concat x)
+     (cond
+       [(mssql? dialect) " + "]
+       [else " || "])]
     [(number? x) (~a x)]
     [(string? x) x]
     [(silence? x) ""]

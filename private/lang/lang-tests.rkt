@@ -206,5 +206,15 @@
    {group-by "foo"}
    #:all "foo")
 
+  ; String concatenation
+  (check
+   {"a" || "b"}
+   #:ms "('a' + 'b')"
+   #:all "('a' || 'b')")
+  (check
+   {(scalar "a") || (scalar "b") || "c"}
+   #:ms "((a + b) + 'c')"
+   #:all "((a || b) || 'c')")
+
   ; End test submodule
   )

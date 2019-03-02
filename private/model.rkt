@@ -46,7 +46,8 @@
     (or/c token?
           string?
           number?
-          'db-now))
+          'db-now
+          'concat))
 
   ; It's convenient for the API to allow unflattened lists of tokens.
   ; This contract will accept an unflattened list of tokens and automatically flatten it.
