@@ -21,6 +21,9 @@
 (require "aggregate.rkt")
 (provide aggregate? aggregate)
 
+(require "case-when.rkt")
+(provide case-when)
+
 (require "macros.rkt")
 (provide from join)
 

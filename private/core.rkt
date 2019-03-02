@@ -9,8 +9,8 @@
   (begin
     (provide (prefix-out s: (struct-out struct-id)))
     ...))
-(provide-struct source fragment query join binding injection interval time-unit dateadd)
-(provide source? fragment? query? join? binding? injection? interval? time-unit? dateadd?)
+(provide-struct source fragment query join binding injection interval time-unit dateadd cases)
+(provide source? fragment? query? join? binding? injection? interval? time-unit? dateadd? cases?)
 (provide (rename-out [make-source source]
                      [make-binding binding]
                      [make-injection injection]
@@ -22,6 +22,7 @@
 
 (provide add-statement add-join join? is-simple-join? grouped-join? query-fragments
          make-query make-join join-type? sql-token? change-kind
+         make-cases
          token-list? fragment-kind? convert-to-subquery
          get-src get-alias reset-uid-for-testing! next-uid normalize
          exists query-scope replace make-injection-placeholder
@@ -470,3 +471,12 @@
 ; Error is very surprising if you do (second list) and get a contract failure
 ; from time-unit. What would be best here?
 (provide (prefix-out : (all-from-out 'time-units)))
+
+
+; Cases
+(define/contract (make-cases input else contents)
+  (-> (or/c #f sql-token?)
+      (or/c #f sql-token?)
+      (listof (cons/c sql-token? sql-token?))
+      cases?)
+  (cases (empty-metadata) input else contents))

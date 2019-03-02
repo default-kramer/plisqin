@@ -82,6 +82,17 @@
          (parameterize ([root-query? #f])
            (render-query (rewrite x)))
          (indent (string-append "\n" (render-query x))))]
+    [(cases? x)
+     (go "case" 'SP
+         (or (s:cases-of x) 'SP)
+         (map (λ(pair)
+                (go 'SP "when" 'SP (car pair)
+                    'SP "then" 'SP (cdr pair)))
+              (s:cases-contents x))
+         (if (s:cases-else x)
+             (go 'SP "else" 'SP (s:cases-else x))
+             'SP)
+         'SP "end")]
     ; dateadd, postgres
     [(and (dateadd? x)
           (postgres? dialect))
