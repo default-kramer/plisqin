@@ -127,6 +127,9 @@
                     plisqin/private/lang/default-require))
 (void select + syntax->datum)
 (current-connection 'cities-example)
+{if 41.add1 = 21 * 1.add1
+    "as it should"
+    "what is wrong?"}
 CODE
         )
 
@@ -406,3 +409,22 @@ CODE
 @(show-table "(show-table (city-stats-by-org))")
 
 TODO guide what to read next.
+
+@(codex #<<CODE
+(define (case-example)
+  {from co Country
+        {define (million x)
+          {x * 1000 * 1000}}
+        {define (Size co)
+          {case-when
+; TODO need string literal handling here
+            {when co.CountryPopulation > 100.million then "'huge'"}
+            {when co.CountryPopulation >  30.million then "'big'"}
+            {when co.CountryPopulation >   1.million then "'medium'"}
+            {else "'small'"}}}
+        {group-by co.Size}
+        {select co.Size" as Size"}
+        {select co.count" as Count"}})
+CODE
+        )
+@(show-table "(show-table (case-example))")

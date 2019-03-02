@@ -138,6 +138,7 @@
      (/pass valueless-dot
             dot-list
             dot-id)
+     (/pass (make-infix-rewriter '(||)))
      (/pass (make-infix-rewriter '(* /)))
      (/pass (make-infix-rewriter '(+ -)))
      (/pass (make-infix-rewriter '(= < > <= >= <> like not-like)))

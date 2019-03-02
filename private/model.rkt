@@ -27,6 +27,8 @@
          `(binding ,(to-list join))]
         [(injection _ target placeholder fragment)
          `(injection ,(to-list target) ,(to-list placeholder) ,(to-list fragment))]
+        [(cases _ of else contents)
+         `(cases ,(to-list of) ,(to-list else) ,contents)]
         [x #:when (list? x)
            (map to-list x)]
         [else x]))
@@ -46,7 +48,8 @@
     (or/c token?
           string?
           number?
-          'db-now))
+          'db-now
+          'concat))
 
   ; It's convenient for the API to allow unflattened lists of tokens.
   ; This contract will accept an unflattened list of tokens and automatically flatten it.
@@ -163,6 +166,16 @@
   (def-token injection injection? ([target (or/c join? binding? source?)]
                                    [placeholder source?]
                                    [fragment fragment?]))
+
+  ; The SQL case statement comes in two forms; this structure will model both.
+  ; 1) CASE input WHEN value THEN result [WHEN ...] [ELSE result] END
+  ; 2) CASE WHEN condition THEN result [WHEN ...] [ELSE result] END
+  ; The second form will use #f for the input.
+  ; Both forms allow #f to indicate the absence of "else".
+  (def-token cases cases? ([of (or/c #f sql-token?)]
+                           [else (or/c #f sql-token?)]
+                           ; the pair is (cons when-token then-token)
+                           [contents (listof (cons/c sql-token? sql-token?))]))
 
   (def-contract join-type?
     (or/c 'InnerJoin
