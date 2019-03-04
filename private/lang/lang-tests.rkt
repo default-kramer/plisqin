@@ -216,5 +216,44 @@
    #:ms "((a + b) + 'c')"
    #:all "((a || b) || 'c')")
 
+  ; Case expression
+  (check
+   {case-when {scalar "foo"}
+              {when 10 then 11}
+              {when 12 then 13}
+              {else 99}}
+   #:all "case foo when 10 then 11 when 12 then 13 else 99 end")
+  (check
+   {case-when {when {bool "a"} then 1}
+              {when {bool "b"} then 2}}
+   #:all "case when a then 1 when b then 2 end")
+  ; Repeat tests, but rely on {case args ...} -> {case-when args ...}
+  (check
+   {case {scalar "foo"}
+     {when 10 then 11}
+     {when 12 then 13}
+     {else 99}}
+   #:all "case foo when 10 then 11 when 12 then 13 else 99 end")
+  (check
+   {case {when {bool "a"} then 1}
+     {when {bool "b"} then 2}}
+   #:all "case when a then 1 when b then 2 end")
+  ; A more Racket-like syntax when not using braces:
+  (check
+   (case-when #:of (scalar "foo")
+              [10 11]
+              [12 13]
+              #:else 99)
+   #:all "case foo when 10 then 11 when 12 then 13 else 99 end")
+  (check
+   (case-when [(bool "a") 1]
+              [(bool "b") 2])
+   #:all "case when a then 1 when b then 2 end")
+  ; Racket's built-in case is still available
+  (check-equal? (case (+ 7 5)
+                  [(1 2 3) 'small]
+                  [(10 11 12) 'big])
+                'big)
+
   ; End test submodule
   )

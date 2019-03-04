@@ -315,6 +315,52 @@ If any of these returns true, then @(racket fragment?) will also return true.
                                                (join-on y".foo = "x".bar"))))))))
 }
 
+@defform[(case-when maybe-of terms ...+ maybe-else)
+         #:grammar [(maybe-of (code:line)
+                              (code:line #:of of-expr))
+                    (terms [when-expr then-expr])
+                    (maybe-else (code:line)
+                                (code:line #:else else-expr))]]{
+ @margin-note{
+  Warning! When invoked with curly braces like @(racket {case-when args ...}),
+  the grammar changes to that defined by @(racket case).
+  This is true even in #lang racket.
+ }
+
+ Corresponds to the SQL case expression.
+ If @(racket maybe-of) is specified, its value is compared to each @(racket when-expr)
+ and the the result is the @(racket then-expr) of the first match found.
+ If @(racket maybe-of) is omitted, each @(racket when-expr) should be a boolean
+ expression, and the result is the @(racket then-expr) of the first one that was true.
+
+ @(interaction
+   #:eval my-eval
+   (define simple-case
+     (case-when #:of (scalar "foo")
+                [10 100]
+                [20 200]))
+   (displayln (to-sql simple-case))
+   (define searched-case
+     (case-when
+      [(bool "x < y") -1]
+      [(bool "x > y") 1]
+      #:else 0))
+   (displayln (to-sql searched-case)))
+}
+
+@defform[#:literals (when then else)
+         (case maybe-of terms ...+ maybe-else)
+         #:grammar [(maybe-of (code:line)
+                              of-expr)
+                    (terms {when x then y})
+                    (maybe-else (code:line)
+                                {else else-expr})]]{
+ TODO explain this is only available to #lang plisqin.
+ It falls back to @(racket (racket:case)) if not used with braces.
+
+ TODO need to import stuff to show a #lang plisqin code example
+}
+
 @section[#:tag "ref-data-model"]{Data Model}
 
 @defthing[fragment-kind? contract?]
