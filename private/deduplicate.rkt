@@ -2,8 +2,6 @@
 (provide deduplicate)
 (require "core.rkt" "util.rkt")
 
-(define-syntax-rule (C x ...) (void))
-
 ; What should deduplicate do?
 ; In short, it should make things identical if they are "pretty much equal".
 ; So what does it mean...?
@@ -13,17 +11,17 @@
 ;
 ; When we see a join or injection, replace it with a "normal version"...
 ; ON EXIT right? So if we have this
-(C (define ex1
-     (from x "X"
-           (inject [i1 (join y1 "Y")] "count(*)")
-           (inject [i2 (join y2 "Y")] "count(*)"))))
+#;(define ex1
+    (from x "X"
+          (inject [i1 (join y1 "Y")] "count(*)")
+          (inject [i2 (join y2 "Y")] "count(*)")))
 ; We will see and normalize in this order:
-(C (join y1 "Y"))
-(C (inject [i1 (normalized (join y1 "Y"))] "count(*)"))
-(C (join y2 "Y"))
-(C (inject [i2 (normalized (join y2 "Y"))] "count(*)"))
+#;(join y1 "Y")
+#;(inject [i1 (normalized (join y1 "Y"))] "count(*)")
+#;(join y2 "Y")
+#;(inject [i2 (normalized (join y2 "Y"))] "count(*)")
 ; We should be able to eventually recognize that these are identical
-(C (inject [__I__ (join __Y__ "Y")] "count(*)"))
+#;(inject [__I__ (join __Y__ "Y")] "count(*)")
 
 (define/contract (scope-src x)
   (-> any/c (or/c source? #f))
@@ -132,18 +130,18 @@
 
 (test
  (define q
-   (from x "X"
-         (join y "Y")
-         (join a "A"
-               (join b "B"
-                     (join-on b".blah = "y".blah")))))
+   (RS from x "X"
+       (join y "Y")
+       (join a "A"
+             (join b "B"
+                   (join-on b".blah = "y".blah")))))
  (define r (build-resourcer q))
  (define expected
    (from x (NORM "X" 3)
          (join y (NORM "Y" 0))
          (join a (NORM "A" 2)
                (join b (NORM "B" 1)
-                     (join-on b".blah = "y".blah")))))
+                     (RS join-on b".blah = "y".blah")))))
  (check-equal?
   (apply-resourcer r q)
   expected))

@@ -141,10 +141,10 @@
  ; are the same thing. Therefore no changes to aliases are needed.
  (define q
    (deduplicate
-    (from a "A"
-          (join y "Y")
-          (select y".bound")
-          (select (join y "Y")".inline"))))
+    (RS from a "A"
+        (join y "Y")
+        (select y".bound")
+        (select (join y "Y")".inline"))))
  (check-equal?
   q
   (make-unique-aliases q)))

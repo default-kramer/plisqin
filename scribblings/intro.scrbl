@@ -36,13 +36,13 @@ by using these links when you are not sure what some code is doing.
 @subsubsub*section{@larger{The Video Rental Example Schema}}
 Here is a query in Plisqin:
 @(racketblock
-  (from r "Rental"
-        (where r".RentalId > 100")))
+  (RS from r "Rental"
+      (where r".RentalId > 100")))
 
 Here is an (almost) equivalent query:
 @(racketblock
-  (from r Rental
-        (where (RentalId r)" > 100")))
+  (RS from r Rental
+      (where (RentalId r)" > 100")))
 
 When you see upper-case identifiers such as @(racket Rental) and @(racket RentalId),
 they almost certainly refer to part of the @secref{Video_Rental_Example_Schema}.
@@ -56,9 +56,9 @@ Here @(racket new-releases-1) is defined as a procedure that creates and returns
 Then we render it to SQL:
 @(interact
   (define (new-releases-1)
-    (from i "Item"
-          (where i".ReleaseDate > '2018-01-01'")
-          (select i".ItemName")))
+    (RS from i "Item"
+        (where i".ReleaseDate > '2018-01-01'")
+        (select i".ItemName")))
   (display (to-sql (new-releases-1))))
 
 This query has 2 clauses: one @(racket where) clause and one @(racket select) clause.
@@ -66,10 +66,10 @@ It is easy to add more clauses to an existing query.
 Here, we create @(racket new-releases-2) which appends 3 more clauses to @(racket new-releases-1):
 @(interact
   (define (new-releases-2)
-    (from i (new-releases-1)
-          (select i".ReleaseDate")
-          (where i".ItemTypeId = 1")
-          (order-by i".ReleaseDate asc")))
+    (RS from i (new-releases-1)
+        (select i".ReleaseDate")
+        (where i".ItemTypeId = 1")
+        (order-by i".ReleaseDate asc")))
   (display (to-sql (new-releases-2))))
 
 This isn't very exciting alone, but combined with the rest of Plisqin and the full
@@ -82,9 +82,9 @@ I have defined this join in the @(racket Item-of) procedure:
 
 @(interact
   (define (recent-rentals)
-    (from rental "Rental"
-          (join item (Item-of rental))
-          (where item".ReleaseDate >= '2018-11-22'")))
+    (RS from rental "Rental"
+        (join item (Item-of rental))
+        (where item".ReleaseDate >= '2018-11-22'")))
   (display (to-sql (recent-rentals))))
 
 You can see in the generated SQL that I glossed over some details.
@@ -101,8 +101,8 @@ This has some powerful results.
 For starters, I could have defined the previous example like this instead:
 @(racketblock
   (define (recent-rentals)
-    (from rental "Rental"
-          (where (Item-of rental)".ReleaseDate >= '2018-11-22'"))))
+    (RS from rental "Rental"
+        (where (Item-of rental)".ReleaseDate >= '2018-11-22'"))))
 
 The join is "inline" in the @(racket where) clause.
 But we can do even better.
@@ -110,12 +110,12 @@ The following example also contains an inline join, can you guess where it is?
 
 @(interact
   (define (recent-rentals)
-    (from rental "Rental"
-          (where (ReleaseDate rental)" >= '2018-11-22'")))
+    (RS from rental "Rental"
+        (where (ReleaseDate rental)" >= '2018-11-22'")))
   (display (to-sql (recent-rentals))))
 
 The inline join comes from @(racket (ReleaseDate rental)), which returns
-@(racketblock (scalar (Item-of rental)".ReleaseDate"))
+@(racketblock (RS scalar (Item-of rental)".ReleaseDate"))
 
 Putting joins inside scalars can be very useful.
 It is nice to be able to say "the ReleaseDate of a Rental" without repeating the details
@@ -162,13 +162,13 @@ independently of the aggregate operations (part 3).
 Plisqin allows me to do this:
 @(interact
   (define (my-query)
-    (from cust Customer
-          (join rentals (grouped-Rentals-of cust))
-          (select cust".*")
-          (select (count rentals)
-                  " as TotalRentalCount")
-          (select (sum "case when "(ItemTypeId rentals)" = 1 then 1 else 0 end")
-                  " as MovieRentalCount")))
+    (RS from cust Customer
+        (join rentals (grouped-Rentals-of cust))
+        (select cust".*")
+        (select (count rentals)
+                " as TotalRentalCount")
+        (select (sum "case when "(ItemTypeId rentals)" = 1 then 1 else 0 end")
+                " as MovieRentalCount")))
   (display (to-sql (my-query))))
 @(check-sql
   my-eval (my-query)
@@ -207,26 +207,26 @@ In the following example two more aggregate expressions are added and new inject
 appear, while @(racket (grouped-Rentals-of cust)) does not change.
 @(interact
   (define (my-query)
-    (from cust Customer
-          (join rentals (grouped-Rentals-of cust))
-          (code:comment @#,elem{Local definitions can help readability:})
-          (define (is-movie rental)
-            (bool (ItemTypeId rental)" = 1"))
-          (define (is-recent rental)
-            (bool (CheckoutTime rental)" > '2018-01-01'"))
-          (define (count-when predicate)
-            (sum "case when "predicate" then 1 else 0 end"))
-          (select cust".*")
-          (select (count rentals)
-                  " as TotalRentalCount")
-          (select (count-when (is-movie rentals))
-                  " as MovieRentalCount")
-          (select (count-when (is-recent rentals))
-                  " as RecentRentalCount")
-          (select (count-when (bool (is-movie rentals)
-                                    " and "
-                                    (is-recent rentals)))
-                  " as RecentMovieRentalCount")))
+    (RS from cust Customer
+        (join rentals (grouped-Rentals-of cust))
+        (code:comment @#,elem{Local definitions can help readability:})
+        (define (is-movie rental)
+          (bool (ItemTypeId rental)" = 1"))
+        (define (is-recent rental)
+          (bool (CheckoutTime rental)" > '2018-01-01'"))
+        (define (count-when predicate)
+          (sum "case when "predicate" then 1 else 0 end"))
+        (select cust".*")
+        (select (count rentals)
+                " as TotalRentalCount")
+        (select (count-when (is-movie rentals))
+                " as MovieRentalCount")
+        (select (count-when (is-recent rentals))
+                " as RecentRentalCount")
+        (select (count-when (bool (is-movie rentals)
+                                  " and "
+                                  (is-recent rentals)))
+                " as RecentMovieRentalCount")))
   (display (to-sql (my-query))))
 
 @heading{Putting it All Together}
@@ -252,13 +252,13 @@ In Plisqin, we can handle all these variations with only one parameter.
 @(interaction
   #:eval my-eval
   (define (frequently-rented-items [rental-query Rental])
-    (from i Item
-          (join rentals rental-query
-                (group-by (ItemId rentals))
-                (join-on (ItemId rentals)" = "(ItemId i)))
-          (select i".*")
-          (select (count rentals)" as NumRentals")
-          (order-by (count rentals)" desc"))))
+    (RS from i Item
+        (join rentals rental-query
+              (group-by (ItemId rentals))
+              (join-on (ItemId rentals)" = "(ItemId i)))
+        (select i".*")
+        (select (count rentals)" as NumRentals")
+        (order-by (count rentals)" desc"))))
 
 The @(racket rental-query) parameter is optional, and it defaults to @(racket Rental)
 which will just create a new, unfiltered query of the Rental table. But since queries
@@ -269,17 +269,17 @@ First, let's do the "Frequently rented at certain stores" variation:
 @(interaction
   #:eval my-eval
   (define (at-certain-stores)
-    (from r Rental
-          (where (StoreId r)" in (42, 43, 44)")))
+    (RS from r Rental
+        (where (StoreId r)" in (42, 43, 44)")))
   (display (to-sql (frequently-rented-items (at-certain-stores)))))
 
 Next, frequently rented in a certain month:
 @(interaction
   #:eval my-eval
   (define (this-month)
-    (from r Rental
-          (where (CheckoutTime r)" >= '2018-11-01'")
-          (where (CheckoutTime r)" < '2018-12-01'")))
+    (RS from r Rental
+        (where (CheckoutTime r)" >= '2018-11-01'")
+        (where (CheckoutTime r)" < '2018-12-01'")))
   (display (to-sql (frequently-rented-items (this-month)))))
 
 OK, we see where this is headed. Let's just combine them all and declare victory:
@@ -288,17 +288,17 @@ OK, we see where this is headed. Let's just combine them all and declare victory
   #:eval my-eval
   (define (combined-query)
     (frequently-rented-items
-     (from r Rental
-           (code:comment "at certain stores:")
-           (where (StoreId r)" in (42, 43, 44)")
-           (code:comment "in a certain month:")
-           (where (CheckoutTime r)" >= '2018-11-01'")
-           (where (CheckoutTime r)" < '2018-12-01'")
-           (code:comment "having an 'Action' genre:")
-           (join g (Genres-of r)
-                 (join-on g".GenreName = 'Action'"))
-           (code:comment "by customers over a certain age:")
-           (where (CustomerBirthDate r)" < '1988-11-01'"))))
+     (RS from r Rental
+         (code:comment "at certain stores:")
+         (where (StoreId r)" in (42, 43, 44)")
+         (code:comment "in a certain month:")
+         (where (CheckoutTime r)" >= '2018-11-01'")
+         (where (CheckoutTime r)" < '2018-12-01'")
+         (code:comment "having an 'Action' genre:")
+         (join g (Genres-of r)
+               (join-on g".GenreName = 'Action'"))
+         (code:comment "by customers over a certain age:")
+         (where (CustomerBirthDate r)" < '1988-11-01'"))))
   (display (to-sql (combined-query))))
 
 This concludes the sales pitch.

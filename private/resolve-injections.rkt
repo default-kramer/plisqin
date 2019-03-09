@@ -61,7 +61,7 @@
   ; If inj was found we will do this
   (define (replace-and-recurse)
     (define colname (get-colname j))
-    (define the-scalar (scalar (get-src j) (format ".~a" colname)))
+    (define the-scalar (scalar (get-src j) (raw-sql "."colname)))
     (set! j (add-select-clause j inj colname))
     (set! j (replace j inj the-scalar))
     (resolve-local-injections j))
@@ -94,7 +94,7 @@
     (set! target (replace target ORIG-join join))
     (set! inj (replace inj ORIG-join join))
     ; Replace injection with scalar in EVERYTHING
-    (define the-scalar (scalar target (format ".~a" select-as)))
+    (define the-scalar (scalar target (raw-sql "."select-as)))
     (set! q (replace q ORIG-inj the-scalar))
     (set! join (replace join ORIG-inj the-scalar))
     (set! q (replace q ORIG-join join))
@@ -104,21 +104,21 @@
 (test
  (define j
    (deduplicate
-    (join j "J"
-          (join-on (inject j j".foo")" = 1")
-          (join-on (inject j j".foo")" = 2")
-          (join-on (inject j j".bar")" = 3")
-          (join-on (inject j j".bar")" = 4"))))
+    (RS join j "J"
+        (join-on (inject j j".foo")" = 1")
+        (join-on (inject j j".foo")" = 2")
+        (join-on (inject j j".bar")" = 3")
+        (join-on (inject j j".bar")" = 4"))))
  (check-equal?
   (normalize (resolve-local-injections j))
   (normalize (deduplicate
-              (join j "J"
-                    (select (scalar j".foo")" as __INJECT1")
-                    (select (scalar j".bar")" as __INJECT2")
-                    (join-on (scalar j".__INJECT1")" = 1")
-                    (join-on (scalar j".__INJECT1")" = 2")
-                    (join-on (scalar j".__INJECT2")" = 3")
-                    (join-on (scalar j".__INJECT2")" = 4"))))))
+              (RS join j "J"
+                  (select (scalar j".foo")" as __INJECT1")
+                  (select (scalar j".bar")" as __INJECT2")
+                  (join-on (scalar j".__INJECT1")" = 1")
+                  (join-on (scalar j".__INJECT1")" = 2")
+                  (join-on (scalar j".__INJECT2")" = 3")
+                  (join-on (scalar j".__INJECT2")" = 4"))))))
 
 (define/contract (find-join inj ancestry)
   (-> injection? list? join?)
@@ -143,7 +143,7 @@
   (walk root #:on-enter visit #:accum #f #:return 'accum))
 
 (define/contract (add-select-clause j i select-as)
-  (-> join? injection? string? join?)
+  (-> join? injection? raw-sql? join?)
   ; Adds a select clause to the join for the given injection
   (define/contract (remove-placeholder)
     (-> fragment?)
@@ -156,35 +156,35 @@
          (return (get-src j))]
         [else (return node)]))
     (walk (s:injection-fragment i) #:on-enter visit))
-  (add-statement j (select (remove-placeholder) (format " as ~a" select-as))))
+  (add-statement j (select (remove-placeholder) (raw-sql" as "select-as))))
 
 (define/contract (get-colname j)
-  (-> join? string?)
+  (-> join? raw-sql?)
   ; Returns a column name like "__INJECT%" to be used for the injection.
   ; For example, if the join already has 2 select clauses, the column name will be "__INJECT3"
   (let* ([q (s:join-query j)]
          [num-selects (length (query-fragments q 'Select))])
-    (format "__INJECT~a" (add1 num-selects))))
+    (raw-sql (format "__INJECT~a" (add1 num-selects)))))
 
 (test
  (define q
    (deduplicate
-    (from x "X"
-          (join y "Y"
-                (group-by y".BLAH")
-                (join-on (inject y y".F1")))
-          (select (inject y "sum("y".Stuff)"))
-          (select (inject y "sum("y".Stuff)")))))
+    (RS from x "X"
+        (join y "Y"
+              (group-by y".BLAH")
+              (join-on (inject y y".F1")))
+        (select (inject y "sum("y".Stuff)"))
+        (select (inject y "sum("y".Stuff)")))))
  (define expected
    (deduplicate
-    (from x "X"
-          (join y "Y"
-                (group-by y".BLAH")
-                (join-on (scalar y".__INJECT1"))
-                (select (scalar y".F1")" as __INJECT1")
-                (select (scalar "sum("y".Stuff)")" as __INJECT2"))
-          (select (scalar y".__INJECT2"))
-          (select (scalar y".__INJECT2")))))
+    (RS from x "X"
+        (join y "Y"
+              (group-by y".BLAH")
+              (join-on (scalar y".__INJECT1"))
+              (select (scalar y".F1")" as __INJECT1")
+              (select (scalar "sum("y".Stuff)")" as __INJECT2"))
+        (select (scalar y".__INJECT2"))
+        (select (scalar y".__INJECT2")))))
  (check-equal?
   (normalize (resolve-injections q))
   (normalize expected)))
@@ -197,40 +197,40 @@
  (void '(sum (sum (Rentals-of/g (Checkouts-of/g employee)))))
 
  (define (Rentals-of/g checkout)
-   (join r "Rental"
-         (group-by r".CheckoutId")
-         (join-on r".CheckoutId = "checkout".CheckoutId")))
+   (RS join r "Rental"
+       (group-by r".CheckoutId")
+       (join-on r".CheckoutId = "checkout".CheckoutId")))
  (define (Checkouts-of/g employee)
-   (join c "Checkout"
-         (group-by c".EmployeeId")
-         (join-on c".EmployeeId = "employee".EmployeeId")))
+   (RS join c "Checkout"
+       (group-by c".EmployeeId")
+       (join-on c".EmployeeId = "employee".EmployeeId")))
  (define q
    (deduplicate
-    (from e "Employee"
-          (select (inject [c (Checkouts-of/g e)]
-                          "sum("
-                          (inject [r (Rentals-of/g c)]
-                                  "sum("
-                                  (scalar r".Cost")
-                                  ")")
-                          ")")
-                  " as TotalCost"))))
+    (RS from e "Employee"
+        (select (inject [c (Checkouts-of/g e)]
+                        "sum("
+                        (inject [r (Rentals-of/g c)]
+                                "sum("
+                                (scalar r".Cost")
+                                ")")
+                        ")")
+                " as TotalCost"))))
  (define expected
    (deduplicate
-    (from e "Employee"
-          (define (RENTALS c)
-            (join r (Rentals-of/g c)
-                  (select (scalar "sum("
-                                  (scalar r".Cost")
-                                  ")")
-                          " as __INJECT1")))
-          (define (CHECKOUTS e)
-            (join c (Checkouts-of/g e)
-                  (select (scalar "sum("
-                                  (scalar (RENTALS c)".__INJECT1")
-                                  ")")
-                          " as __INJECT1")))
-          (select (scalar (CHECKOUTS e)".__INJECT1")" as TotalCost"))))
+    (RS from e "Employee"
+        (define (RENTALS c)
+          (join r (Rentals-of/g c)
+                (select (scalar "sum("
+                                (scalar r".Cost")
+                                ")")
+                        " as __INJECT1")))
+        (define (CHECKOUTS e)
+          (join c (Checkouts-of/g e)
+                (select (scalar "sum("
+                                (scalar (RENTALS c)".__INJECT1")
+                                ")")
+                        " as __INJECT1")))
+        (select (scalar (CHECKOUTS e)".__INJECT1")" as TotalCost"))))
  (check-equal?
   (normalize (resolve-injections q))
   (normalize expected)))

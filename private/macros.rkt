@@ -10,6 +10,7 @@
   (cond
     [(source? x) x]
     [(string? x) (source alias x)]
+    [(raw-sql? x) (handle-from (raw-sql-content x) alias)]
     [(query? x) (s:query-source x)]
     [(join? x) (handle-from (s:join-query x) alias)]
     [(subquery? x) (source alias x)]
@@ -99,5 +100,5 @@
 (module+ test
   ; simple test of referential transparency
   (check-equal?
-   (from x "X" (join y "Y" (join-on y".YID = "x".YID")))
-   (from x "X" (join y "Y" (join-on y".YID = "x".YID")))))
+   (RS from x "X" (join y "Y" (join-on y".YID = "x".YID")))
+   (RS from x "X" (join y "Y" (join-on y".YID = "x".YID")))))

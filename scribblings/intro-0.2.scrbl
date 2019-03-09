@@ -270,7 +270,7 @@ And that should do it. Let's try it out:
 @(codex #<<CODE
 (define (big-cities-outside-china)
   {from city (big-cities-with-country)
-        {where city.CountryName not-like "%china"}})
+        {where city.CountryName not-like {val "%china"}}})
 CODE
         )
 @(show-table "(show-table (big-cities-outside-china))")
@@ -309,7 +309,7 @@ Let me just prove what I said about Belgium is true:
 @(codex #<<CODE
 (define (belgium-orgs)
   {from co Country
-        {where co.CountryName = "Belgium"}
+        {where co.CountryName = {val "Belgium"}}
         {select co.CountryName}
         {select co.Organizations.OrgShortName}})
 CODE
@@ -352,8 +352,8 @@ Notice that @(racket CitiesG) always occurs inside an aggregate:
 (define (city-stats-by-country)
   {from co Country
         {select co.CountryName}
-        {select {count co.CitiesG}" as CountCitiesG"}
-        {select {sum co.CitiesG.CityPopulation}" as SumCityPopulation"}
+        {RS select {count co.CitiesG}" as CountCitiesG"}
+        {RS select {sum co.CitiesG.CityPopulation}" as SumCityPopulation"}
         {order-by 'desc {count co.CitiesG}}
         {limit 10}})
 CODE
@@ -384,8 +384,8 @@ Let's remove that clause to make a reusable version:
 @(codex #<<CODE
 (define (city-stats X)
   {from x X
-        {select {count x.CitiesG}" as CountCitiesG"}
-        {select {sum x.CitiesG.CityPopulation}" as SumCityPopulation"}
+        {RS select {count x.CitiesG}" as CountCitiesG"}
+        {RS select {sum x.CitiesG.CityPopulation}" as SumCityPopulation"}
         {order-by 'desc {count x.CitiesG}}
         {limit 10}})
 CODE
@@ -412,7 +412,7 @@ TODO guide what to read next.
 
 @(codex #<<CODE
 (define (case-example)
-  {from co Country
+  {RS from co Country
         {define (million x)
           {x * 1000 * 1000}}
         {define (Size co)

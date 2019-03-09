@@ -29,6 +29,13 @@
          `(injection ,(to-list target) ,(to-list placeholder) ,(to-list fragment))]
         [(cases _ of else contents)
          `(cases ,(to-list of) ,(to-list else) ,contents)]
+        [(value _ content)
+         `(val ,content)]
+        [(raw-sql _ content)
+         ; TODO should give some indication that it is raw SQL, otherwise error messages look like
+         ; expected: string?
+         ; got: "some-raw-sql"
+         content]
         [x #:when (list? x)
            (map to-list x)]
         [else x]))
@@ -46,7 +53,6 @@
 
   (def-contract sql-token?
     (or/c token?
-          string?
           number?
           'db-now
           'concat))
@@ -79,6 +85,11 @@
       #:guard (build-guard-proc [base #f]
                                 [fields contract-exprs]
                                 ...)))
+
+  (def-token value value? ([content (or/c string? number?)]))
+  (def-token raw-sql raw-sql? ([content string?]))
+  (def-token param param? ([name string?]
+                           [value any/c]))
 
   (def-token fragment fragment? ([kind fragment-kind?]
                                  [tokens token-list?]))
@@ -237,4 +248,4 @@
   (begin
     (provide (except-out (struct-out struct-id) struct-id))
     ...))
-(provide-struct source fragment query join binding injection token)
+(provide-struct source fragment query join binding injection token value raw-sql param)

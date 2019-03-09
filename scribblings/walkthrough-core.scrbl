@@ -24,9 +24,9 @@ It consists of
 @section{Fragments}
 The smallest building blocks in Plisqin are fragments.
 @(racketblock
-  (from x "X"
-        (where (bool (scalar x".Bar")" = 3"))
-        (select (scalar x".Foo"))))
+  (RS from x "X"
+      (where (bool (scalar x".Bar")" = 3"))
+      (select (scalar x".Foo"))))
 
 The above example uses 4 different kinds of fragments:
 @(racket where), @(racket select), @(racket bool), and @(racket scalar).
@@ -39,14 +39,14 @@ are usually not written directly into a query like the above example.
 More typically, non-clause fragments are used as the return value of procedures:
 @(racketblock
   (define (Bar x)
-    (scalar x".Bar"))
+    (RS scalar x".Bar"))
   (define (Foo x)
-    (scalar x".Foo"))
+    (RS scalar x".Foo"))
   (define (my= a b)
-    (bool "("a" = "b")"))
-  (from x "X"
-        (where (my= (Bar x) 3))
-        (select (Foo x))))
+    (RS bool "("a" = "b")"))
+  (RS from x "X"
+      (where (my= (Bar x) 3))
+      (select (Foo x))))
 
 The reason for using non-clause fragments like @(racket scalar) won't
 become clear until later sections.
@@ -73,13 +73,13 @@ The value representing the table does not have to be a string like @(racket "Y")
 One of the most interesting things it can be is another query:
 @(interact
   (define (query-1)
-    (from x "X"
-          (select x".one")
-          (select x".two")))
+    (RS from x "X"
+        (select x".one")
+        (select x".two")))
   (define (query-2)
-    (from y (query-1)
-          (select y".three")
-          (select y".four")))
+    (RS from y (query-1)
+        (select y".three")
+        (select y".four")))
   (displayln (to-sql (query-2))))
 
 In the example above, @(racket query-2) appends to @(racket query-1).
@@ -89,11 +89,11 @@ You can also see that the original alias from @(racket query-1) (x) is used, but
 @subsection{Always Use the Alias!}
 In Plisqin, it is highly recommended to always use the alias instead of naked column names:
 @(racketblock
-  (from r "Rental"
-        (code:comment "bad:")
-        (select "CopyId")
-        (code:comment "better:")
-        (select r".CopyId")))
+  (RS from r "Rental"
+      (code:comment "bad:")
+      (select "CopyId")
+      (code:comment "better:")
+      (select r".CopyId")))
 
 This is because queries in Plisqin are highly composable, so even if a query is unambiguous locally,
 it might become ambiguous if another query appends to it.
@@ -105,15 +105,15 @@ We have already seen clauses, which are the most common contents of a query.
 But we can actually use any expression that evaluates to a clause, or a list of clauses:
 @(interact
   (define (my-query)
-    (from x "X"
-          (if #t
-              (select x".truth")
-              (error "true is false?!"))
-          (if #t
-              (list
-               (where "1=1")
-               (where "2=2"))
-              (error "true is false?!"))))
+    (RS from x "X"
+        (if #t
+            (select x".truth")
+            (error "true is false?!"))
+        (if #t
+            (list
+             (where "1=1")
+             (where "2=2"))
+            (error "true is false?!"))))
   (display (to-sql (my-query))))
 
 There are also some forms that get special handling.
@@ -121,18 +121,18 @@ One is used to create joins, which we will look at very soon.
 The other is define, which is a limited version of racket's built-in @(racket define).
 @(interact
   (define (my-query)
-    (from x "X"
-          (code:comment "define a value:")
-          (define rating
-            (scalar x".Rating"))
-          (code:comment "define a procedure:")
-          (define (count-when predicate)
-            (scalar "sum(case when "predicate" then 1 else 0 end)"))
-          (code:comment "the definitions are available until the (from ...) is closed")
-          (select (count-when (bool rating" >= 7"))
-                  " as NumGoodRatings")
-          (select (count-when (bool rating" >= 9"))
-                  " as NumGreatRatings")))
+    (RS from x "X"
+        (code:comment "define a value:")
+        (define rating
+          (scalar x".Rating"))
+        (code:comment "define a procedure:")
+        (define (count-when predicate)
+          (scalar "sum(case when "predicate" then 1 else 0 end)"))
+        (code:comment "the definitions are available until the (from ...) is closed")
+        (select (count-when (bool rating" >= 7"))
+                " as NumGoodRatings")
+        (select (count-when (bool rating" >= 9"))
+                " as NumGreatRatings")))
   (display (to-sql (my-query))))
 
 @section{Join}
@@ -143,27 +143,27 @@ what @(racket join) actually means, depending on its context.
 Here one way that joins can be used:
 @(racketblock
   (define (Foo-of x)
-    (join f "Foo"
-          (join-on f".FooId = "x".FooId")))
-  (from b "Bar"
-        (select (Foo-of b)".Baz")))
+    (RS join f "Foo"
+        (join-on f".FooId = "x".FooId")))
+  (RS from b "Bar"
+      (select (Foo-of b)".Baz")))
 
 Another way is this:
 @(racketblock
   (define (Foo-of x)
-    (join f "Foo"
-          (join-on f".FooId = "x".FooId")))
-  (from b "Bar"
-        (code:comment "The colon in b:foo means nothing. It could be any identifier.")
-        (join b:foo (Foo-of b))
-        (select b:foo".Baz")))
+    (RS join f "Foo"
+        (join-on f".FooId = "x".FooId")))
+  (RS from b "Bar"
+      (code:comment "The colon in b:foo means nothing. It could be any identifier.")
+      (join b:foo (Foo-of b))
+      (select b:foo".Baz")))
 
 Yet another way is this:
 @(racketblock
-  (from b "Bar"
-        (join f "Foo"
-              (join-on f".FooId = "x".FooId"))
-        (select f".Baz")))
+  (RS from b "Bar"
+      (join f "Foo"
+            (join-on f".FooId = "x".FooId"))
+      (select f".Baz")))
 
 These 3 variations will all generate the same SQL in this particular example,
 but there is a subtle difference that the next section will explain.
@@ -173,17 +173,17 @@ Look at these two variations.
 The only difference is that the first uses @(racket define) where the second uses @(racket join).
 @(interact
   (define (variation-one)
-    (from x "X"
-          (define y (join y "Y"
-                          (join-on y".YID = "x".YID")))
-          (where (exists (from z "Z"
-                               (where z".Foo = "y".Foo"))))))
-  (define (variation-two)
-    (from x "X"
-          (join y (join y "Y"
+    (RS from x "X"
+        (define y (join y "Y"
                         (join-on y".YID = "x".YID")))
-          (where (exists (from z "Z"
-                               (where z".Foo = "y".Foo")))))))
+        (where (exists (from z "Z"
+                             (where z".Foo = "y".Foo"))))))
+  (define (variation-two)
+    (RS from x "X"
+        (join y (join y "Y"
+                      (join-on y".YID = "x".YID")))
+        (where (exists (from z "Z"
+                             (where z".Foo = "y".Foo")))))))
 
 But the generated SQL will be different,
 specifically with regard to where the @(racket y) join gets rendered:
@@ -207,10 +207,10 @@ The pedagogical way to create an attached join is @(racket join-attach).
 Consider this example:
 @(racketblock
   (define (make-join a)
-    (join x "X"
-          (join-attach y "Y"
-                       (join-on y".XID = "x".XID"))
-          (join-on y".AID = "a".AID"))))
+    (RS join x "X"
+        (join-attach y "Y"
+                     (join-on y".XID = "x".XID"))
+        (join-on y".AID = "a".AID"))))
 
 I used @(racket join-attach) to make it more clear
 that it is a special form recognized by its enclosing join.
@@ -220,11 +220,11 @@ Don't let the syntax highlighting in the following example fool you; it is exact
 the same as the previous example:
 @(racketblock
   (define (make-join a)
-    (join x "X"
-          (code:comment "the first word following this comment means join-attach")
-          (join y "Y"
-                (join-on y".XID = "x".XID"))
-          (join-on y".AID = "a".AID"))))
+    (RS join x "X"
+        (code:comment "the first word following this comment means join-attach")
+        (join y "Y"
+              (join-on y".XID = "x".XID"))
+        (join-on y".AID = "a".AID"))))
 
 @subsection{Joined Subqueries}
 If all of a join's clauses are @(racket join-on) clauses, then I call it a "simple join".
@@ -233,24 +233,24 @@ But if a join contains any clauses other than @(racket join-on), the rules
 of SQL require that it gets rendered as a joined subquery:
 @(interact
   (define (Foo-of x)
-    (join f "Foo"
-          (select f".*")
-          (where "1=1")
-          (join-on f".FooId = "x".FooId")))
+    (RS join f "Foo"
+        (select f".*")
+        (where "1=1")
+        (join-on f".FooId = "x".FooId")))
   (define (my-query)
-    (from b "Bar"
-          (select b".*")
-          (select (Foo-of b)".blah")))
+    (RS from b "Bar"
+        (select b".*")
+        (select (Foo-of b)".blah")))
   (display (to-sql (my-query))))
 
 This highlights a scoping issue of non-simple joins.
 If you want your Racket code to match the generated SQL more closely,
 you could write the above example like this instead:
 @(racketblock
-  (join f (from f "Foo"
-                (select f".*")
-                (where "1=1"))
-        (join-on f".FooId = "x".FooId")))
+  (RS join f (from f "Foo"
+                   (select f".*")
+                   (where "1=1"))
+      (join-on f".FooId = "x".FooId")))
 
 This makes it more clear that the @(racket select) and @(racket where) clauses live
 inside the subquery, while the @(racket join-on) clause lives outside of it.
@@ -264,13 +264,13 @@ In practice, this means that the @(racket join-on) clauses are changed to @(rack
 This is most useful for subqueries:
 @(interact
   (define (Copies-for-Item i)
-    (join c "Copy"
-          (join-on c".ItemId = "i".ItemId")))
+    (RS join c "Copy"
+        (join-on c".ItemId = "i".ItemId")))
   (define (my-query)
-    (from i "Item"
-          (where (exists (from copy (Copies-for-Item i)
-                               (code:comment "append a clause just for fun:")
-                               (where "1=1"))))))
+    (RS from i "Item"
+        (where (exists (from copy (Copies-for-Item i)
+                             (code:comment "append a clause just for fun:")
+                             (where "1=1"))))))
   (display (to-sql (my-query))))
 @(check-sql
   my-eval (my-query)
@@ -295,9 +295,9 @@ For example, this procedure encodes the fact that every @(racket Copy)
 has a group of @(racket Rental)s:
 @(interact
   (define (Rentals-by-Copy copy)
-    (join r "Rental"
-          (group-by r".CopyId")
-          (join-on r".CopyId = "copy".CopyId"))))
+    (RS join r "Rental"
+        (group-by r".CopyId")
+        (join-on r".CopyId = "copy".CopyId"))))
 
 This seems reasonable, right?
 But this won't work when we render it to SQL:
@@ -312,11 +312,11 @@ it is not contained in either an aggregate function or the GROUP BY clause."
 One approach I could use is to manually manage which columns get @(racket select)ed:
 @(interact
   (define (Rentals-by-Copy copy)
-    (join r "Rental"
-          (group-by r".CopyId")
-          (code:comment "manually select the CopyId column here:")
-          (select r".CopyId")
-          (join-on r".CopyId = "copy".CopyId")))
+    (RS join r "Rental"
+        (group-by r".CopyId")
+        (code:comment "manually select the CopyId column here:")
+        (select r".CopyId")
+        (join-on r".CopyId = "copy".CopyId")))
   (display (to-sql (my-query))))
 
 Manually managing the select list is not ideal.
@@ -324,9 +324,9 @@ If I use a @(racket scalar) expression instead, Plisqin can automatically add it
 the select list inside the grouped join:
 @(interact
   (define (Rentals-by-Copy copy)
-    (join r "Rental"
-          (group-by (scalar r".CopyId"))
-          (join-on (scalar r".CopyId")" = "(scalar copy".CopyId"))))
+    (RS join r "Rental"
+        (group-by (scalar r".CopyId"))
+        (join-on (scalar r".CopyId")" = "(scalar copy".CopyId"))))
   (display (to-sql (my-query))))
 
 The above example demonstrates the first type of injection, called @bold{scalar injection}.
@@ -340,11 +340,11 @@ All of this isn't very useful, until we pair it with the other type of injection
 is @bold{aggregate injection}. Here is a quick example:
 @(interact
   (define (my-query)
-    (from c "Copy"
-          (join r (Rentals-by-Copy c))
-          (select (count r)" as NumRentals")
-          (select (avg r".PricePaid")" as AveragePricePaid")
-          (select c".*")))
+    (RS from c "Copy"
+        (join r (Rentals-by-Copy c))
+        (select (count r)" as NumRentals")
+        (select (avg r".PricePaid")" as AveragePricePaid")
+        (select c".*")))
   (display (to-sql (my-query))))
 @(check-sql
   my-eval (my-query)
@@ -385,17 +385,17 @@ The @bold{target} of an aggregate is the grouped join that it will be injected i
 An aggregate may not have multiple targets, but it may have none.
 For example, the following aggregate does not have a target so no injection occurs:
 @(interact
-  (display (to-sql (from x "X"
-                         (select (count x))))))
+  (display (to-sql (RS from x "X"
+                       (select (count x))))))
 
 The following aggregate has two potential targets, so an error is immediately
 reported and the aggregate is not constructed:
 @(interact
   (attach-callstacks)
   (define (make-grouped-join x)
-    (join gj "GJ"
-          (group-by (scalar gj".GroupKey"))
-          (join-on (scalar gj".GroupKey")" = "x)))
+    (RS join gj "GJ"
+        (group-by (scalar gj".GroupKey"))
+        (join-on (scalar gj".GroupKey")" = "x)))
   (aggregate
    (make-grouped-join 1)
    (make-grouped-join 2)))
@@ -407,10 +407,10 @@ So the rest of this section is only interested in aggregates that have 1 target.
 Finding an aggregate and its target is the key to understanding injections.
 @(interact
   (define (my-query)
-    (from x "X"
-          (join j (make-grouped-join (scalar x".Id")))
-          (select (avg j".foo")" as AverageFoo")
-          (select (max j".bar")" as MaxBar"))))
+    (RS from x "X"
+        (join j (make-grouped-join (scalar x".Id")))
+        (select (avg j".foo")" as AverageFoo")
+        (select (max j".bar")" as MaxBar"))))
 
 The above example has two aggregates.
 The target of both is @(racket j), the grouped join constructed by @(racket make-grouped-join).
@@ -471,9 +471,9 @@ To wrap things up, look at the SQL generated by both the nested and non-nested v
 First, the complicated nested variant:
 @(interact
   (define (my-query)
-    (from item Item
-          (select (sum (count (Rentals-of/g (Copies-of/g item))))
-                  " as NumRentals")))
+    (RS from item Item
+        (select (sum (count (Rentals-of/g (Copies-of/g item))))
+                " as NumRentals")))
   (display (to-sql (my-query))))
 @(check-sql
   my-eval (my-query)
@@ -501,9 +501,9 @@ HEREDOC
 And here is the SQL of the simpler non-nested variant:
 @(interact
   (define (my-query)
-    (from item Item
-          (select (count (Rentals-of/g item))
-                  " as NumRentals")))
+    (RS from item Item
+        (select (count (Rentals-of/g item))
+                " as NumRentals")))
   (display (to-sql (my-query))))
 @(check-sql
   my-eval (my-query)

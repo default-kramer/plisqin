@@ -8,7 +8,7 @@
           rackunit
           ; Use only-in to avoid accidentally using "my-eval" which contains
           ; the definitions that we are trying to re-implement:
-          (only-in "helpers.rkt" show-sql check-sql)
+          (only-in "helpers.rkt" show-sql check-sql check-sql2)
           "racket.rkt")
 
 @(define (scribble-path filename)
@@ -58,14 +58,14 @@ We've already seen two ways to deal with our DB schema.
 One is to use strings, like this:
 
 @(racketblock
-  (from r "Rental"
-        (where r".RentalId > 100")))
+  (RS from r "Rental"
+      (where r".RentalId > 100")))
 
 The other is to use procedures, like this:
 
 @(racketblock
-  (from r Rental
-        (where (RentalId r)" > 100")))
+  (RS from r Rental
+      (where (RentalId r)" > 100")))
 
 But we haven't really looked at how these procedures are defined.
 This section will walk you through how to recreate the definitions of the @secref{Video_Rental_Example_Schema}.
@@ -87,7 +87,7 @@ Whenever you see a code block formatted like the above, you should add that code
 This format, on the other hand, shows a REPL interaction:
 
 @(INTERACT
-  (to-sql (scalar "hello world")))
+  (to-sql (RS scalar "hello world")))
 
 You can try that code in your REPL and verify that the result matches this guide.
 If you get errors, revisit @(secref "environment-setup").
@@ -129,9 +129,9 @@ These table definitions can be used with @(racket from) and @(racket join) like 
 @(INTERACT
   (displayln
    (to-sql
-    (from r (Rental)
-          (join c (Copy)
-                (join-on c".CopyId = "r".RentalId"))))))
+    (RS from r (Rental)
+        (join c (Copy)
+              (join-on c".CopyId = "r".RentalId"))))))
 
 For every table procedure (like @(racket Rental)) there is also a tester procedure (like @(racket Rental?)).
 The tester procedure tests whether it single argument is a query or join of the given table:
@@ -142,28 +142,12 @@ The tester procedure tests whether it single argument is a query or join of the 
   (Rental? (Copy)))
 
 @section{Columns}
-To define the columns, we can use the @(racket field-cases) macro.
-For example, to define a column @(racket Bar) on table @(racket Foo) we would write
-
-@(racketblock
-  (field-cases (Bar x)
-               [(Foo? x) (scalar x".Bar")]))
-
-But this a little too verbose for column information that we can pull from the
-information schema. So let's define a helper macro called @(racket column):
-
-@(CODE
-  (define-syntax-rule (column table? column-name)
-    (field-cases (column-name x)
-                 [(table? x)
-                  (scalar x (format ".~a" 'column-name))])))
-
-Now we can define columns using @(racket (column Foo? Bar)).
-This makes it a lot easier to use the information schema again.
+To define the columns, we can use the @(racket def-fields-of) macro.
+And the information schema can help again.
 This query works for SQL Server:
 
 @(show-sql #<<HEREDOC
-select '(column '+TABLE_NAME+'? '+COLUMN_NAME+')'
+select '(def-fields-of '+TABLE_NAME+' '+COLUMN_NAME+')'
 from INFORMATION_SCHEMA.COLUMNS
 order by TABLE_NAME, COLUMN_NAME
 HEREDOC
@@ -172,43 +156,43 @@ HEREDOC
 And produces the following code:
 
 @(CODE
-  (column Account? AccountId)
-  (column Account? Address)
-  (column Account? PhoneNumber)
-  (column Checkout? CheckoutId)
-  (column Checkout? CheckoutTime)
-  (column Checkout? CustomerId)
-  (column Checkout? EmployeeId)
-  (column Checkout? StoreId)
-  (column Copy? Barcode)
-  (column Copy? CopyId)
-  (column Copy? ItemId)
-  (column Customer? AccountId)
-  (column Customer? CustomerBirthDate)
-  (column Customer? CustomerId)
-  (column Customer? CustomerName)
-  (column District? DistrictId)
-  (column District? DistrictName)
-  (column Employee? EmployeeId)
-  (column Employee? EmployeeName)
-  (column Employee? PrimaryStoreId)
-  (column Genre? GenreId)
-  (column Genre? GenreName)
-  (column Item? ItemId)
-  (column Item? ItemName)
-  (column Item? ItemTypeId)
-  (column Item? ReleaseDate)
-  (column ItemGenre? GenreId)
-  (column ItemGenre? ItemId)
-  (column ItemType? ItemTypeId)
-  (column ItemType? ItemTypeName)
-  (column Rental? CheckoutId)
-  (column Rental? CopyId)
-  (column Rental? PricePaid)
-  (column Rental? RentalId)
-  (column Store? Address)
-  (column Store? DistrictId)
-  (column Store? StoreId))
+  (def-fields-of Account AccountId)
+  (def-fields-of Account Address)
+  (def-fields-of Account PhoneNumber)
+  (def-fields-of Checkout CheckoutId)
+  (def-fields-of Checkout CheckoutTime)
+  (def-fields-of Checkout CustomerId)
+  (def-fields-of Checkout EmployeeId)
+  (def-fields-of Checkout StoreId)
+  (def-fields-of Copy Barcode)
+  (def-fields-of Copy CopyId)
+  (def-fields-of Copy ItemId)
+  (def-fields-of Customer AccountId)
+  (def-fields-of Customer CustomerBirthDate)
+  (def-fields-of Customer CustomerId)
+  (def-fields-of Customer CustomerName)
+  (def-fields-of District DistrictId)
+  (def-fields-of District DistrictName)
+  (def-fields-of Employee EmployeeId)
+  (def-fields-of Employee EmployeeName)
+  (def-fields-of Employee PrimaryStoreId)
+  (def-fields-of Genre GenreId)
+  (def-fields-of Genre GenreName)
+  (def-fields-of Item ItemId)
+  (def-fields-of Item ItemName)
+  (def-fields-of Item ItemTypeId)
+  (def-fields-of Item ReleaseDate)
+  (def-fields-of ItemGenre GenreId)
+  (def-fields-of ItemGenre ItemId)
+  (def-fields-of ItemType ItemTypeId)
+  (def-fields-of ItemType ItemTypeName)
+  (def-fields-of Rental CheckoutId)
+  (def-fields-of Rental CopyId)
+  (def-fields-of Rental PricePaid)
+  (def-fields-of Rental RentalId)
+  (def-fields-of Store Address)
+  (def-fields-of Store DistrictId)
+  (def-fields-of Store StoreId))
 
 @section{Joins}
 I classify joins into 3 different types.
@@ -238,8 +222,8 @@ most 1 Copy:
 @(CODE
   (field-cases (Copy-of/s x)
                [(Rental? x)
-                (join c (Copy)
-                      (join-on (CopyId c)" = "(CopyId x)))]
+                (RS join c (Copy)
+                    (join-on (CopyId c)" = "(CopyId x)))]
                [(Copy? x) x]))
 
 Using @(racket field-cases) is kind of like Racket's built-in @(racket cond), but one difference
@@ -253,8 +237,8 @@ To demonstrate, let's do one more singular join:
 @(CODE
   (field-cases (Item-of/s x)
                [(Copy? x)
-                (join i (Item)
-                      (join-on (ItemId i)" = "(ItemId x)))]
+                (RS join i (Item)
+                    (join-on (ItemId i)" = "(ItemId x)))]
                [(Rental? x)
                 (Item-of/s (Copy-of/s x))]
                [(Item? x) x]))
@@ -275,11 +259,11 @@ First we define @(racket ItemGenres-of/p)
 @(CODE
   (field-cases (ItemGenres-of/p x)
                [(Item? x)
-                (join ig (ItemGenre)
-                      (join-on (ItemId ig)" = "(ItemId x)))]
+                (RS join ig (ItemGenre)
+                    (join-on (ItemId ig)" = "(ItemId x)))]
                [(Genre? x)
-                (join ig (ItemGenre)
-                      (join-on (GenreId ig)" = "(GenreId x)))]
+                (RS join ig (ItemGenre)
+                    (join-on (GenreId ig)" = "(GenreId x)))]
                [(or (Copy? x)
                     (Rental? x))
                 (ItemGenres-of/p (Item-of/s x))]))
@@ -294,8 +278,8 @@ Genres for a given Item/Copy/Rental. We can define @(racket Genres-of/p) like th
 @(CODE
   (field-cases (Genres-of/p x)
                [(Item? x)
-                (join g (Genre)
-                      (join-on (GenreId g)" = "(GenreId (ItemGenres-of/p x))))]
+                (RS join g (Genre)
+                    (join-on (GenreId g)" = "(GenreId (ItemGenres-of/p x))))]
                [(or (Copy? x)
                     (Rental? x))
                 (Genres-of/p (Item-of/s x))]))
@@ -308,8 +292,8 @@ but we will need these definitions later.
 @(CODE
   (field-cases (Copies-of/p x)
                [(Item? x)
-                (join c (Copy)
-                      (join-on (ItemId c)" = "(ItemId x)))]))
+                (RS join c (Copy)
+                    (join-on (ItemId c)" = "(ItemId x)))]))
 
 @subsection{Grouped Join Examples}
 A grouped join is a join that contains a group-by clause.
@@ -319,14 +303,14 @@ join for any @(racket x) that has a group of @(racket Rental)s:
 @(CODE
   (field-cases (Rentals-of/g x)
                [(Copy? x)
-                (join r (Rental)
-                      (join-on (CopyId r)" = "(CopyId x))
-                      (group-by (CopyId r)))]
+                (RS join r (Rental)
+                    (join-on (CopyId r)" = "(CopyId x))
+                    (group-by (CopyId r)))]
                [(Item? x)
-                (join r (Rental)
-                      (join c (Copy-of/s r))
-                      (join-on (ItemId c)" = "(ItemId x))
-                      (group-by (ItemId c)))]))
+                (RS join r (Rental)
+                    (join c (Copy-of/s r))
+                    (join-on (ItemId c)" = "(ItemId x))
+                    (group-by (ItemId c)))]))
 
 Having just defined a polymorphic @(racket Rentals-of/g), let's take a quick detour
 to appreciate its power. The following @(racket rental-summary) defines a query
@@ -334,17 +318,17 @@ that can show you the most-rented @(racket Item)s or @(racket Copy)s.
 This is pretty much impossible in SQL:
 @(INTERACT
   (define (rental-summary item-or-copy)
-    (from x item-or-copy
-          (join r (Rentals-of/g x))
-          (select (count r)" as NumRentals")
-          (select x".*")
-          (order-by (count r)" desc")))
+    (RS from x item-or-copy
+        (join r (Rentals-of/g x))
+        (select (count r)" as NumRentals")
+        (select x".*")
+        (order-by (count r)" desc")))
   (define copy-sql (to-sql (rental-summary (Copy))))
   (define item-sql (to-sql (rental-summary (Item))))
   (displayln copy-sql)
   (displayln item-sql))
-@(check-sql
-  my-eval copy-sql
+@(check-sql2
+  (my-eval 'copy-sql)
   #<<HEREDOC
 select
   _rental.__INJECT2 as NumRentals
@@ -360,8 +344,8 @@ on _rental.__INJECT1 = _copy.CopyId
 order by _rental.__INJECT2 desc
 HEREDOC
   )
-@(check-sql
-  my-eval item-sql
+@(check-sql2
+  (my-eval 'item-sql)
   #<<HEREDOC
 select
   _rental.__INJECT2 as NumRentals
@@ -433,11 +417,11 @@ Now we can get the number of Rentals for a given Item or Copy.
 Let's test both @(racket NumRentals) and the extended definition of @(racket ItemName).
 
 @(INTERACT
-  (define (my-query)
-    (from c (Copy)
-          (select (NumRentals c))
-          (select (ItemName c))
-          (select c".*")))
+  (RS define (my-query)
+      (from c (Copy)
+            (select (NumRentals c))
+            (select (ItemName c))
+            (select c".*")))
   (displayln (to-sql (my-query))))
 
 It works as expected.

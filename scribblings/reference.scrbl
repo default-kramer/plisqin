@@ -74,8 +74,8 @@
  Renders the token to an SQL string.
  @(interaction
    #:eval my-eval
-   (displayln (to-sql (from foo "Foo"
-                            (select foo".Bar")))))
+   (displayln (to-sql (RS from foo "Foo"
+                          (select foo".Bar")))))
 }
 
 @defform[(def-table constructor [table-name] [default-alias] [tester?])
@@ -222,10 +222,9 @@ If any of these returns true, then @(racket fragment?) will also return true.
 
 @(interaction
   #:eval my-eval
-  (where? (where "1=1"))
-  (group-by? (where "1=1"))
-  (fragment? (where "1=1"))
-  (fragment? "1=1"))
+  (where? (RS where "1=1"))
+  (group-by? (RS where "1=1"))
+  (fragment? (RS where "1=1")))
 
 @section[#:tag "ref-sql"]{SQL Functions}
 
@@ -244,34 +243,34 @@ If any of these returns true, then @(racket fragment?) will also return true.
    #:eval my-eval
    (display
     (to-sql
-     (from c "information_schema.columns"
-           (select (sum c".ordinal_position")))))
+     (RS from c "information_schema.columns"
+         (select (sum c".ordinal_position")))))
    (display
     (to-sql
-     (from c "information_schema.columns"
-           (select (sum c".ordinal_position" #:distinct? #t))))))
+     (RS from c "information_schema.columns"
+         (select (sum c".ordinal_position" #:distinct? #t))))))
 
  When there is a grouped join involved, they can cause an automatic injection:
  @(interaction
    #:eval my-eval
    (define (columns-of/g t)
-     (join c "information_schema.columns"
-           (group-by (scalar c".table_name"))
-           (join-on (scalar c".table_name")
-                    " = "
-                    (scalar t".table_name"))))
+     (RS join c "information_schema.columns"
+         (group-by (scalar c".table_name"))
+         (join-on (scalar c".table_name")
+                  " = "
+                  (scalar t".table_name"))))
    (display
     (to-sql
-     (from t "information_schema.tables"
-           (join c (columns-of/g t))
-           (select (max c".ordinal_position"))
-           (select t".table_name"))))
+     (RS from t "information_schema.tables"
+         (join c (columns-of/g t))
+         (select (max c".ordinal_position"))
+         (select t".table_name"))))
    (display
     (to-sql
-     (from t "information_schema.tables"
-           (join c (columns-of/g t))
-           (select (max c".ordinal_position" #:distinct? #t))
-           (select t".table_name")))))
+     (RS from t "information_schema.tables"
+         (join c (columns-of/g t))
+         (select (max c".ordinal_position" #:distinct? #t))
+         (select t".table_name")))))
 
  The @(racket count) function gets some special treatment that the others don't.
  Specifically, @(racket count) is allowed to accept a single token that refers
@@ -295,8 +294,8 @@ If any of these returns true, then @(racket fragment?) will also return true.
  Represents the SQL "exists" function.
  @(interaction
    #:eval my-eval
-   (display (to-sql (from x "X"
-                          (where (exists "select 1 as ONE"))))))
+   (display (to-sql (RS from x "X"
+                        (where (exists "select 1 as ONE"))))))
 
  There is special handling for a single argument that is a query:
  @(interaction
@@ -310,9 +309,9 @@ If any of these returns true, then @(racket fragment?) will also return true.
  here is an example:
  @(interaction
    #:eval my-eval
-   (display (to-sql (from x "X"
-                          (where (exists (join y "Y"
-                                               (join-on y".foo = "x".bar"))))))))
+   (display (to-sql (RS from x "X"
+                        (where (exists (join y "Y"
+                                             (join-on y".foo = "x".bar"))))))))
 }
 
 @defform[(case-when maybe-of terms ...+ maybe-else)
@@ -336,14 +335,14 @@ If any of these returns true, then @(racket fragment?) will also return true.
  @(interaction
    #:eval my-eval
    (define simple-case
-     (case-when #:of (scalar "foo")
+     (case-when #:of (RS scalar "foo")
                 [10 100]
                 [20 200]))
    (displayln (to-sql simple-case))
    (define searched-case
      (case-when
-      [(bool "x < y") -1]
-      [(bool "x > y") 1]
+      [(RS bool "x < y") -1]
+      [(RS bool "x > y") 1]
       #:else 0))
    (displayln (to-sql searched-case)))
 }
@@ -387,13 +386,13 @@ This is most commonly used with rest arguments, like this:
     (->* () () #:rest token-list? (listof sql-token?))
     (code:comment "'tokens' has already been flattened by its contract here:")
     tokens)
-  (autoflatten "a" '(1 (2 3)) "z"))
+  (RS autoflatten "a" '(1 (2 3)) "z"))
 
 Basically any procedure that accepts a list of tokens works the same way:
 @(interaction
   #:eval my-eval
-  (where "a" '(1 (2 (3 4))) "z")
-  (order-by "a" '(7 8 (9)) "z"))
+  (RS where "a" '(1 (2 (3 4))) "z")
+  (RS order-by "a" '(7 8 (9)) "z"))
 
 @defthing[queryable? contract]
 This is a contract that defines how you are allowed to start a query or join.
@@ -425,22 +424,22 @@ So this example shows a query of "MyTable" with an alias of "jkl":
 When the value is a @(racket query?), the query or join appends to that value.
 Some examples:
 @(racketblock
-  (from a (from b "B"
-                (select "1 as ONE"))
-        (select "2 as TWO"))
+  (RS from a (from b "B"
+                   (select "1 as ONE"))
+      (select "2 as TWO"))
   (code:comment "is equivalent to:")
-  (from b "B"
-        (select "1 as ONE")
-        (select "2 as TWO")))
+  (RS from b "B"
+      (select "1 as ONE")
+      (select "2 as TWO")))
 And
 @(racketblock
-  (join a (from b "B"
-                (select "1 as ONE"))
-        (join-on "2=2"))
+  (RS join a (from b "B"
+                   (select "1 as ONE"))
+      (join-on "2=2"))
   (code:comment "is equivalent to:")
-  (join b "B"
-        (select "1 as ONE")
-        (join-on "2=2")))
+  (RS join b "B"
+      (select "1 as ONE")
+      (join-on "2=2")))
 
 When the value is a @(racket join?), it is a special appending scenario.
 A join appends to a join with no surprises.
@@ -448,21 +447,21 @@ But when a query appends to a join, it first converts the join to a query.
 You can read more about this at @seclink["join-query-conversion"]{Join-Query Conversion},
 but the main point is that @(racket join-on) clauses get converted to @(racket where) clauses:
 @(racketblock
-  (from a (join b "B"
-                (join-on "1=1"))
-        (select a".foo"))
+  (RS from a (join b "B"
+                   (join-on "1=1"))
+      (select a".foo"))
   (code:comment "is equivalent to:")
-  (from b "B"
-        (where "1=1")
-        (select b".foo")))
+  (RS from b "B"
+      (where "1=1")
+      (select b".foo")))
 
 Finally, if the value is a @(racket subquery?), it suppresses the appending behavior.
 Showing the SQL is the best way to explain this:
 @(interaction
   #:eval my-eval
   (define (my-sub)
-    (from x "X"
-          (select x".foo")))
+    (RS from x "X"
+        (select x".foo")))
   (code:comment "queries append by default:")
   (display (to-sql (from a (my-sub))))
   (code:comment "use a subquery to prevent appending:")
@@ -471,15 +470,15 @@ Showing the SQL is the best way to explain this:
 You can also use @(racket subquery) to make a "literal" subquery, which I sometimes use
 when I want a result set that has exactly one row:
 @(racketblock
-  (from one-row (subquery "select 1 as ONE_ROW")
-        (join a "A" 'LeftJoin
-              (join-on a".ID = 3"))
-        (join b "B" 'LeftJoin
-              (join-on b".ID = 9"))
-        (select (coalesce
-                 (scalar a".Name")
-                 (scalar b".Name")
-                 "neither A nor B was found"))))
+  (RS from one-row (subquery "select 1 as ONE_ROW")
+      (join a "A" 'LeftJoin
+            (join-on a".ID = 3"))
+      (join b "B" 'LeftJoin
+            (join-on b".ID = 9"))
+      (select (coalesce
+               (scalar a".Name")
+               (scalar b".Name")
+               "neither A nor B was found"))))
 
 @defthing[statement? contract?]
 A statement is a value that can be applied to a query to produce a new query.
@@ -510,23 +509,23 @@ A statement is a value that can be applied to a query to produce a new query.
     (to-sql
      (from
       ignored-id
-      (join x "X"
-            (define y (join y "Y"))
-            (join z "Z")
-            (define (what-is it)
-              (list
-               (if (binding? it)
-                   (select it".is-binding")
-                   (select it".is-not-binding"))
-               (if (join? it)
-                   (select it".is-join")
-                   (select it".is-not-join"))
-               (if (source? it)
-                   (select it".is-source")
-                   (select it".is-not-source"))))
-            (what-is x)
-            (what-is y)
-            (what-is z))))))
+      (RS join x "X"
+          (define y (join y "Y"))
+          (join z "Z")
+          (define (what-is it)
+            (list
+             (if (binding? it)
+                 (select it".is-binding")
+                 (select it".is-not-binding"))
+             (if (join? it)
+                 (select it".is-join")
+                 (select it".is-not-join"))
+             (if (source? it)
+                 (select it".is-source")
+                 (select it".is-not-source"))))
+          (what-is x)
+          (what-is y)
+          (what-is z))))))
 }
 
 @defthing[query? contract?]{

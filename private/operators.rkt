@@ -13,7 +13,7 @@
 ;; Token -> Token
 (define (fmt token)
   (if (string? token)
-      (scalar "'"token"'")
+      (RS scalar "'" (raw-sql token) "'")
       token))
 
 ; These x-ish? checks are where type checking could get added.
@@ -85,7 +85,7 @@
              '||
              "a string expression")
   ; the symbol 'concat is understood by to-sql based on the dialect
-  (scalar "("(interpose args 'concat)")"))
+  (RS scalar "("(interpose args 'concat)")"))
 
 (define (+ . args)
   (if (empty? args)
@@ -109,7 +109,7 @@
          (check-all args number-ish?
                     '|+ (plisqin, numeric)|
                     "a numeric expression")
-         (scalar "("(interpose args " + ")")")]
+         (RS scalar "("(interpose args " + ")")")]
         [else
          (apply r:+ args)])))
 
@@ -134,7 +134,7 @@
          (check-all args number-ish?
                     '|- (plisqin, numeric)|
                     "a numeric expression")
-         (scalar "("(interpose args " - ")")")]
+         (RS scalar "("(interpose args " - ")")")]
         [else
          (apply r:- args)])))
 
@@ -152,12 +152,12 @@
            (check-all args number-ish?
                       (string->symbol (format "~a (plisqin, numeric)" 'op))
                       "a numeric expression")
-           (scalar "("(interpose args joiner)")")]
+           (RS scalar "("(interpose args joiner)")")]
           [else
            (apply racket-op args)]))))
 
-(def-mul-div * r:* " * ")
-(def-mul-div / r:/ " / ")
+(RS def-mul-div * r:* " * ")
+(RS def-mul-div / r:/ " / ")
 
 (define-syntax-rule (def-cmp op racket-op)
   (define (op arg1 . args)
@@ -171,7 +171,7 @@
        (check-all args sql-token?
                   (string->symbol (format "(from plisqin) ~a" 'op))
                   "sql-token?")
-       (bool "("(interpose args (format " ~a " 'op))")")]
+       (bool (RS "(") (interpose args (raw-sql (format " ~a " 'op))) (RS ")"))]
       [else
        (apply racket-op args)])))
 
@@ -185,21 +185,21 @@
 (define-syntax-rule (def-fresh-binop name joiner)
   (define/contract (name a b)
     (-> sql-token? sql-token? sql-token?)
-    (bool "("(fmt a) joiner (fmt b)")")))
-(def-fresh-binop <> " <> ")
-(def-fresh-binop like " like ")
-(def-fresh-binop not-like " not like ")
+    (RS bool "("(fmt a) joiner (fmt b)")")))
+(RS def-fresh-binop <> " <> ")
+(RS def-fresh-binop like " like ")
+(RS def-fresh-binop not-like " not like ")
 
 (define/contract (is a b)
   (-> (or/c sql-token? 'null) (or/c sql-token? 'null) sql-token?)
   (define (f x)
     (fmt (if (eq? 'null x)
-             (scalar "null")
+             (RS scalar "null")
              x)))
-  (bool "("(f a)" is "(f b)")"))
+  (RS bool "("(f a)" is "(f b)")"))
 
 ; SQLite allows "1 is not 2" but SQL Server does not.
 ; Simply negating the result of "is" should work in all DBs.
 (define/contract (is-not a b)
   (-> (or/c sql-token? 'null) (or/c sql-token? 'null) sql-token?)
-  (bool "not "(is a b)))
+  (RS bool "not "(is a b)))

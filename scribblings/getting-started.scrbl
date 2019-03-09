@@ -42,14 +42,14 @@ If you want to follow along using a local database, the following scripts will c
 @section{Strings vs Procedures}
 Here is a simple query in Plisqin:
 @(racketblock
-  (from r "Rental"
-        (where r".RentalId > 100")))
+  (RS from r "Rental"
+      (where r".RentalId > 100")))
 The details of our database schema are in strings, namely the @(racket "Rental") table
 and the @(racket "RentalId") column. An alternative style is to encode our database
 schema into Racket procedures. Here is an [almost] equivalent query:
 @(racketblock
-  (from r Rental
-        (where (RentalId r)" > 100")))
+  (RS from r Rental
+      (where (RentalId r)" > 100")))
 The details of this 2nd style won't be explained until the @secref["schema-as-procs"] section,
 but any section of this guide might use either style, depending on what is convenient.
 

@@ -9,11 +9,15 @@
   (begin
     (provide (prefix-out s: (struct-out struct-id)))
     ...))
-(provide-struct source fragment query join binding injection interval time-unit dateadd cases)
-(provide source? fragment? query? join? binding? injection? interval? time-unit? dateadd? cases?)
+(provide-struct source fragment query join binding injection
+                raw-sql value interval time-unit dateadd cases)
+(provide source? fragment? query? join? binding? injection?
+         raw-sql? value? interval? time-unit? dateadd? cases?)
 (provide (rename-out [make-source source]
                      [make-binding binding]
                      [make-injection injection]
+                     [make-raw-sql raw-sql]
+                     [make-val val]
                      [make-dateadd dateadd]
                      [make-interval interval]
                      [make-limit limit]
@@ -31,7 +35,7 @@
          (struct-out exn:fail:plisqin)
          (struct-out exn:fail:plisqin:invalid-aggregate)
          interval-plus interval-minus interval-negate
-         db-now
+         db-now RS raw-sql-content value-content
          query-limit query-offset query-distinct?
          ; fragments
          select select?
@@ -47,8 +51,48 @@
          sql sql?
          silence silence?)
 
+(define/contract (make-val x)
+  (-> (or/c string? number? value?) value?)
+  (if (value? x)
+      x
+      (value (empty-metadata) x)))
+
+(define (build-raw-sql x)
+  (if (raw-sql? x)
+      x
+      (raw-sql (empty-metadata) x)))
+
+(define/contract (make-raw-sql . strs)
+  (->* () #:rest (listof (or/c string? raw-sql?)) raw-sql?)
+  (define (content x)
+    (if (raw-sql? x)
+        (raw-sql-content x)
+        x))
+  (build-raw-sql (string-join (map content strs) "")))
+
+; RS is a macro that recursively replaces "string literals" into (build-raw-sql "string literals")
+(begin-for-syntax
+  (define (rs* stx)
+    (let ([e (syntax-e stx)])
+      (cond
+        [(string? e)
+         #`(build-raw-sql #,stx)]
+        [(list? e)
+         (datum->syntax stx
+                        (map rs* e)
+                        stx stx)]
+        [else stx]))))
+
+(define-syntax (RS stx)
+  (syntax-case stx ()
+    [(_ x)
+     (rs* #'x)]
+    [(_ f arg ...)
+     (rs* #'(f arg ...))]))
+
 (module+ test
-  (check-true (fragment? (where (make-source "x" "X")".FIELD > 100"))))
+  (let ([src (make-source "x" "X")])
+    (check-true (fragment? (RS where src".FIELD > 100")))))
 
 (define limit-val? (or/c #f (and/c integer? positive?)))
 (define offset-val? limit-val?)
@@ -69,21 +113,21 @@
        #:rest token-list?
        order-by?)
   (match a
-    ['asc (order-by-raw tokens" asc")]
-    ['desc (order-by-raw tokens" desc")]
-    [else (order-by-raw a tokens)]))
+    ['asc (RS order-by-raw tokens" asc")]
+    ['desc (RS order-by-raw tokens" desc")]
+    [else (RS order-by-raw a tokens)]))
 
 (module+ test
-  (check-equal? (order-by "foo")
-                (order-by-raw "foo"))
-  (check-equal? (order-by 'desc "foo")
-                (order-by-raw "foo"" desc"))
-  (check-equal? (order-by 'asc "foo" ".bar")
-                (order-by-raw "foo"".bar"" asc"))
-  (check-equal? (order-by (list "a") (list "b" "c"))
-                (order-by-raw "a""b""c"))
-  (check-equal? (order-by (list "a" "b") (list "c" "d"))
-                (order-by-raw "a""b""c""d"))
+  (check-equal? (RS order-by "foo")
+                (RS order-by-raw "foo"))
+  (check-equal? (RS order-by 'desc "foo")
+                (RS order-by-raw "foo"" desc"))
+  (check-equal? (RS order-by 'asc "foo" ".bar")
+                (RS order-by-raw "foo"".bar"" asc"))
+  (check-equal? (RS order-by (list "a") (list "b" "c"))
+                (RS order-by-raw "a""b""c"))
+  (check-equal? (RS order-by (list "a" "b") (list "c" "d"))
+                (RS order-by-raw "a""b""c""d"))
   (check-equal? (order-by (list) 1 2 3)
                 (order-by-raw 1 2 3)))
 
@@ -92,6 +136,7 @@
   (or/c source?
         procedure?
         string?
+        raw-sql?
         query?
         join?
         subquery?))
@@ -303,9 +348,9 @@
      #:when (or (query? x)
                 (join? x)
                 (binding? x))
-     (bool "exists ("(convert-to-subquery x)")")]
+     (RS bool "exists ("(convert-to-subquery x)")")]
     [else
-     (bool "exists (" tokens ")")]))
+     (RS bool "exists (" tokens ")")]))
 
 ;(: filter-frags (-> (Listof Fragment) (Listof FragmentKind) (Listof Fragment)))
 (define (filter-frags frags kinds)
@@ -424,7 +469,7 @@
   (define-syntax-rule (go forms ...)
     ((λ() forms ...)))
   (go
-   (define w (where "3=4"))
+   (define w (RS where "3=4"))
    (define w2 (metadata-set 'foo w 'bar))
    (check-equal? w w2)
    (check-equal?

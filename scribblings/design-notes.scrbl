@@ -17,9 +17,9 @@ like object equality?" And the answer is still NO. Consider this:
 @(racketblock+eval
   #:eval my-eval
   (define (duplicates-of x)
-    (from t "Title"
-          (where t".PrimaryTitle = "x".PrimaryTitle")
-          (where t".TitleID < "x".TitleID")))
+    (RS from t "Title"
+        (where t".PrimaryTitle = "x".PrimaryTitle")
+        (where t".TitleID < "x".TitleID")))
   (from t "Title"
         (where (exists (duplicates-of t))))
   )

@@ -105,40 +105,40 @@
 
   ; These operators are binary with regard to SQL:
   (check
-   {{scalar "foo"} + {scalar "bar"}}
+   {{RS scalar "foo"} + {RS scalar "bar"}}
    #:all "(foo + bar)")
   (check
-   {{scalar "foo"} - {scalar "bar"}}
+   {{RS scalar "foo"} - {RS scalar "bar"}}
    #:all "(foo - bar)")
   (check
-   {{scalar "foo"} * {scalar "bar"}}
+   {{RS scalar "foo"} * {RS scalar "bar"}}
    #:all "(foo * bar)")
   (check
-   {{scalar "foo"} / {scalar "bar"}}
+   {{RS scalar "foo"} / {RS scalar "bar"}}
    #:all "(foo / bar)")
   (check
-   {{scalar "foo"} = "bar"}
+   {{RS scalar "foo"} = {val "bar"}}
    #:all "(foo = 'bar')")
   (check
-   {"foo" <> {scalar "bar"}}
+   {{val "foo"} <> {RS scalar "bar"}}
    #:all "('foo' <> bar)")
   (check
-   {{scalar "foo"} like "bar"}
+   {{RS scalar "foo"} like {val "bar"}}
    #:all "(foo like 'bar')")
   (check
-   {"foo" not-like {scalar "bar"}}
+   {{val "foo"} not-like {RS scalar "bar"}}
    #:all "('foo' not like bar)")
   (check
-   {{scalar "foo"} < "bar"}
+   {{RS scalar "foo"} < {val "bar"}}
    #:all "(foo < 'bar')")
   (check
-   {"foo" <= {scalar "bar"}}
+   {{val "foo"} <= {RS scalar "bar"}}
    #:all "('foo' <= bar)")
   (check
-   {{scalar "foo"} > "bar"}
+   {{RS scalar "foo"} > {val "bar"}}
    #:all "(foo > 'bar')")
   (check
-   {"foo" >= {scalar "bar"}}
+   {{val "foo"} >= {RS scalar "bar"}}
    #:all "('foo' >= bar)")
   ; But if there is no SQL involved, it falls back to the built-in Racket
   ; version which allows more than 2 arguments.
@@ -191,63 +191,63 @@
 
   ; Order-by
   (check
-   {order-by 'desc "foo" ".bar"}
+   {RS order-by 'desc "foo" ".bar"}
    #:all "foo.bar desc")
   (check
-   {order-by 'asc "foo" ".bar"}
+   {RS order-by 'asc "foo" ".bar"}
    #:all "foo.bar asc")
   (check
-   {order-by "a" "b" "c"}
+   {RS order-by "a" "b" "c"}
    #:all "abc")
 
 
   ; Make sure group-by doesn't somehow revert to racket's version
   (check
-   {group-by "foo"}
+   {RS group-by "foo"}
    #:all "foo")
 
   ; String concatenation
   (check
-   {"a" || "b"}
+   {{val "a"} || {val "b"}}
    #:ms "('a' + 'b')"
    #:all "('a' || 'b')")
   (check
-   {(scalar "a") || (scalar "b") || "c"}
+   {(RS scalar "a") || (RS scalar "b") || "c"} ; TODO THIS SHOULD BE AN ERROR!
    #:ms "((a + b) + 'c')"
    #:all "((a || b) || 'c')")
 
   ; Case expression
   (check
-   {case-when {scalar "foo"}
+   {case-when {RS scalar "foo"}
               {when 10 then 11}
               {when 12 then 13}
               {else 99}}
    #:all "case foo when 10 then 11 when 12 then 13 else 99 end")
   (check
-   {case-when {when {bool "a"} then 1}
-              {when {bool "b"} then 2}}
+   {case-when {when {RS bool "a"} then 1}
+              {when {RS bool "b"} then 2}}
    #:all "case when a then 1 when b then 2 end")
   ; Repeat tests, but rely on {case args ...} -> {case-when args ...}
   (check
-   {case {scalar "foo"}
+   {case {RS scalar "foo"}
      {when 10 then 11}
      {when 12 then 13}
      {else 99}}
    #:all "case foo when 10 then 11 when 12 then 13 else 99 end")
   (check
-   {case {when {bool "a"} then 1}
-     {when {bool "b"} then 2}}
+   {case {when {RS bool "a"} then 1}
+     {when {RS bool "b"} then 2}}
    #:all "case when a then 1 when b then 2 end")
   ; A more Racket-like syntax when not using braces:
   (check
-   (case-when #:of (scalar "foo")
+   (case-when #:of (RS scalar "foo")
               [10 11]
               [12 13]
               #:else 99)
    #:all "case foo when 10 then 11 when 12 then 13 else 99 end")
   (check
-   (case-when [(bool "a") 1]
-              [(bool "b") 2])
+   (case-when [(RS bool "a") 1]
+              [(RS bool "b") 2])
    #:all "case when a then 1 when b then 2 end")
   ; Racket's built-in case is still available
   (check-equal? (case (+ 7 5)

@@ -9,7 +9,7 @@
                      ; so we can pull them out using get-captured-syntax
                      plisqin/examples/video-rental-schema))
 
-(provide my-eval reset-eval! reset-uid make-eval show-sql check-sql rb)
+(provide my-eval reset-eval! reset-uid make-eval show-sql check-sql check-sql2 rb)
 
 (define (make-eval)
   (let ([eval (make-base-eval)])
@@ -40,6 +40,11 @@
     (check-equal?
      (string-normalize-spaces eval-sql)
      (string-normalize-spaces str))))
+
+(define (check-sql2 actual expected)
+  (check-equal?
+   (string-normalize-spaces actual)
+   (string-normalize-spaces expected)))
 
 ; Renders a (racketblock ...) for the given key
 (define-syntax (rb stx)

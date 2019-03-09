@@ -1,6 +1,9 @@
 #lang racket
-(require (submod "model.rkt" all)
-         (only-in "core.rkt" get-src
+(require (except-in (submod "model.rkt" all)
+                    raw-sql)
+         (only-in "core.rkt"
+                  get-src
+                  raw-sql
                   [source make-source])
          (for-syntax racket syntax/parse))
 (module+ test
@@ -98,7 +101,7 @@
          (define table TABLE.c)
          (def/append! (fields x)
            [(is-table? table x)
-            (scalar x (format ".~a" 'fields))])
+            (scalar x (raw-sql (format ".~a" 'fields)))])
          ...)]))
 
 (define/contract (make-default-alias table-name)
@@ -172,4 +175,7 @@
   ; regression: def/append! can follow def-table
   (def-table table92)
   (def/append! (table92 a b c)
-    [#t (list a b c)]))
+    [#t (list a b c)])
+
+  (def-fields-of Foo bar)
+  (check-not-false (bar (Foo))))

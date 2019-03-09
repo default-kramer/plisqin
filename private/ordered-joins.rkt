@@ -69,7 +69,7 @@
    (deduplicate
     (from x "X"
           ; This is an inline join which should be returned
-          (select (join y "Y")".something"))))
+          (RS select (join y "Y")".something"))))
  (check-equal?
   (ordered-joins q)
   (list (deduplicate (join y "Y")))))
@@ -83,5 +83,5 @@
  (define q
    (deduplicate
     (from x "X"
-          (select y".something"))))
+          (RS select y".something"))))
  (check-equal? (ordered-joins q) '()))

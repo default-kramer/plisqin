@@ -50,7 +50,7 @@
   (attach-callstacks)
 
   (define (f x)
-    (where "42 < "x" and "x" < 420"))
+    (RS where "42 < "x" and "x" < 420"))
 
   (check-equal? (f 9) (f 9))
   (check-equal?

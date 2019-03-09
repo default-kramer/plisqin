@@ -22,9 +22,9 @@
 ; First, recall that a grouped join is a simply a join that contains a group-by clause:
 (module+ test
   (define (make-grouped-join x)
-    (join gj "GJ"
-          (group-by (scalar gj".foo"))
-          (join-on (scalar gj".foo")" = "x)))
+    (RS join gj "GJ"
+        (group-by (scalar gj".foo"))
+        (join-on (scalar gj".foo")" = "x)))
   (check-true (grouped-join? (make-grouped-join 9))))
 ; The aggregate constructor does not allow more than one unique grouped join into an aggregate:
 (test
@@ -45,7 +45,7 @@
 ; But an aggregate is not required to have a target:
 (test
  (check-equal?
-  (find-target (aggregate "count(*)"))
+  (find-target (RS aggregate "count(*)"))
   #f))
 ; So to summarize, every aggregate has exactly 0 or 1 target.
 ; If it does not have a target, it simply gets changed to a scalar.
@@ -66,10 +66,10 @@
       (to-injection)
       agg))
 (test
- (define actual (convert (aggregate
-                          "sum("(make-grouped-join 4)".foo)")))
- (define expected (inject [x (make-grouped-join 4)]
-                          "sum("x".foo)"))
+ (define actual (RS convert (aggregate
+                             "sum("(make-grouped-join 4)".foo)")))
+ (define expected (RS inject [x (make-grouped-join 4)]
+                      "sum("x".foo)"))
  (check-equal? (normalize actual) (normalize expected)))
 ; So now the algorithm becomes pretty simple.
 ; But there is a slight caveat regarding nesting.
@@ -91,12 +91,12 @@
 (test
  (check-equal?
   ; inner aggregate:
-  (find-target (aggregate (make-grouped-join (make-grouped-join "emp"))))
-  (make-grouped-join (make-grouped-join "emp")))
+  (find-target (aggregate (RS make-grouped-join (make-grouped-join "emp"))))
+  (make-grouped-join (RS make-grouped-join "emp")))
  (check-equal?
   ; outer aggregate:
-  (find-target (aggregate (aggregate (make-grouped-join (make-grouped-join "emp")))))
-  (make-grouped-join "emp")))
+  (find-target (aggregate (aggregate (make-grouped-join (RS make-grouped-join "emp")))))
+  (RS make-grouped-join "emp")))
 ; So if we are working inwards from the root, as soon as we encounter an aggregate
 ; we convert it. But then we also need to check inside it for more aggregates.
 (define (inject-aggregates root)
@@ -112,33 +112,33 @@
 
 (test
  (define-syntax-rule (actual joiner)
-   (from a "A"
-         (joiner x (join x "X"
-                         (group-by x".AID")
-                         (join-on x".AID = "a".AID")))
-         (define (y x) (join y "Y"
-                             (group-by y".XID")
-                             (join-on y".XID = "x".XID")))
-         (select (aggregate "sum("
-                            (aggregate "sum("
-                                       (scalar (y x)".FOO")
-                                       ")")
-                            ")"))))
+   (RS from a "A"
+       (joiner x (join x "X"
+                       (group-by x".AID")
+                       (join-on x".AID = "a".AID")))
+       (define (y x) (join y "Y"
+                           (group-by y".XID")
+                           (join-on y".XID = "x".XID")))
+       (select (aggregate "sum("
+                          (aggregate "sum("
+                                     (scalar (y x)".FOO")
+                                     ")")
+                          ")"))))
  (define-syntax-rule (expected joiner)
-   (from a "A"
-         (joiner x (join x "X"
-                         (group-by x".AID")
-                         (join-on x".AID = "a".AID")))
-         (define (y x) (join y "Y"
-                             (group-by y".XID")
-                             (join-on y".XID = "x".XID")))
-         (select (inject [x x]
-                         "sum("
-                         (inject [y (y x)]
-                                 "sum("
-                                 (scalar y".FOO")
-                                 ")")
-                         ")"))))
+   (RS from a "A"
+       (joiner x (join x "X"
+                       (group-by x".AID")
+                       (join-on x".AID = "a".AID")))
+       (define (y x) (join y "Y"
+                           (group-by y".XID")
+                           (join-on y".XID = "x".XID")))
+       (select (inject [x x]
+                       "sum("
+                       (inject [y (y x)]
+                               "sum("
+                               (scalar y".FOO")
+                               ")")
+                       ")"))))
  (check-equal?
   (normalize (inject-aggregates (actual define)))
   (normalize (expected define)))

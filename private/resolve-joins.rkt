@@ -37,10 +37,10 @@
      ,(source "normal" "x" #:uid 1)
      ,(source "normal" "x" #:uid 2)))
 
-  (let ([j1 (join j1 "J"
-                  (join-on j1".X > 3"))]
-        [j2 (join j2 "J"
-                  (join-on j2".X > 3"))])
+  (let ([j1 (RS join j1 "J"
+                (join-on j1".X > 3"))]
+        [j2 (RS join j2 "J"
+                (join-on j2".X > 3"))])
     (begin
       (check-not-equal? j1 j2)
       (check-equal? (normalize j1) (normalize j2)))))
@@ -99,27 +99,27 @@
     (define root (source "r" "Root"))
     (define parent (source "p" "Parent"))
     (define grandparent (source "gp" "Parent"))
-    (define example (from _ root
-                          (join _ grandparent
-                                (join-on grandparent".ID = "
-                                         (join _ parent
-                                               (join-on parent".ID = "root".PARENT_ID"))
-                                         ".PARENT_ID"))))
+    (define example (RS from _ root
+                        (join _ grandparent
+                              (join-on grandparent".ID = "
+                                       (join _ parent
+                                             (join-on parent".ID = "root".PARENT_ID"))
+                                       ".PARENT_ID"))))
     (define jc (new-join-collector))
     ; processing inside-out, we should see the "parent" join first
-    (set! jc (add-join jc (join _ parent
-                                (join-on parent".ID = "root".PARENT_ID"))))
+    (set! jc (add-join jc (RS join _ parent
+                              (join-on parent".ID = "root".PARENT_ID"))))
     ; then see the "grandparent" with the "parent" join inline
-    (set! jc (add-join jc (join _ grandparent
-                                (join-on grandparent".ID = "
-                                         (join _ parent
-                                               (join-on parent".ID = "root".PARENT_ID"))
-                                         ".PARENT_ID"))))
+    (set! jc (add-join jc (RS join _ grandparent
+                              (join-on grandparent".ID = "
+                                       (join _ parent
+                                             (join-on parent".ID = "root".PARENT_ID"))
+                                       ".PARENT_ID"))))
     ; But we should have de-inlined "parent" out of "grandparent" when we canonicalized "grandparent"
     (check-equal?
      (first (join-collector-ordered-joins jc))
-     (join _ grandparent
-           (join-on grandparent".ID = "parent".PARENT_ID")))))
+     (RS join _ grandparent
+         (join-on grandparent".ID = "parent".PARENT_ID")))))
 
 ; Collect joins only in the immediate scope - subqueries are not searched
 (define/contract (collect-joins q)
@@ -150,27 +150,27 @@
     (define root (source "r" "Root"))
     (define parent (source "p" "Parent"))
     (define grandparent (source "gp" "Parent"))
-    (define example (from _ root
-                          (join _ grandparent
-                                (join-on grandparent".ID = "
-                                         (join _ parent
-                                               (join-on parent".ID = "root".PARENT_ID"))
-                                         ".PARENT_ID"))
-                          ; Let's put a join in a subquery to prove it doesn't get collected
-                          (where (exists (from subquery "Sub"
-                                               (join x "X" (join-on "1=1")))))))
+    (RS define example (from _ root
+                             (join _ grandparent
+                                   (join-on grandparent".ID = "
+                                            (join _ parent
+                                                  (join-on parent".ID = "root".PARENT_ID"))
+                                            ".PARENT_ID"))
+                             ; Let's put a join in a subquery to prove it doesn't get collected
+                             (where (exists (from subquery "Sub"
+                                                  (join x "X" (join-on "1=1")))))))
     (define jc (collect-joins example))
     (define joins (join-collector-ordered-joins jc))
     (check-equal? (length joins) 2)
     ; We should have de-inlined the "parent" out of the "grandparent"
     (check-equal?
      (first joins)
-     (join _ grandparent
-           (join-on grandparent".ID = "parent".PARENT_ID")))
+     (RS join _ grandparent
+         (join-on grandparent".ID = "parent".PARENT_ID")))
     (check-equal?
      (second joins)
-     (join _ parent
-           (join-on parent".ID = "root".PARENT_ID")))))
+     (RS join _ parent
+         (join-on parent".ID = "root".PARENT_ID")))))
 
 (define/contract (get-replacement jc node)
   (-> join-collector? any/c any/c)
@@ -218,9 +218,9 @@
 (module+ test
   (let ()
     (define (Title-of/s rating)
-      (join t "Title"
-            (join-on t".TitleID = "rating".TitleID")))
-    (define q (from r "Rating"
-                    (where (Title-of/s r)".StartYear >= 1990")
-                    (where (Title-of/s r)".EndYear < 2000")))
+      (RS join t "Title"
+          (join-on t".TitleID = "rating".TitleID")))
+    (define q (RS from r "Rating"
+                  (where (Title-of/s r)".StartYear >= 1990")
+                  (where (Title-of/s r)".EndYear < 2000")))
     (void (resolve-joins q))))

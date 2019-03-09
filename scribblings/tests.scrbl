@@ -22,11 +22,11 @@ Both of these want the alias "x" but the subquery gets renamed to "x1":
 @(interaction
   #:eval my-eval
   (define (my-subquery parent)
-    (from x "Sub"
-          (where x".Something = "parent".Something")))
+    (RS from x "Sub"
+        (where x".Something = "parent".Something")))
   (define my-query
-    (from x "Parent"
-          (where "not "(exists (my-subquery x)))))
+    (RS from x "Parent"
+        (where "not "(exists (my-subquery x)))))
   (display (to-sql my-query)))
 
 @(check-sql
@@ -48,9 +48,9 @@ Joins are included even if they don't appear in a fragment:
 @(interaction
   #:eval my-eval
   (define my-query
-    (from x "X"
-          (join y "Y"
-                (join-on "1=1"))))
+    (RS from x "X"
+        (join y "Y"
+              (join-on "1=1"))))
   (display (to-sql my-query)))
 
 @(check-sql
@@ -68,18 +68,18 @@ The query-building macros accept a single clause or a list for greater composabi
 @(interaction
   #:eval my-eval
   (define my-query
-    (from x "X"
-          (if #t
-              (select x".First")
-              (list))
-          (if #t
-              (list
-               (select x".Second")
-               (select x".Third"))
-              (list))
-          (if #f
-              (select x".Fourth")
-              (list))))
+    (RS from x "X"
+        (if #t
+            (select x".First")
+            (list))
+        (if #t
+            (list
+             (select x".Second")
+             (select x".Third"))
+            (list))
+        (if #f
+            (select x".Fourth")
+            (list))))
   (display (to-sql my-query)))
 @(check-sql
   my-eval my-query
@@ -97,11 +97,11 @@ Aggregate functions don't need to be injected if they refer only to the main que
 @(interaction
   #:eval my-eval
   (define my-query
-    (from t "Title"
-          (join r "Rating"
-                (join-on r".TitleID = "t".TitleID"))
-          (select (sum t".TitleID + "r".Score"))
-          (group-by t".TitleID")))
+    (RS from t "Title"
+        (join r "Rating"
+              (join-on r".TitleID = "t".TitleID"))
+        (select (sum t".TitleID + "r".Score"))
+        (group-by t".TitleID")))
   (display (to-sql my-query)))
 @(check-sql
   my-eval my-query
@@ -118,11 +118,11 @@ The SQL `having' clause:
 @(interaction
   #:eval my-eval
   (define my-query
-    (from r "Rating"
-          (group-by r".TitleID")
-          (having "count("r".TitleID) > 100")
-          (select r".TitleID")
-          (select (avg r".Score"))))
+    (RS from r "Rating"
+        (group-by r".TitleID")
+        (having "count("r".TitleID) > 100")
+        (select r".TitleID")
+        (select (avg r".Score"))))
   (display (to-sql my-query)))
 @(check-sql
   my-eval my-query
@@ -141,12 +141,12 @@ We can deduplicate injections!
 @(interaction
   #:eval my-eval
   (define my-query
-    (from t "Title"
-          (join ratings "Rating"
-                (group-by ratings".TitleID")
-                (join-on (scalar ratings".TitleID")" = "t".TitleID"))
-          (select (avg ratings".Score")" as AvgScore")
-          (select (avg ratings".Score")" as AvgScore2")))
+    (RS from t "Title"
+        (join ratings "Rating"
+              (group-by ratings".TitleID")
+              (join-on (scalar ratings".TitleID")" = "t".TitleID"))
+        (select (avg ratings".Score")" as AvgScore")
+        (select (avg ratings".Score")" as AvgScore2")))
   (display (to-sql my-query)))
 @(reset-uid)
 @(check-sql
@@ -173,17 +173,17 @@ This is no longer true. Let's try to create a failing test here:
 @(interaction
   #:eval my-eval
   (define (TitleType-of/s title)
-    (join tt "TitleType"
-          (join-on tt".TitleTypeID = "title".TitleTypeID")))
+    (RS join tt "TitleType"
+        (join-on tt".TitleTypeID = "title".TitleTypeID")))
 
   (define my-query
-    (from t "Title"
-          (join tt1 (TitleType-of/s t))
-          (join tt2 (TitleType-of/s t))
-          (select tt1".a1")
-          (select tt2".a2")
-          (select (TitleType-of/s t)".a3")
-          (select (TitleType-of/s t)".a4")))
+    (RS from t "Title"
+        (join tt1 (TitleType-of/s t))
+        (join tt2 (TitleType-of/s t))
+        (select tt1".a1")
+        (select tt2".a2")
+        (select (TitleType-of/s t)".a3")
+        (select (TitleType-of/s t)".a4")))
   (display (to-sql my-query)))
 @(check-sql
   my-eval my-query
@@ -200,13 +200,13 @@ Regression test. A joined subquery should be able to explicitly join other other
 @(interaction
   #:eval my-eval
   (define my-query
-    (from x "X"
-          (join y "Y"
-                (join-on "'y'='y'")
-                (join z "Z"
-                      (join-on "'z'='z'"))
-                (select y".Foo")
-                (select z".Bar"))))
+    (RS from x "X"
+        (join y "Y"
+              (join-on "'y'='y'")
+              (join z "Z"
+                    (join-on "'z'='z'"))
+              (select y".Foo")
+              (select z".Bar"))))
   (display (to-sql my-query)))
 @(check-sql
   my-eval my-query
@@ -229,12 +229,12 @@ Auto-inject scalars in join-on clauses:
 @(interaction
   #:eval my-eval
   (define my-query
-    (from x "X"
-          (join y "Y"
-                (group-by y".XID")
-                (join-on (scalar y".XID")" = "(scalar x".XID")))
-          (select x".*")
-          (select (count y)" as NumYs")))
+    (RS from x "X"
+        (join y "Y"
+              (group-by y".XID")
+              (join-on (scalar y".XID")" = "(scalar x".XID")))
+        (select x".*")
+        (select (count y)" as NumYs")))
   (display (to-sql my-query)))
 @(check-sql
   my-eval my-query
@@ -259,24 +259,24 @@ Auto-inject scalars in join-on clauses (TODO no tests here)
   #:eval my-eval
   (require (only-in racket remove-duplicates))
   (define (jZ y [group? #f])
-    (join z "Z"
-          (if group?
-              (group-by (scalar z".ZID"))
-              (list))
-          (join-on (scalar z".ZID")" = "(scalar y".ZID"))))
+    (RS join z "Z"
+        (if group?
+            (group-by (scalar z".ZID"))
+            (list))
+        (join-on (scalar z".ZID")" = "(scalar y".ZID"))))
   (define (jY x [group? #f])
-    (join y "Y"
-          (if group?
-              (group-by (scalar y".YID"))
-              (list))
-          (join-on (scalar y".YID")" = "(scalar x".YID"))))
+    (RS join y "Y"
+        (if group?
+            (group-by (scalar y".YID"))
+            (list))
+        (join-on (scalar y".YID")" = "(scalar x".YID"))))
   ; Use a macro to test various combinations of inline and non-inline joins.
   (define-syntax-rule (q1 linkY linkZ)
-    (from x "X"
-          ;(join force-this-to-render-first (jY x))
-          (linkY y (jY x))
-          (linkZ z (jZ y #t))
-          (select (count z)" as Blah")))
+    (RS from x "X"
+        ;(join force-this-to-render-first (jY x))
+        (linkY y (jY x))
+        (linkZ z (jZ y #t))
+        (select (count z)" as Blah")))
   ; The generated SQL should be the same for all variants
   (define sql-strings
     (remove-duplicates
@@ -296,10 +296,10 @@ Auto-inject with duplicate inline grouped joins (TODO no tests here)
 @(interaction
   #:eval my-eval
   (define my-query
-    (from x "X"
-          (define (z) (jZ (jY x) #t))
-          (select (count (z))" as Blah")
-          (select (sum (z)".Stuff")" as Total")))
+    (RS from x "X"
+        (define (z) (jZ (jY x) #t))
+        (select (count (z))" as Blah")
+        (select (sum (z)".Stuff")" as Total")))
   (displayln (to-sql my-query)))
 
 @(test)
@@ -310,25 +310,25 @@ The better solution would be some way to avoid the global scope when creating so
 @(interaction
   #:eval my-eval
   (define (my-query)
-    (from cust Customer
-          (define (is-movie rental)
-            (bool (ItemTypeId rental)" = 1"))
-          (define (is-recent rental)
-            (bool (CheckoutTime rental)" > '2018-01-01'"))
-          (define (count-when predicate)
-            (sum "case when "predicate" then 1 else 0 end"))
-          (join rentals (Rentals-of/g cust))
-          (select cust".*")
-          (select (count rentals)
-                  " as TotalRentalCount")
-          (select (count-when (is-movie rentals))
-                  " as MovieRentalCount")
-          (select (count-when (is-recent rentals))
-                  " as RecentRentalCount")
-          (select (count-when (bool (is-movie rentals)
-                                    " and "
-                                    (is-recent rentals)))
-                  " as RecentMovieRentalCount")))
+    (RS from cust Customer
+        (define (is-movie rental)
+          (bool (ItemTypeId rental)" = 1"))
+        (define (is-recent rental)
+          (bool (CheckoutTime rental)" > '2018-01-01'"))
+        (define (count-when predicate)
+          (sum "case when "predicate" then 1 else 0 end"))
+        (join rentals (Rentals-of/g cust))
+        (select cust".*")
+        (select (count rentals)
+                " as TotalRentalCount")
+        (select (count-when (is-movie rentals))
+                " as MovieRentalCount")
+        (select (count-when (is-recent rentals))
+                " as RecentRentalCount")
+        (select (count-when (bool (is-movie rentals)
+                                  " and "
+                                  (is-recent rentals)))
+                " as RecentMovieRentalCount")))
   (display (to-sql (my-query))))
 @(check-sql
   my-eval (my-query)
@@ -409,37 +409,37 @@ Tests of @(racket count).
            my-eval (q)
            str))]))
 @(test-query
-  (from x "X"
-        (select (count x)))
+  (RS from x "X"
+      (select (count x)))
   "select count(*) from X x")
 @(test-query
-  (from x "X"
-        (select (count x".foo")))
+  (RS from x "X"
+      (select (count x".foo")))
   "select count(x.foo) from X x")
 @(test-query
-  (from x "X"
-        (select (count x".foo" #:distinct? #t)))
+  (RS from x "X"
+      (select (count x".foo" #:distinct? #t)))
   "select count(distinct x.foo) from X x")
 @(test-query
-  (from x "X"
-        (join y "Y")
-        (select (count y)))
+  (RS from x "X"
+      (join y "Y")
+      (select (count y)))
   "select count(*) from X x inner join Y y on 1=1")
 @(test-query
-  (from x "X"
-        (join y "Y")
-        (select (count y".foo")))
+  (RS from x "X"
+      (join y "Y")
+      (select (count y".foo")))
   "select count(y.foo) from X x inner join Y y on 1=1")
 @(test-query
-  (from x "X"
-        (join y "Y")
-        (select (count y".foo" #:distinct? #t)))
+  (RS from x "X"
+      (join y "Y")
+      (select (count y".foo" #:distinct? #t)))
   "select count(distinct y.foo) from X x inner join Y y on 1=1")
 @(test-query
-  (from x "X"
-        (join y "Y"
-              (group-by y".foo"))
-        (select  (count y)))
+  (RS from x "X"
+      (join y "Y"
+            (group-by y".foo"))
+      (select  (count y)))
   #<<HEREDOC
 select y.__INJECT1
 from X x
@@ -451,10 +451,10 @@ on 1=1
 HEREDOC
   )
 @(test-query
-  (from x "X"
-        (join y "Y"
-              (group-by y".foo"))
-        (select (count y".bar")))
+  (RS from x "X"
+      (join y "Y"
+            (group-by y".foo"))
+      (select (count y".bar")))
   #<<HEREDOC
 select y.__INJECT1
 from X x
@@ -466,10 +466,10 @@ on 1=1
 HEREDOC
   )
 @(test-query
-  (from x "X"
-        (join y "Y"
-              (group-by y".foo"))
-        (select (count y".bar" #:distinct? #t)))
+  (RS from x "X"
+      (join y "Y"
+            (group-by y".foo"))
+      (select (count y".bar" #:distinct? #t)))
   #<<HEREDOC
 select y.__INJECT1
 from X x
@@ -484,8 +484,8 @@ HEREDOC
 @(test)
 Tests of @(racket exists).
 @(test-query
-  (from x "X"
-        (where (exists "select * from blah")))
+  (RS from x "X"
+      (where (exists "select * from blah")))
   #<<HEREDOC
 select x.*
 from X x
@@ -493,9 +493,9 @@ where exists (select * from blah)
 HEREDOC
   )
 @(test-query
-  (from x "X"
-        (where (exists (from y "Y"
-                             (where y".Foo = "x".Bar")))))
+  (RS from x "X"
+      (where (exists (from y "Y"
+                           (where y".Foo = "x".Bar")))))
   #<<HEREDOC
 select x.*
 from X x
@@ -503,9 +503,9 @@ where exists ( select y.* from Y y where y.Foo = x.Bar)
 HEREDOC
   )
 @(test-query
-  (from x "X"
-        (where (exists (join y "Y"
-                             (join-on y".Foo = "x".Bar")))))
+  (RS from x "X"
+      (where (exists (join y "Y"
+                           (join-on y".Foo = "x".Bar")))))
   #<<HEREDOC
 select x.*
 from X x

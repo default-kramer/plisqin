@@ -17,8 +17,8 @@
        (if single-id-handler
            (single-id-handler x)
            (raise-argument-error 'tokens "a scalar-looking SQL expression" x))]
-      [else (aggregate name-str "(" distinct-str tokens ")")])))
-(def-agg count (λ(x) (aggregate "count(*)" (silence x))))
+      [else (RS aggregate (raw-sql name-str) "(" (raw-sql distinct-str) tokens ")")])))
+(def-agg count (λ(x) (RS aggregate "count(*)" (silence x))))
 (def-agg sum #f)
 (def-agg min #f)
 (def-agg max #f)

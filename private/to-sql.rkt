@@ -56,6 +56,12 @@
     (~a (s:time-unit-symbol (s:interval-unit iv))))
   ; main body
   (cond
+    [(raw-sql? x) (raw-sql-content x)]
+    [(value? x)
+     (let ([content (value-content x)])
+       (if (string? content)
+           (go "'"content"'")
+           (~a x)))]
     [(equal? 'SP x) 'SP]
     [(equal? 'db-now x)
      (cond
@@ -222,7 +228,7 @@
      (render-clauses (query-fragments q 'Select)
                      (string-append select-intro "\n  ")
                      "\n  , "
-                     (render-token (sql select-intro" "src".*")))
+                     (render-token (RS sql (raw-sql select-intro" ") src".*")))
      "\nfrom "table-str" "(s:source-alias src)
      (string-join (map render-join (ordered-joins q)) "")
      (render-clauses (query-fragments q 'Where)
@@ -267,11 +273,11 @@
    "select a.* from A a")
   
   (check-sql
-   (from t "Title"
-         (join c "Credit"
-               (join-on c".TitleID = "t".TitleID"))
-         (select t".X")
-         (select c".Y"))
+   (RS from t "Title"
+       (join c "Credit"
+             (join-on c".TitleID = "t".TitleID"))
+       (select t".X")
+       (select c".Y"))
    #<<HEREDOC
 select
   t.X
@@ -284,11 +290,11 @@ HEREDOC
 
   ; same as above, let's just inline it
   (check-sql
-   (from t "Title"
-         (select t".X")
-         (select (join c "Credit"
-                       (join-on c".TitleID = "t".TitleID"))
-                 ".Y"))
+   (RS from t "Title"
+       (select t".X")
+       (select (join c "Credit"
+                     (join-on c".TitleID = "t".TitleID"))
+               ".Y"))
    #<<HEREDOC
 select
   t.X
@@ -300,10 +306,10 @@ HEREDOC
    )
 
   (check-sql
-   (from x "X"
-         (join y "Y" 'LeftJoin
-               (join-on "(1 = 1)"))
-         (select 1))
+   (RS from x "X"
+       (join y "Y" 'LeftJoin
+             (join-on "(1 = 1)"))
+       (select 1))
    #<<HEREDOC
 select 1
 from X x
@@ -314,10 +320,10 @@ HEREDOC
 
   ; TODO should we auto-convert join-on clauses to where clauses if the join type is an apply?
   (check-sql
-   (from x "X"
-         (join y "Y" 'CrossApply
-               (where y".XID = "x".XID"))
-         (select y".BLAH"))
+   (RS from x "X"
+       (join y "Y" 'CrossApply
+             (where y".XID = "x".XID"))
+       (select y".BLAH"))
    #<<HEREDOC
 select y.BLAH
 from X x
@@ -329,17 +335,17 @@ HEREDOC
    )
 
   (check-sql
-   (from x (subquery "select 1 as ONE")
-         (select x".ONE"))
+   (RS from x (subquery "select 1 as ONE")
+       (select x".ONE"))
    #<<HEREDOC
 select x.ONE
 from (select 1 as ONE) x
 HEREDOC
    )
   (check-sql
-   (from x (subquery (from y "Y"
-                           (select y".ONE")))
-         (select x".ONE"))
+   (RS from x (subquery (from y "Y"
+                              (select y".ONE")))
+       (select x".ONE"))
    #<<HEREDOC
 select x.ONE
 from (
@@ -354,7 +360,7 @@ HEREDOC
     (parameterize ([current-dialect (postgres)])
       forms ...))
 
-  (define frag (op:+ (sql "getdate()")
+  (define frag (op:+ (RS sql "getdate()")
                      (interval 3 :hours)
                      (interval 1 :day)))
   (with-MS
@@ -365,7 +371,7 @@ HEREDOC
       (check-equal?
        (to-sql frag)
        "(getdate() + interval '3 hour' + interval '1 day')"))
-  (set! frag (op:- (sql "getdate()")
+  (set! frag (op:- (RS sql "getdate()")
                    (interval 3 :hours)
                    (interval 1 :day)))
   (with-MS

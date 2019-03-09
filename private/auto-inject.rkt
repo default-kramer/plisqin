@@ -129,10 +129,10 @@
                                   (cons node accum))))))
 
 (test
- (define j (join j "J"
-                 (group-by (scalar j".ONE"))
-                 (join-on (scalar j".ONE")" = "(scalar "42"))
-                 (join-on (scalar j".TWO")" = "(scalar "2"))))
+ (define j (RS join j "J"
+               (group-by (scalar j".ONE"))
+               (join-on (scalar j".ONE")" = "(scalar "42"))
+               (join-on (scalar j".TWO")" = "(scalar "2"))))
  ; (scalar "2") is resolved, but does not contain a self-reference so it should not be included
  (define cands (find-candidates j))
  (check-equal? (length cands) 2))
@@ -152,9 +152,9 @@
 
 (test
  (define J (source "j" "J"))
- (define j (join j J
-                 (group-by (scalar j".ONE"))
-                 (join-on (scalar j".ONE"))))
+ (define j (RS join j J
+               (group-by (scalar j".ONE"))
+               (join-on (scalar j".ONE"))))
  (define cands (find-candidates j))
  (check-equal? (length cands) 1)
  (define orig (car cands))
@@ -163,17 +163,17 @@
 
 (test
  (define (A-of/s x)
-   (join a "A"
-         (join-on a".AID = "x".AID")))
+   (RS join a "A"
+       (join-on a".AID = "x".AID")))
  (define J (source "j" "J"))
- (define j (join j J
-                 (group-by (scalar j".ONE"))
-                 (join-on (scalar (A-of/s j)".ONE")" = 1")))
+ (define j (RS join j J
+               (group-by (scalar j".ONE"))
+               (join-on (scalar (A-of/s j)".ONE")" = 1")))
  (define cands (find-candidates j))
  (check-equal? (length cands) 1)
  (check-equal?
   (normalize (first cands))
-  (normalize (scalar (A-of/s J)".ONE"))))
+  (normalize (RS scalar (A-of/s J)".ONE"))))
 
 (define/contract (auto-inject2 join)
   (-> join? join?)
@@ -191,15 +191,15 @@
 
 (test
  (define actual
-   (from x "X"
-         (join b "B"
-               (group-by (scalar b".XID"))
-               (join-on (scalar b".XID")" = "(scalar x".XID")))))
+   (RS from x "X"
+       (join b "B"
+             (group-by (scalar b".XID"))
+             (join-on (scalar b".XID")" = "(scalar x".XID")))))
  (define expected
-   (from x "X"
-         (join b "B"
-               (group-by (scalar b".XID"))
-               (join-on (inject b b".XID")" = "(scalar x".XID")))))
+   (RS from x "X"
+       (join b "B"
+             (group-by (scalar b".XID"))
+             (join-on (inject b b".XID")" = "(scalar x".XID")))))
  (check-equal?
   (normalize (auto-inject actual))
   (normalize expected)))
@@ -208,23 +208,23 @@
  ; In this example, we group-by and join-on (foo b) which contains an inline join.
  ; That inline join belongs inside the grouped join, and should get injected into it.
  (define actual
-   (from x "X"
-         (join b "B"
-               (define (A-of/s b) (join a "A"
-                                        (join-on a".BID = "b".BID")))
-               (define (foo b)
-                 (scalar (A-of/s b)".FOO"))
-               (group-by (foo b))
-               (join-on (scalar (foo b))" = "x".FOO"))))
+   (RS from x "X"
+       (join b "B"
+             (define (A-of/s b) (join a "A"
+                                      (join-on a".BID = "b".BID")))
+             (define (foo b)
+               (scalar (A-of/s b)".FOO"))
+             (group-by (foo b))
+             (join-on (scalar (foo b))" = "x".FOO"))))
  (define expected
-   (from x "X"
-         (join b "B"
-               (define (A-of/s b) (join a "A"
-                                        (join-on a".BID = "b".BID")))
-               (define (foo b)
-                 (scalar (A-of/s b)".FOO"))
-               (group-by (foo b))
-               (join-on (inject b (foo b))" = "x".FOO"))))
+   (RS from x "X"
+       (join b "B"
+             (define (A-of/s b) (join a "A"
+                                      (join-on a".BID = "b".BID")))
+             (define (foo b)
+               (scalar (A-of/s b)".FOO"))
+             (group-by (foo b))
+             (join-on (inject b (foo b))" = "x".FOO"))))
  (check-equal?
   (normalize (auto-inject actual))
   (normalize expected)))
