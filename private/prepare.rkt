@@ -1,8 +1,15 @@
 #lang racket
-(require "core.rkt" "to-sql.rkt" "param-binder.rkt" "dialect.rkt"
-         (prefix-in db: db))
 
-; A mutable context that holds the statement
+(provide make-statement
+         def-statement)
+
+(require "core.rkt" "to-sql.rkt" "param-binder.rkt" "dialect.rkt"
+         (prefix-in db: db)
+         (for-syntax syntax/parse))
+
+; A mutable context that holds the statement.
+; When invoked with a connection that differs from "current-conn", we
+; prepare it and store the results into the mutable fields.
 (struct ctx (token
              renderings ; (mutable-hashof dialect (pairof sql binder))
              [current-conn #:mutable] ; the most recent connection used
@@ -64,15 +71,14 @@
 ;  #:pre-render '(postgres sqlite)
 ; to generate SQL at compile time
 (define-syntax (make-statement stx)
-  (syntax-case stx ()
-    [(_ (param-id ...) body ...)
+  (syntax-parse stx
+    [(_ (param-id:id ...) body:expr ...+)
      (begin
        (define param-vals (map syntax-local-introduce (syntax->list #'(param-id ...))))
        #`(let* ([param-id (param #:name #'param-id)]
                 ...
-                [token
-                 (let ([a 1])
-                   body ...)]
+                ; Use `let` instead of `begin` here so that `body ...` can contain `define`
+                [token (let () body ...)]
                 [ctx (make-ctx token)]
                 ; Produces a bound statement
                 [bind-statement
@@ -85,12 +91,15 @@
            ; return
            (statement bind-statement ctx)))]))
 
-(define-syntax-rule (def-statement (id param ...) body ...)
-  (define id (make-statement (param ...) body ...)))
-
+(define-syntax (def-statement stx)
+  (syntax-parse stx
+    [(_ (proc-id:id param-id:id ...) body:expr ...+)
+     #'(define proc-id
+         (make-statement (param-id ...) body ...))]))
 
 (module+ test
-  (require "api.rkt" "schema.rkt" "show-table.rkt")
+  (require "api.rkt" "schema.rkt" "show-table.rkt"
+           rackunit)
   (def-table Country)
   (def-fields-of Country
     CountryId CountryName CountryPopulation)
@@ -99,10 +108,23 @@
   (define conn (current-connection))
 
   (def-statement (get-country id)
+    (define testdef "blah")
+    (void testdef)
     (RS from c Country
         (where (CountryId c)" = "id)))
 
-  (db:query-rows conn (get-country 1))
-  (db:query-rows conn (get-country 2))
+  (define rows
+    (db:query-rows conn (get-country 1)))
+  (check-equal? (length rows) 1)
+
+  (set! rows
+        (db:query-rows conn (get-country -1)))
+  (check-equal? (length rows) 0)
+
+  ; Note - there is an opportunity for
+  #;((get-country 1) #:conn 'default)
+  ; to mean "execute the bound-statement using the current connection."
+  ; And the #:conn parameter is optional of course.
+  ; The ctx would need to hold a callback representing which of query-rows, query-exec, etc... you want to do
 
   (db:disconnect conn))
