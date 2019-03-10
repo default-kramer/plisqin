@@ -488,17 +488,14 @@ A statement is a value that can be applied to a query to produce a new query.
 @(doc:statement-expr?)
 
 @deftogether[[
+ @defthing[attached-join? contract?]
  @defthing[binding? contract?]
  @defthing[join? contract?]
  @defthing[source? contract?]
  ]]{
- @margin-note{
-  The name @(racket binding?) was a poor choice.
-  TODO Better names would be @(racket attached-join?) and @(racket detached-join?);
-  and @(racket join?) would be true if either is true.
- }
  @itemlist[
- @item{A @(racket binding?) is an attached join.}
+ @item{An @(racket attached-join?) is a join that is attached to its enclosing query. (See @(racket from).)}
+ @item{A @(racket binding?) is a deprecated synonym for @(racket attached-join?).}
  @item{A @(racket join?) is a detached join.}
  @item{A @(racket source?) is the value of the identifier introduced
    by an enclosing @(racket from) or @(racket join).}
@@ -514,9 +511,9 @@ A statement is a value that can be applied to a query to produce a new query.
           (join z "Z")
           (define (what-is it)
             (list
-             (if (binding? it)
-                 (select it".is-binding")
-                 (select it".is-not-binding"))
+             (if (attached-join? it)
+                 (select it".is-attached-join")
+                 (select it".is-not-attached-join"))
              (if (join? it)
                  (select it".is-join")
                  (select it".is-not-join"))

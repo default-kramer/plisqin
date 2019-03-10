@@ -97,7 +97,7 @@
     [(number? x) (~a x)]
     [(string? x) x]
     [(silence? x) ""]
-    [(or (binding? x)
+    [(or (attached-join? x)
          (join? x))
      (recurse1 (get-src x))]
     [(source? x) (s:source-alias x)]

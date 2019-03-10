@@ -2,6 +2,7 @@
 (require (except-in (submod "model.rkt" all)
                     raw-sql)
          (only-in "core.rkt"
+                  attached-join?
                   get-src
                   raw-sql
                   [source make-source])
@@ -24,7 +25,7 @@
       (is-table? (table-name t) x)
       (cond [(or (query? x)
                  (join? x)
-                 (binding? x))
+                 (attached-join? x))
              (is-table? t (get-src x))]
             [(table? x)
              (is-table? t (table-name x))]

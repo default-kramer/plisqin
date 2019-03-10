@@ -13,7 +13,7 @@
       [(list x)
        #:when (or (source? x)
                   (join? x)
-                  (binding? x))
+                  (attached-join? x))
        (if single-id-handler
            (single-id-handler x)
            (raise-argument-error 'tokens "a scalar-looking SQL expression" x))]

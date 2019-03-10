@@ -15,7 +15,7 @@
          fragment? exists reset-uid-for-testing!
          fragment-kind? join-type? sql-token? token-list?
          queryable? statement? statement-expr?
-         binding? join? source? query? injection?
+         binding? join? source? query? injection? attached-join?
          db-now RS val param)
 
 (require "aggregate.rkt")

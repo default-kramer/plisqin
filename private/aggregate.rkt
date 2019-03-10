@@ -5,7 +5,7 @@
 ; An aggregate will have at most 1 target.
 ; We will enforce this in a constructor procedure later.
 (define/contract (find-target agg)
-  (-> aggregate? (or/c binding? join? #f))
+  (-> aggregate? (or/c attached-join? join? #f))
   (match (find-targets (s:fragment-tokens agg))
     [(list x) x]
     [(list) #f]
@@ -13,7 +13,7 @@
 
 ; Tests and better explanation of this are in "auto-inject-aggregates.rkt"
 (define/contract (find-targets root)
-  (-> any/c (listof (or/c binding? join?)))
+  (-> any/c (listof (or/c attached-join? join?)))
   (define (enter node accum)
     (cond
       ; Don't explore subqueries
@@ -23,8 +23,8 @@
       ; If it does, we look in its join-on clauses
       [(aggregate? node)
        (let* ([target (find-target node)]
-              [join (if (binding? target)
-                        (s:binding-join target)
+              [join (if (attached-join? target)
+                        (attached-join-join target)
                         target)]
               [join-clauses (if (join? join)
                                 (s:join-clauses join)
@@ -32,8 +32,8 @@
          (return (no-recurse node)
                  (append (find-targets join-clauses) accum)))]
       [(or (grouped-join? node)
-           (and (binding? node)
-                (grouped-join? (s:binding-join node))))
+           (and (attached-join? node)
+                (grouped-join? (attached-join-join node))))
        (return (no-recurse node) (cons node accum))]
       [else (return node)]))
   (remove-duplicates

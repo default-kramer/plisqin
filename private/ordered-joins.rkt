@@ -7,7 +7,7 @@
   (-> query? (listof join?))
   (define (enter node)
     (cond
-      [(or (query? node) (binding? node))
+      [(or (query? node) (attached-join? node))
        (return (no-recurse node))]
       [else (return node)]))
   (define (exit node accum)

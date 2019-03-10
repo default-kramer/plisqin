@@ -125,7 +125,7 @@
   (let ([target (s:injection-target inj)])
     (cond
       [(join? target) target]
-      [(binding? target) (s:binding-join target)]
+      [(attached-join? target) (attached-join-join target)]
       [(source? target)
        (first (filter (λ(j) (and (join? j)
                                  (equal? (get-src j) target)))

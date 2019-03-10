@@ -4,13 +4,30 @@
 This documentation is not written for a user of Plisqin, but you
 might find something useful anyway.
 
-@section{What Next?}
-There are a lot of things I could try to do next.
+@section{Needed for 0.2}
 @itemlist[
- @item{Work on parameters (see notes below).}
- @item{Can Plisqin be designed in such a way that it can generate SQL or directly integrate with Postgres?}
- @item{Is the previous question important enough to care about right now?}
- @item{Should I try direct integration with SQLite before trying Postgres?}
+ @item{Remove number? from sql-token? - need param or val.}
+ @item{raw-sql NEEDS to look different than a regular string in error messages}
+ @item{select #:as}
+ @item{and, or, not}
+ @item{the literal rewrites (or syntax parameters) of 'asc 'desc 'null}
+ @item{something for sql-null}
+ @item{Lots of testing needed - do rebuild views / SPs}
+ @item{Lots of missing documentation}
+ @item{Document the 3 modes (offline SQL gen, compile-time gen, runtime-gen (eager or lazy)).}
+ ]
+
+@section{Nice to have for 0.2}
+@itemlist[
+ @item{Compile-time SQL generation for Racket programs}
+ @item{Support for update and delete}
+ @item{Overhaul query printing / that to-list stuff}
+ @item{rename binding? to attached-join?}
+ @item{Split core lib from extras, like the examples}
+ ]
+
+@section{What Else}
+@itemlist[
  @item{What type system should Plisqin have? Dynamic, sure, but what about...}
  @item{Can @(racket (scalar x".Foo")) be used in addition? (A: Maybe?)}
  @item{Can @(racket (scalar x".Foo" #:typed-as 'decimal)) be used in addition? (A: Always.)}
@@ -23,7 +40,6 @@ There are a lot of things I could try to do next.
   (specifically @(racket sum) and @(racket count) which should return 0.)
   But what about other aggregates? What is the average of an empty set?
   Force the programmer to specify what they want?}
- @item{What does #lang plisqin look like?}
  @item{Can I satisfy people who have never seen (or hate) Lisp without sacrificing power?}
  @item{Can Plisqin provide a uniform API for different databases?}]
 

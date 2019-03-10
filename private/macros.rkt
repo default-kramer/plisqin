@@ -79,19 +79,10 @@
       ; else just build a scalar
       (scalar tokens)))
 
-(define (get-target target)
-  (cond
-    ; Injections were working just fine when bindings didn't exist and we just
-    ; used raw sources. So what happens if we use the raw source as the injection
-    ; target? It should work, right?
-    ;[(binding? target) (get-src target)]
-    ; HA HA let's go!
-    [else target]))
-
 (define-syntax inject
   (syntax-rules ()
     [(inject [VAR TARGET] TOKENS ...)
-     (let* ([target (get-target TARGET)]
+     (let* ([target TARGET]
             [VAR (make-injection-placeholder target)])
        (injection target VAR (make-injection-body VAR (list TOKENS ...))))]
     [(inject VAR TOKENS ...)

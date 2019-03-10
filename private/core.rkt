@@ -39,6 +39,7 @@
          interval-plus interval-minus interval-negate
          db-now RS raw-sql-content value-content
          query-limit query-offset query-distinct?
+         attached-join? attached-join-join
          ; fragments
          select select?
          where where?
@@ -52,6 +53,10 @@
          subquery subquery?
          sql sql?
          silence silence?)
+
+; trying to rename `binding` to `attached-join`
+(define attached-join? binding?)
+(define attached-join-join binding-join)
 
 (define/contract (make-val x)
   (-> (or/c string? number? value?) value?)
@@ -306,7 +311,7 @@
                                 [type type])]))
 
 (define/contract (make-binding join)
-  (-> join? binding?)
+  (-> join? attached-join?)
   (binding (empty-metadata) join))
 
 (define/contract (make-injection target placeholder fragment)
@@ -323,7 +328,7 @@
                       [query (add-join (join-query q) j)])]))
 
 (define/contract (convert-to-subquery x)
-  (-> (or/c query? join? binding?) query?)
+  (-> (or/c query? join? attached-join?) query?)
   (define/contract (convert j)
     (-> join? query?)
     (let* ([q (join-query j)]
@@ -337,7 +342,7 @@
   (cond
     [(query? x) x]
     [(join? x) (convert x)]
-    [(binding? x) (convert (binding-join x))]))
+    [(attached-join? x) (convert (attached-join-join x))]))
 
 (define/contract (exists . tokens)
   (->* () () #:rest token-list? bool?)
@@ -349,7 +354,7 @@
     [(list x)
      #:when (or (query? x)
                 (join? x)
-                (binding? x))
+                (attached-join? x))
      (RS bool "exists ("(convert-to-subquery x)")")]
     [else
      (RS bool "exists (" tokens ")")]))
@@ -378,7 +383,7 @@
   (cond [(source? x) x]
         [(query? x) (query-source x)]
         [(join? x) (get-src (join-query x))]
-        [(binding? x) (get-src (binding-join x))]
+        [(attached-join? x) (get-src (attached-join-join x))]
         [(injection? x) (get-src (injection-target x))]
         [else #f]))
 

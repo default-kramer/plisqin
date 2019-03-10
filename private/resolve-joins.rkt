@@ -126,10 +126,10 @@
   (-> query? join-collector?)
   (define (stop-on-query node)
     (if (or (query? node)
-            ; Bindings should be skipped also. If a binding comes from a parent query we are supposed
-            ; to ignore it (trust that it gets joined there). If a binding comes from the current
+            ; Attached joins should be skipped also. If an attached join comes from a parent query we are supposed
+            ; to ignore it (trust that it gets joined there). If an attached join comes from the current
             ; query then the join should be the query's list of joins anyway, so we'll collect it then.
-            (binding? node))
+            (attached-join? node))
         (return (no-recurse node))
         (return node)))
   ; When we see a join, add it to the join collector  

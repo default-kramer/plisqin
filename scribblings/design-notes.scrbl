@@ -27,34 +27,19 @@ like object equality?" And the answer is still NO. Consider this:
 If all the sources are @(racket '(Source "Title" "t" 0)) then @(racket t) and @(racket x) will
 refer to the same thing. This is clearly wrong.
 
-@section{On Parameters}
-It's very convenient to be able to put raw SQL right into a clause, like this:
+@section{Language Configuration}
+It would be nice if #lang plisqin was customizable.
+Couldn't the reader recognize something like
 @(racketblock
-  (from x "X"
-        (where x".foo = 'bar'")))
+  (lang-options #:string-literals->sql #t
+                #:dotted-application #t
+                #:etc ...))
+as the first datum after the #lang line?
 
-But this comes with the risk of SQL injection.
-Here is what I am thinking.
-@(itemlist
-  #:style 'ordered
-  @item{Create a new data structure @(racket trusted-string).}
-  @item{Tighten the contract (sql-token? probably) to replace @(racket string?) with @(racket trusted-string?).}
-  @item{Create a Racket parameter that says what to do if a @(racket string?) gets passed in.
- Either error or automatically convert to an SQL parameter.
- (Oh yeah, I'll need to add parameters too.)}
-  @item{Create a rewrite rule so that a syntax object @(racket #':) immediately left of
- a syntax object @(racket #'"string literal") gets rewritten to @(racket (trust "string literal")).}
-  @item{Should we do the same for numbers? Probably...}
-  )
-
-Then you can do
-@(racketblock
-  (from x "X"
-        {where x :".foo = 'bar'"}))
-
-Which is almost as convenient.
-
-If you don't have a string literal, you would have to do @(racket (trust the-string)).
-
-I think that if @(racket (syntax->datum stx)) returns a @(racket string?)
-then you know that stx is a string literal.
+Ideas
+@itemlist[
+ @item{Enable/disable converting all string literals to @(racket raw-sql).
+  Maybe use @(racket #"byte-string-literals") as an escape, which would get converted to strings via @(racket bytes->string/utf8).}
+ @item{Enable/disable dot handling "a.b" -> "(b a)"}
+ @item{Enable/disable any of the rewrite rules.}
+ ]
