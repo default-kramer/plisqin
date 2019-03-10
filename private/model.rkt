@@ -29,6 +29,8 @@
          `(injection ,(to-list target) ,(to-list placeholder) ,(to-list fragment))]
         [(cases _ of else contents)
          `(cases ,(to-list of) ,(to-list else) ,contents)]
+        [(param _ name value)
+         `(param ,name ,value)]
         [(value _ content)
          `(val ,content)]
         [(raw-sql _ content)
@@ -88,7 +90,7 @@
 
   (def-token value value? ([content (or/c string? number?)]))
   (def-token raw-sql raw-sql? ([content string?]))
-  (def-token param param? ([name string?]
+  (def-token param param? ([name (or/c string? identifier? #f)]
                            [value any/c]))
 
   (def-token fragment fragment? ([kind fragment-kind?]

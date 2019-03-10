@@ -1,7 +1,8 @@
 #lang racket
 (module+ test
   (require rackunit))
-(require (submod "model.rkt" all) "util.rkt")
+(require (submod "model.rkt" all) "util.rkt"
+         (for-syntax syntax/parse))
 
 ; Provide all struct stuff with a prefix.
 ; Also, provide all struct members (but not the constructor) without a prefix.
@@ -22,11 +23,12 @@
                      [make-interval interval]
                      [make-limit limit]
                      [make-offset offset]
-                     [make-distinct distinct]))
+                     [make-distinct distinct]
+                     [macro-param param]))
 
 (provide add-statement add-join join? is-simple-join? grouped-join? query-fragments
          make-query make-join join-type? sql-token? change-kind
-         make-cases
+         make-cases make-param param? param-name param-value
          token-list? fragment-kind? convert-to-subquery
          get-src get-alias reset-uid-for-testing! next-uid normalize
          exists query-scope replace make-injection-placeholder
@@ -525,3 +527,22 @@
       (listof (cons/c sql-token? sql-token?))
       cases?)
   (cases (empty-metadata) input else contents))
+
+
+; parameters
+(define (make-param name value)
+  (param (empty-metadata) name value))
+
+(define-syntax (macro-param stx)
+  (syntax-parse stx
+    [(_ val:expr
+        (~optional (~seq #:name name:expr)
+                   #:defaults ([name #'#f])))
+     (if (identifier? #'val)
+         #'(make-param (or name #'val) val)
+         #'(make-param name val))]
+    [(_ (~optional (~seq #:name name:expr)
+                   #:defaults ([name #'#f]))
+        (~optional (~seq #:value val:expr)
+                   #:defaults ([val #'#f])))
+     #'(make-param name val)]))

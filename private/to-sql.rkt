@@ -1,7 +1,7 @@
 #lang racket
 (require "core.rkt" "util.rkt" "ordered-joins.rkt" "deduplicate.rkt"
          "auto-inject.rkt" "auto-inject-aggregates.rkt" "make-unique-aliases.rkt"
-         "resolve-injections.rkt" "dialect.rkt")
+         "resolve-injections.rkt" "dialect.rkt" "param-binder.rkt")
 (module+ test
   (require rackunit)
   (require "macros.rkt")
@@ -10,7 +10,7 @@
      (string-normalize-spaces (to-sql q))
      (string-normalize-spaces str))))
 
-(provide to-sql rewrite)
+(provide to-sql bind-sql rewrite)
 
 (define/contract (rewrite q)
   (-> query? query?)
@@ -22,6 +22,9 @@
          [q (resolve-injections q)]
          [q (make-unique-aliases q)])
     q))
+
+; (or/c #f binder?)
+(define current-binder (make-parameter #f))
 
 ; (: indent (-> String String))
 (define (indent str)
@@ -62,6 +65,24 @@
        (if (string? content)
            (go "'"content"'")
            (~a x)))]
+    [(param? x)
+     (if (current-binder)
+         (begin
+           (current-binder (encounter (current-binder) x))
+           ; Render a numeric parameter
+           (let ([num (param-number (current-binder) x)])
+             (cond
+               [(postgres? dialect) (format "$~a" num)]
+               [(sqlite? dialect) (format "?~a" num)]
+               [(mssql? dialect) (format "@p~a" num)]
+               [else (error "cannot render numbered parameter for dialect: " dialect)])))
+         ; Else render a named parameter
+         (cond
+           [(sqlite? dialect)
+            (format ":~a" (param-name x))]
+           [(mssql? dialect)
+            (format "@~a" (param-name x))]
+           [else (error "cannot render named parameter for dialect: " dialect)]))]
     [(equal? 'SP x) 'SP]
     [(equal? 'db-now x)
      (cond
@@ -265,6 +286,12 @@
 (define/contract (to-sql token)
   (-> sql-token? string?)
   (render-token token))
+
+(define/contract (bind-sql token)
+  (-> sql-token? (cons/c string? binder?))
+  (parameterize ([current-binder (new-binder)])
+    (define sql (to-sql token))
+    (cons sql (current-binder))))
 
 (module+ test
   (require (prefix-in op: "operators.rkt"))
