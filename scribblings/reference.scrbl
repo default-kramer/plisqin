@@ -1,6 +1,6 @@
 #lang scribble/manual
 @(require (for-label plisqin
-                     (except-in "racket.rkt" define null)
+                     (except-in "racket.rkt" define)
                      plisqin/examples/video-rental-schema))
 @(require "helpers.rkt"
           plisqin

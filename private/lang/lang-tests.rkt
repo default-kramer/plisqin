@@ -194,7 +194,13 @@
    {RS order-by 'desc "foo" ".bar"}
    #:all "foo.bar desc")
   (check
+   {RS order-by desc "foo" ".bar"}
+   #:all "foo.bar desc")
+  (check
    {RS order-by 'asc "foo" ".bar"}
+   #:all "foo.bar asc")
+  (check
+   {RS order-by asc "foo" ".bar"}
    #:all "foo.bar asc")
   (check
    {RS order-by "a" "b" "c"}

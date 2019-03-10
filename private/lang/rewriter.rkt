@@ -127,6 +127,31 @@
              [else #f])]
       [else #f]))
 
+  ; Searches expr for orig and substitutes it with replacement
+  (define (replace orig replacement expr)
+    (if (equal? expr orig)
+        replacement
+        (let ([content (syntax-e expr)])
+          (cond
+            [(list? content) (datum->syntax expr
+                                            (map (curry replace orig replacement) content)
+                                            expr expr)]
+            [(pair? content) (datum->syntax expr
+                                            (cons (replace orig replacement (car content))
+                                                  (replace orig replacement (cdr content)))
+                                            expr expr)]
+            [else expr]))))
+
+  (define (make-literal-rewriter from to)
+    (λ(stx)
+      (syntax-case stx ()
+        [{lit rest ...}
+         (if (equal? (syntax-e #'lit) from)
+             (let ([replacement (datum->syntax stx to stx stx)])
+               (replace #'lit replacement stx))
+             #f)]
+        [else #f])))
+
   (define-syntax-rule (/pass rules ...)
     (/pass-ltr (/filter braced? (/or rules ...))))
 
@@ -135,6 +160,12 @@
      ; Dont filter braced for this one:
      (/pass-ltr rest-args-pattern)
      ; OK, now do our real rewriting work
+     ; Wrap these literals like (identity 'asc) so that we don't infinitely recurse
+     ; (Otherwise we get asc -> (quote asc) -> (quote (quote asc)) -> ... forever)
+     (/pass (make-literal-rewriter 'asc #'(identity 'asc))
+            (make-literal-rewriter 'desc #'(identity 'desc))
+            (make-literal-rewriter 'null #'(identity 'null))
+            (make-literal-rewriter 'as #'#:as))
      (/pass valueless-dot
             dot-list
             dot-id)

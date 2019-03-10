@@ -1,7 +1,7 @@
 #lang racket
 ; Provide everything from racket except identifiers that clash with plisqin.
 (define-for-syntax plisqin-conflicts
-  (list "group-by" "count" "min" "max" "second" "case"
+  (list "group-by" "count" "min" "max" "second" "case" "null"
         "+" "-" "/" "*" "=" "<" "<=" ">" ">="))
 
 (require racket/provide)

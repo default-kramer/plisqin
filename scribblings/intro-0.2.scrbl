@@ -183,7 +183,7 @@ takes no arguments and returns a query:
 @(codex #<<CODE
 (define (big-cities)
   {from city City
-        {order-by 'desc city.CityPopulation}
+        {order-by desc city.CityPopulation}
         {limit 10}
         {select city.CityName}
         {select city.CityPopulation}})
@@ -354,7 +354,7 @@ Notice that @(racket CitiesG) always occurs inside an aggregate:
         {select co.CountryName}
         {RS select {count co.CitiesG}" as CountCitiesG"}
         {RS select {sum co.CitiesG.CityPopulation}" as SumCityPopulation"}
-        {order-by 'desc {count co.CitiesG}}
+        {order-by desc {count co.CitiesG}}
         {limit 10}})
 CODE
         )
@@ -386,7 +386,7 @@ Let's remove that clause to make a reusable version:
   {from x X
         {RS select {count x.CitiesG}" as CountCitiesG"}
         {RS select {sum x.CitiesG.CityPopulation}" as SumCityPopulation"}
-        {order-by 'desc {count x.CitiesG}}
+        {order-by desc {count x.CitiesG}}
         {limit 10}})
 CODE
         )
