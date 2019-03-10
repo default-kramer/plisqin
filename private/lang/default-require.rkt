@@ -21,7 +21,7 @@
 
 ; Special forms only available to #lang plisqin:
 (provide case
-         asc desc null asc)
+         asc desc null as)
 
 
 ; Special version of "case" only for #lang plisqin.
