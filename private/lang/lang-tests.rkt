@@ -261,5 +261,14 @@
                   [(10 11 12) 'big])
                 'big)
 
+  ; select as
+  (check {RS from x "X"
+             {select x".foo" as "FOO"}
+             {select x".bar" as "BAR"}}
+         #:all "select x.foo as FOO , x.bar as BAR from X x")
+  (check {RS from x "X"
+             {select x".foo" #:as "FOO"}}
+         #:all "select x.foo as FOO from X x")
+
   ; End test submodule
   )

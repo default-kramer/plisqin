@@ -39,7 +39,7 @@
          interval-plus interval-minus interval-negate
          db-now RS raw-sql-content value-content
          query-limit query-offset query-distinct?
-         attached-join? attached-join-join
+         attached-join? attached-join-join select-as
          ; fragments
          select select?
          where where?
@@ -95,11 +95,21 @@
     [(_ x)
      (rs* #'x)]
     [(_ f arg ...)
-     (rs* #'(f arg ...))]))
+     (rs* (datum->syntax stx
+                         (syntax->list #'(f arg ...))
+                         stx stx))]))
 
 (module+ test
   (let ([src (make-source "x" "X")])
-    (check-true (fragment? (RS where src".FIELD > 100")))))
+    (check-true (fragment? (RS where src".FIELD > 100"))))
+
+  ; TODO can this test be made to pass??
+  ; Maybe (quote (args ...)) can be rewritten to (list (quote args) ...)
+  ; and then we can rewrite (quote "string-lit") to (build-raw-sql "string-lit")
+  ; ... but it seems like there are more hidden caveats.
+  #;(check-equal?
+     (RS '("1" "2"))
+     (map build-raw-sql '("1" "2"))))
 
 (define limit-val? (or/c #f (and/c integer? positive?)))
 (define offset-val? limit-val?)
@@ -137,6 +147,47 @@
                 (RS order-by-raw "a""b""c""d"))
   (check-equal? (order-by (list) 1 2 3)
                 (order-by-raw 1 2 3)))
+
+
+(define select-as-key 'select-as)
+
+; This is the likely place to add "as-name inference" meaning that if we have
+#;(select (scalar "foo" #:as "bar"))
+; We can infer that the select fragment's name should also be "bar"
+(define/contract (select-as token)
+  (-> fragment? (or/c string? #f))
+  (metadata-get select-as-key token))
+
+; Add an #:as keyword to some of the fragment constructors
+(define-syntax-rule (add-as raw-ctor new-ctor return-contract)
+  (define/contract (new-ctor #:as [as #f] . tokens)
+    ; If we set `#:rest token-list?` it fails, I'm not sure why.
+    ; Something about the flattening surprises the chaperone that gets generated
+    ; by define/contract I think... See the following test.
+    (->* () (#:as (or/c string? raw-sql? #f)) #:rest any/c return-contract)
+    (define frag (apply raw-ctor tokens))
+    (if as
+        (metadata-set select-as-key frag (if (raw-sql? as)
+                                             (raw-sql-content as)
+                                             as)
+                      #:hidden? #f)
+        frag)))
+
+(add-as select-raw select select?)
+(add-as scalar-raw scalar scalar?)
+(add-as bool-raw bool bool?)
+(add-as sql-raw sql sql?)
+
+(module+ test
+  ; Make sure token-list is flattening stuff.
+  ; This can give a really weird error message later on if we don't catch it here.
+  (check-equal? (RS scalar "search-string-jgh590ba3" (list "a" "b"))
+                (RS scalar "search-string-jgh590ba3" "a" "b"))
+  ; Make sure #:as works
+  (check-equal?
+   (select-as (RS scalar (list "x" ".") #:as "as-name" "foo"))
+   "as-name"))
+
 
 ; What can be used to start a query
 (def-contract queryable?

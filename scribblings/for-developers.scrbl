@@ -8,7 +8,6 @@ might find something useful anyway.
 @itemlist[
  @item{Remove number? from sql-token? - need param or val.}
  @item{raw-sql NEEDS to look different than a regular string in error messages}
- @item{select #:as}
  @item{and, or, not}
  @item{the literal rewrites (or syntax parameters) of 'asc 'desc 'null}
  @item{something for sql-null}
@@ -20,6 +19,7 @@ might find something useful anyway.
 @section{Nice to have for 0.2}
 @itemlist[
  @item{Compile-time SQL generation for Racket programs}
+ @item{as-name inference}
  @item{Support for update and delete}
  @item{Overhaul query printing / that to-list stuff}
  @item{rename binding? to attached-join?}

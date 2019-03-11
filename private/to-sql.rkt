@@ -102,6 +102,12 @@
      (recurse1 (get-src x))]
     [(source? x) (s:source-alias x)]
     [(subquery? x) (go "("(change-kind 'Sql x)")")]
+    [(select? x)
+     (let ([as (select-as x)])
+       (go (recurseM (s:fragment-tokens x))
+           (or (and as
+                    (list 'SP "as" 'SP as))
+               '())))]
     [(fragment? x)
      (recurseM (s:fragment-tokens x))]
     [(query? x)

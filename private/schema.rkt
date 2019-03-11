@@ -2,6 +2,7 @@
 (require (except-in (submod "model.rkt" all)
                     raw-sql)
          (only-in "core.rkt"
+                  scalar
                   attached-join?
                   get-src
                   raw-sql
