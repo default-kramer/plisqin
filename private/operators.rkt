@@ -1,7 +1,8 @@
 #lang racket
 (provide + - * / ||
          = <> like not-like is is-not
-         < <= > >=)
+         < <= > >=
+         plisqin-and plisqin-or plisqin-not)
 
 (module+ test
   (require rackunit))
@@ -202,4 +203,17 @@
 ; Simply negating the result of "is" should work in all DBs.
 (define/contract (is-not a b)
   (-> (or/c sql-token? 'null) (or/c sql-token? 'null) sql-token?)
-  (RS bool "not "(is a b)))
+  (plisqin-not (is a b)))
+
+
+; "and" and "or" are intended to be used by #lang plisqin as infix operators,
+; so they take only 2 arguments. A more rackety version could accept many.
+(define/contract (plisqin-and a b)
+  (-> sql-token? sql-token? sql-token?)
+  (RS bool "("a" and "b")"))
+(define/contract (plisqin-or a b)
+  (-> sql-token? sql-token? sql-token?)
+  (RS bool "("a" or "b")"))
+(define/contract (plisqin-not a)
+  (-> sql-token? sql-token?)
+  (RS bool "not "a))

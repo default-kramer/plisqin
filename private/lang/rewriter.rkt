@@ -52,6 +52,24 @@
                  [else #f]))]
         [else #f])))
 
+  (define/contract (make-unary-rewriter symbols)
+    (-> (listof symbol?) procedure?)
+    (λ(stx)
+      (syntax-case stx ()
+        [{op arg rest ...}
+         (begin
+           (define loc (first (syntax->list stx)))
+           (cond [(member (syntax-e #'op) symbols)
+                  ; rewrite to {(op arg) rest ...}
+                  (let* ([inner #'(op arg)]
+                         ; only copy srcloc, not other properties (like braces) to avoid infinite recursion
+                         [inner (copy-srcloc loc inner)])
+                    (datum->syntax stx
+                                   (syntax->list #`{#,inner rest ...})
+                                   stx stx))]
+                 [else #f]))]
+        [else #f])))
+
   ; Because we customized the read of the dot, (a b c . d)
   ; will read as (list a b c literally-a-dot d)
   ; We need to rewrite it to (cons a (cons b (cons c d)))
@@ -155,6 +173,11 @@
   (define-syntax-rule (/pass rules ...)
     (/pass-ltr (/filter braced? (/or rules ...))))
 
+  (require (only-in "../operators.rkt"
+                    plisqin-and
+                    plisqin-or
+                    plisqin-not))
+
   (define the-rewriter
     (/all
      ; Dont filter braced for this one:
@@ -165,6 +188,9 @@
      (/pass (make-literal-rewriter 'asc #'(identity 'asc))
             (make-literal-rewriter 'desc #'(identity 'desc))
             (make-literal-rewriter 'null #'(identity 'null))
+            (make-literal-rewriter 'and #'plisqin-and)
+            (make-literal-rewriter 'or #'plisqin-or)
+            (make-literal-rewriter 'not #'plisqin-not)
             (make-literal-rewriter 'as #'#:as))
      (/pass valueless-dot
             dot-list
@@ -173,6 +199,9 @@
      (/pass (make-infix-rewriter '(* /)))
      (/pass (make-infix-rewriter '(+ -)))
      (/pass (make-infix-rewriter '(= < > <= >= <> like not-like)))
+     (/pass (make-unary-rewriter '(plisqin-not)))
+     (/pass (make-infix-rewriter '(plisqin-and)))
+     (/pass (make-infix-rewriter '(plisqin-or)))
      ; Now we're done. If there are any unresolved dots, it is a syntax error.
      ; Don't filter braced for this one:
      (/pass-ltr dot-misuse)))

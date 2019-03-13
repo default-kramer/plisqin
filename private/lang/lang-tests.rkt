@@ -270,5 +270,26 @@
              {select x".foo" #:as "FOO"}}
          #:all "select x.foo as FOO from X x")
 
+  ; and, or, not
+  (check {RS where not "foo"}
+         #:all "not foo")
+  (check {RS where "1=1" and not "2=2" or not "3=3"}
+         #:all "((1=1 and not 2=2) or not 3=3)")
+  (check {RS where "1=1" and {not "2=2"} or {not "3=3"}}
+         #:all "((1=1 and not 2=2) or not 3=3)")
+  (check {RS where {and "1=1" {not "2=2"}} or {not "3=3"}}
+         #:all "((1=1 and not 2=2) or not 3=3)")
+  (check {RS where {or {and "1=1" {not "2=2"}} {not "3=3"}}}
+         #:all "((1=1 and not 2=2) or not 3=3)")
+  (check {RS where not "a=a" and "b=b"}
+         #:all "(not a=a and b=b)")
+  ; Make sure the Racket versions still work when not braced
+  (check-equal? {identity (and 'foo 'bar)}
+                'bar)
+  (check-equal? {identity (or #f 'foo)}
+                'foo)
+  (check-equal? {identity (not 'foo)}
+                #f)
+
   ; End test submodule
   )

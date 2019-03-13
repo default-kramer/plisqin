@@ -43,3 +43,18 @@ Ideas
  @item{Enable/disable dot handling "a.b" -> "(b a)"}
  @item{Enable/disable any of the rewrite rules.}
  ]
+
+@section{Cardinality Tracking}
+This is something I've always wanted from SQL.
+@(racketblock
+  (def/append! (Foo x)
+    (join f Foo
+          (join-on f.FooId = x.FooId)
+          (assert-cardinality x))))
+In the above example @(racket (assert-cardinality x)) is a new clause that says
+"I (the programmer) think the cardinality of this join is x, give an error if you can't prove me right."
+Plisqin would have to know that @(racket FooId) is unique in order to prove this.
+There would also be something like @(racket trust-cardinality) which would say
+"I (the programmer) am telling you the cardinality of this join is x, just take my word for it."
+
+But... it might be difficult to make it smart enough to solve actual problems.
