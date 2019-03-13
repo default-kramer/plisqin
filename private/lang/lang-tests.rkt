@@ -291,5 +291,9 @@
   (check-equal? {identity (not 'foo)}
                 #f)
 
+  ; String literal escaping:
+  (check {val "Tasita D'mour"}
+         #:all "'Tasita D''mour'")
+
   ; End test submodule
   )
