@@ -9,38 +9,43 @@
       (define NAME (flat-named-contract 'NAME BODY))
       (def-doc NAME (racketblock BODY))))
 
+  (define already-writing (make-parameter #f))
+
   (define (my-custom-write x port mode)
     ; https://docs.racket-lang.org/reference/Printer_Extension.html#%28def._%28%28lib._racket%2Fprivate%2Fbase..rkt%29._gen~3acustom-write%29%29
     (define (to-list x)
-      (match x
-        [(dateadd _ date interval)
-         `(dateadd ,(to-list date) ,interval)]
-        [(fragment _ kind tokens)
-         (list kind (to-list tokens))]
-        [(source _ alias table uid)
-         `(source ,(to-list alias) ,(to-list table) ,(to-list uid))]
-        [(query _ source clauses joins options)
-         `(query ,(to-list source) ,(to-list clauses) ,(to-list joins) ,options)]
-        [(join _ type query clauses)
-         `(join ,(to-list type) ,(to-list query) ,(to-list clauses))]
-        [(binding _ join)
-         `(binding ,(to-list join))]
-        [(injection _ target placeholder fragment)
-         `(injection ,(to-list target) ,(to-list placeholder) ,(to-list fragment))]
-        [(cases _ of else contents)
-         `(cases ,(to-list of) ,(to-list else) ,contents)]
-        [(param _ name value)
-         `(param ,name ,value)]
-        [(value _ content)
-         `(val ,content)]
-        [(raw-sql _ content)
-         ; TODO should give some indication that it is raw SQL, otherwise error messages look like
-         ; expected: string?
-         ; got: "some-raw-sql"
-         content]
-        [x #:when (list? x)
-           (map to-list x)]
-        [else x]))
+      (define root? (not (already-writing)))
+      (parameterize ([already-writing #t])
+        (match x
+          [(dateadd _ date interval)
+           `(dateadd ,(to-list date) ,interval)]
+          [(fragment _ kind tokens)
+           (list kind (to-list tokens))]
+          [(source _ alias table uid)
+           `(source ,(to-list alias) ,(to-list table) ,(to-list uid))]
+          [(query _ source clauses joins options)
+           `(query ,(to-list source) ,(to-list clauses) ,(to-list joins) ,options)]
+          [(join _ type query clauses)
+           `(join ,(to-list type) ,(to-list query) ,(to-list clauses))]
+          [(binding _ join)
+           `(binding ,(to-list join))]
+          [(injection _ target placeholder fragment)
+           `(injection ,(to-list target) ,(to-list placeholder) ,(to-list fragment))]
+          [(cases _ of else contents)
+           `(cases ,(to-list of) ,(to-list else) ,contents)]
+          [(param _ name value)
+           `(param ,name ,value)]
+          [(value _ content)
+           `(val ,content)]
+          [(raw-sql _ content)
+           ; At root level, indicate this is raw sql.
+           ; But if we're inside another token, it doesn't need to be restated all the time.
+           (if root?
+               `(raw-sql ,content)
+               content)]
+          [x #:when (list? x)
+             (map to-list x)]
+          [else x])))
     (match mode
       [#t (write (to-list x) port)]
       [#f (display (to-list x) port)]
