@@ -2,6 +2,9 @@
 (require "util.rkt" "core.rkt" "stack-tracker.rkt")
 (provide aggregate find-target)
 
+(module+ test
+  (require rackunit "macros.rkt" "case-when.rkt"))
+
 ; An aggregate will have at most 1 target.
 ; We will enforce this in a constructor procedure later.
 (define/contract (find-target agg)
@@ -38,6 +41,21 @@
       [else (return node)]))
   (remove-duplicates
    (walk root #:on-enter enter #:accum '() #:return 'accum)))
+
+(module+ test
+  ; Regression: need to find the target when `case-when` is involved.
+  ; (Bug was that the walker didn't handle pairs)
+  (let* ([x (source "x" "X")]
+         [y (source "y" "Y")]
+         [gj ; grouped-join
+          (RS join x x
+              (group-by (scalar x".KEY"))
+              (join-on (scalar x".KEY")" = "(scalar y".KEY")))]
+         [the-case (RS case-when [(bool (scalar gj".Something")" = 4")
+                                  (scalar "foo")])]
+         [agg (RS aggregate "count("the-case")")])
+    (check-equal? (find-target agg)
+                  gj)))
 
 (define/contract (make-msg targets counter)
   (-> (listof token?) integer? string?)

@@ -109,6 +109,11 @@
               (cond
                 [stype (do-struct node stype)]
                 [(list? node) (do-list node)]
+                [(pair? node)
+                 (let ([result (do-list (list (car node) (cdr node)))])
+                   (if (not (equal? 2 (length result)))
+                       (error "needed exactly two results for pair")
+                       (cons (car result) (cadr result))))]
                 [else node]))]
            ; do the exit callback
            [node
