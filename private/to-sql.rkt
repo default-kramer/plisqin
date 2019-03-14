@@ -64,7 +64,7 @@
      (let ([content (value-content x)])
        (if (string? content)
            (go "'" (string-replace content "'" "''") "'")
-           (~a x)))]
+           (~a content)))]
     [(param? x)
      (if (current-binder)
          (begin
