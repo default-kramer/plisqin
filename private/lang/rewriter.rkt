@@ -198,7 +198,7 @@
      (/pass (make-infix-rewriter '(||)))
      (/pass (make-infix-rewriter '(* /)))
      (/pass (make-infix-rewriter '(+ -)))
-     (/pass (make-infix-rewriter '(= < > <= >= <> like not-like)))
+     (/pass (make-infix-rewriter '(= < > <= >= <> like not-like is is-not)))
      (/pass (make-unary-rewriter '(plisqin-not)))
      (/pass (make-infix-rewriter '(plisqin-and)))
      (/pass (make-infix-rewriter '(plisqin-or)))

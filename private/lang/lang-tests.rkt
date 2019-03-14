@@ -290,6 +290,12 @@
                 'foo)
   (check-equal? {identity (not 'foo)}
                 #f)
+  ; Regression:
+  (check-equal?
+   ; (Is this testing an implementation detail?
+   '{x.Foo is null or x.Bar = 1}
+   '{{or {is x.Foo null}
+         {= x.Bar 1}}})
 
   ; String literal escaping:
   (check {val "Tasita D'mour"}
