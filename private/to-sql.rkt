@@ -83,6 +83,12 @@
            [(mssql? dialect)
             (format "@~a" (param-name x))]
            [else (error "cannot render named parameter for dialect: " dialect)]))]
+    [(selected-bool? x)
+     (cond
+       [(mssql? dialect)
+        (go "cast(case when "(selected-bool-content x)" then 1 else 0 end as bit)")]
+       ; PG and SQLite handle this automatically
+       [else (go (selected-bool-content x))])]
     [(equal? 'SP x) 'SP]
     [(equal? 'db-now x)
      (cond

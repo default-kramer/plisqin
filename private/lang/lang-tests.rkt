@@ -301,5 +301,10 @@
   (check {val "Tasita D'mour"}
          #:all "'Tasita D''mour'")
 
+  ; {select bool-expr} conversion:
+  (check {select {RS bool "foo like 'bar%'"}}
+         #:ms "cast(case when foo like 'bar%' then 1 else 0 end as bit)"
+         #:all "foo like 'bar%'")
+
   ; End test submodule
   )

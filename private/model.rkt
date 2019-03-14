@@ -195,6 +195,10 @@
                            ; the pair is (cons when-token then-token)
                            [contents (listof (cons/c sql-token? sql-token?))]))
 
+  ; SQL Server doesn't allow a boolean expression directly in a select list.
+  ; We can support it though, by holding it here then wrapping it in a "case" during rendering.
+  (def-token selected-bool selected-bool? ([content bool?]))
+
   (def-contract join-type?
     (or/c 'InnerJoin
           'LeftJoin

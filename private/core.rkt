@@ -40,6 +40,7 @@
          db-now RS raw-sql-content value-content
          query-limit query-offset query-distinct?
          attached-join? attached-join-join select-as
+         selected-bool? selected-bool-content
          ; fragments
          select select?
          where where?
@@ -173,7 +174,14 @@
                       #:hidden? #f)
         frag)))
 
-(add-as select-raw select select?)
+(define (select-shim . tokens)
+  (match tokens
+    [(list b)
+     #:when (bool? b)
+     (select-raw (selected-bool (empty-metadata) b))]
+    [else (apply select-raw tokens)]))
+
+(add-as select-shim select select?)
 (add-as scalar-raw scalar scalar?)
 (add-as bool-raw bool bool?)
 (add-as sql-raw sql sql?)
