@@ -80,11 +80,10 @@
        [test-expr:expr then-body:expr]
        ...)
      (define maybe-define-a
-       ;(if (not (identifier-binding #'a))
-       ;    #'(define a (proc empty-proc (~a 'a)))
-       ;    #'(void))
        (let ([hashkey (syntax->datum #'a)])
-         (if (hash-has-key? fields-defined hashkey)
+         ; Need to check both our hash and identifier-binding
+         (if (or (hash-has-key? fields-defined hashkey)
+                 (identifier-binding #'a))
              #'(void)
              (begin
                (hash-set! fields-defined hashkey #t)
