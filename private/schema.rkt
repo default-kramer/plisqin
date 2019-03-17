@@ -1,4 +1,10 @@
 #lang racket
+(provide def! def/append! append!
+         def-table def-fields-of
+         ; legacy compatibility:
+         (rename-out [def/append! field-cases]
+                     [def-table table]))
+
 (require (except-in (submod "model.rkt" all)
                     raw-sql)
          (only-in "core.rkt"
@@ -11,12 +17,6 @@
 (module+ test
   (require rackunit)
   (require "api.rkt"))
-
-(provide def/append! append!
-         def-table def-fields-of
-         ; legacy compatibility:
-         (rename-out [def/append! field-cases]
-                     [def-table table]))
 
 (define empty-proc (λ(arglist) nothing))
 
@@ -180,3 +180,155 @@
 
   (def-fields-of Foo bar)
   (check-not-false (bar (Foo))))
+
+
+; An "arg spec" is an identifier in which a double-colon has meaning.
+; If it is of the form `arg-id::arg-type` then we split it into `arg-id` and `arg-type`.
+; Otherwise it is simply `arg-id` with no type.
+(module split-helper racket
+  (provide get-arg-id get-arg-type)
+
+  (define (string->stx str stx offset)
+    (datum->syntax stx
+                   (string->symbol str)
+                   (list (syntax-source stx)
+                         (syntax-line stx)
+                         (syntax-column stx)
+                         (+ offset (syntax-position stx))
+                         (string-length str))
+                   stx))
+
+  (define (split-arg-spec spec)
+    (define result (string-split (~a (syntax-e spec)) "::"))
+    (match (length result)
+      [0 (cons spec #f)]
+      [1 (cons spec #f)]
+      [2 (let* ([str1 (car result)]
+                [str2 (cadr result)]
+                [stx1 (string->stx str1 spec 0)]
+                [stx2 (string->stx str2 spec (+ 2 (string-length str1)))])
+           (cons stx1 stx2))]
+      [else (raise-syntax-error #f "invalid argument spec (too many colons)" spec)]))
+
+  (define (get-arg-id spec)
+    (car (split-arg-spec spec)))
+  (define (get-arg-type spec)
+    (cdr (split-arg-spec spec))))
+
+(require (for-syntax 'split-helper))
+
+(module+ test
+  (require (submod ".." split-helper))
+
+  (define orig (read-syntax "src" (open-input-string "foo::barium")))
+  (check-equal? (syntax-position orig) 1)
+  (check-equal? (syntax-span orig) 11)
+
+  (define arg-id (get-arg-id orig))
+  (define arg-type (get-arg-type orig))
+  (check-equal? (syntax-position arg-id) 1)
+  (check-equal? (syntax-span arg-id) 3)
+  (check-equal? (syntax-position arg-type) 6)
+  (check-equal? (syntax-span arg-type) 6))
+
+(define (validate-type type stx)
+  (when (not (or (table? type)
+                 (contract? type)))
+    ; Is it better to use `raise-syntax-error` or just `error` here?
+    (raise-syntax-error #f "invalid type name (must be table or predicate)" stx)))
+
+(define (check-arg arg type)
+  (if (table? type)
+      (is-table? type arg)
+      ; else just assume its a predicate (this might not be safe)
+      (type arg)))
+
+(define-for-syntax (change-srcloc stx new-loc)
+  (datum->syntax stx (syntax-e stx) new-loc stx))
+
+
+; Given
+#;(validate-types (arg-spec ...))
+; we generate approximately
+#;(begin (validate-type arg-type #'arg-type) ...)
+; while being aware that `arg-type` is an optional part of `arg-spec`.
+; The goal is report a "type error" as soon as possible.
+(define-syntax (validate-types stx)
+  (syntax-case stx ()
+    [(_ (specs ...))
+     #`(begin
+         #,@(filter
+             identity
+             (for/list ([spec (syntax->list #'(specs ...))])
+               (let ([result (get-arg-type spec)])
+                 (and result
+                      (change-srcloc #`(validate-type #,result #'#,result)
+                                     result))))))]))
+
+
+; Given
+#;(def-help (proc arg-spec ...) body ...)
+; we generate approximately
+#;(def/append! (proc arg-id ...)
+    [(and (check-arg arg-id arg-type)
+          ...)
+     body ...])
+; while being aware that `arg-type` is an optional part of `arg-spec`.
+(define-syntax (def-help stx)
+  (syntax-case stx ()
+    [(_ (proc (specs ...)) body ...)
+     #`(def/append! (proc #,@(map get-arg-id (syntax->list #'(specs ...))))
+         [(and #,@(filter
+                   identity
+                   (for/list ([spec (syntax->list #'(specs ...))])
+                     (let ([result (get-arg-type spec)])
+                       (and result
+                            #`(check-arg #,(get-arg-id spec) #,result))))))
+          (begin
+            body ...)])]))
+
+(define-syntax (def! stx)
+  (syntax-parse stx
+    [(_ (proc:id arg-spec:id ...)
+        body:expr ...+)
+     #`(begin
+         (validate-types (arg-spec ...))
+         (def-help (proc (arg-spec ...))
+           body ...))]))
+
+(module+ test
+  (def! (bar)
+    'nada)
+  (def! (bar str::string?)
+    (format "~a ~a" str str))
+  (def! (bar x::number?)
+    (* 2 x))
+  (check-equal? (bar)
+                'nada)
+  (check-equal? (bar "pizza")
+                "pizza pizza")
+  (check-equal? (bar 21)
+                42)
+
+  ; we should be able to use both `TableFoo` and `TableFoo?` as a type
+  (def-table TableFoo)
+  (define foo (TableFoo))
+
+  (def! (bar x)
+    `(simply ,x))
+  (def! (bar x::TableFoo)
+    `(got-foo ,x))
+  (check-equal? (bar 1)
+                '(simply 1))
+  (check-equal? (bar foo)
+                `(got-foo ,foo))
+  (let ([q {from f TableFoo}])
+    (check-equal? (bar q)
+                  `(got-foo ,q)))
+
+  (def! (bar x::TableFoo?)
+    `(got-foo-again ,x))
+  (check-equal? (bar 1)
+                '(simply 1))
+  (check-equal? (bar foo)
+                `(got-foo-again ,foo)))
