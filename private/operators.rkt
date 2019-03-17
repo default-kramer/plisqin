@@ -1,5 +1,5 @@
 #lang racket
-(provide + - * / ||
+(provide + - * / || ??
          = <> like not-like is is-not
          < <= > >=
          plisqin-and plisqin-or plisqin-not)
@@ -217,3 +217,8 @@
 (define/contract (plisqin-not a)
   (-> sql-token? sql-token?)
   (RS bool "not "a))
+
+; coalesce is ??
+(define/contract (?? token1 . tokens)
+  (->* (sql-token?) #:rest (listof sql-token?) sql-token?)
+  (RS scalar "coalesce(" (interpose (cons token1 tokens) ", ") ")"))

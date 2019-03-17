@@ -586,9 +586,6 @@ Note that @(racket a+b) is not the same as @(racket a + b).
         (list @(racket x .y)
               @(racket {y x})
               @elem{Also works for @(racket x.y) which is read as @(racket x .y)})
-        (list @(racket x ?? y)
-              @(racket {coalesce x y})
-              "")
         (list @(racket x || y)
               @(racket {|| x y})
               "String concatenation. TODO think about this precedence...")
@@ -598,6 +595,9 @@ Note that @(racket a+b) is not the same as @(racket a + b).
         (list @pattern{x @italic{OP} y}
               @(racket {OP x y})
               @elem{When @pattern{@italic{OP}} is @(one-of + -)})
+        (list @(racket x ?? y)
+              @(racket {?? x y})
+              "means \"coalesce(x, y)\" in SQL")
         (list @pattern{x @italic{CMP} y}
               @(racket {CMP x y})
               @elem{When @pattern{@italic{CMP}} is @(one-of = <> like not-like

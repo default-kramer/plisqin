@@ -302,9 +302,14 @@
          #:all "'Tasita D''mour'")
 
   ; {select bool-expr} conversion:
-  (check {select {RS bool "foo like 'bar%'"}}
-         #:ms "cast(case when foo like 'bar%' then 1 else 0 end as bit)"
-         #:all "foo like 'bar%'")
+  (check {select {RS bool "1 = null"}}
+         ; Note that null is preserved:
+         #:ms "cast(case when 1 = null then 1 when not 1 = null then 0 end as bit)"
+         #:all "1 = null")
+
+  ; coalesce
+  (check {RS scalar "foo" + "bar" ?? "baz"}
+         #:all "coalesce((foo + bar), baz)")
 
   ; End test submodule
   )
