@@ -259,10 +259,9 @@ Can we just say @(racket {city.CountryName}) instead?
 Yes, by expanding the definition of @(racket CountryName):
 
 @(codex #<<CODE
-(def/append! (CountryName x)  ; the CountryName of x ...
-  [(City? x)                  ; if x is a City ...
-   ; ... is this expression:
-   {x.Country.CountryName}])
+(extend! Country
+         #:procs CountryName CountryPopulation
+         #:to City)
 CODE
         )
 

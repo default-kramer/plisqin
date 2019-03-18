@@ -1,9 +1,19 @@
 #lang racket
-(provide def! def/append! append!
+(provide def! def/append! append! extend!
          def-table def-fields-of
          ; legacy compatibility:
          (rename-out [def/append! field-cases]
                      [def-table table]))
+
+; TODO there is a bug here.
+; We use identifier-binding plus a hash on the side to track whether something
+; has been defined. But the hash causes a problem if you do
+#;(begin
+    (let ()
+      (def/append! (blah) [#t 'blah]))
+    (let ()
+      (def/append! (blah) [#t 'blah])))
+; because the hash says that `blah` is already defined, but it's not in scope.
 
 (require (except-in (submod "model.rkt" all)
                     raw-sql)
@@ -332,3 +342,40 @@
                 '(simply 1))
   (check-equal? (bar foo)
                 `(got-foo-again ,foo)))
+
+
+; extend!
+(define-syntax-rule (extend-one! proc owner [target ...])
+  (append! (proc arg)
+           [(check-arg arg target)
+            (proc (owner arg))]
+           ...))
+
+(define-syntax (extend! stx)
+  (syntax-parse stx
+    [(_ owner:id #:procs proc:id ... #:to target:id ...)
+     #'(begin
+         (extend-one! proc owner [target ...])
+         ...)]))
+
+(module+ test
+  (def-table City)
+  (def-table Country)
+  (def-fields-of City
+    CityId CountryId CityName)
+  (def-fields-of Country
+    CountryId CountryName CountryPop)
+
+  (define fake-join (Country "pretend-this-is-a-join"))
+  (def/append! (Country x)
+    [(City? x)
+     fake-join])
+
+  (extend! Country
+           #:procs CountryName CountryPop
+           #:to City)
+
+  (check-equal? (CountryName (City))
+                (CountryName fake-join))
+  (check-equal? (CountryPop (City))
+                (CountryPop fake-join)))
