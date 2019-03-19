@@ -1,5 +1,5 @@
 #lang racket
-(provide def! def/append! append! extend!
+(provide def! def/append! append! via!
          def-table def-fields-of
          ; legacy compatibility:
          (rename-out [def/append! field-cases]
@@ -344,18 +344,18 @@
                 `(got-foo-again ,foo)))
 
 
-; extend!
-(define-syntax-rule (extend-one! proc owner [target ...])
+; via!
+(define-syntax-rule (via-one! proc owner [target ...])
   (append! (proc arg)
            [(check-arg arg target)
             (proc (owner arg))]
            ...))
 
-(define-syntax (extend! stx)
+(define-syntax (via! stx)
   (syntax-parse stx
-    [(_ owner:id #:procs proc:id ... #:to target:id ...)
+    [(_ owner:id #:link target:id ...+ #:to proc:id ...+)
      #'(begin
-         (extend-one! proc owner [target ...])
+         (via-one! proc owner [target ...])
          ...)]))
 
 (module+ test
@@ -371,9 +371,9 @@
     [(City? x)
      fake-join])
 
-  (extend! Country
-           #:procs CountryName CountryPop
-           #:to City)
+  (via! Country
+        #:link City
+        #:to CountryName CountryPop)
 
   (check-equal? (CountryName (City))
                 (CountryName fake-join))

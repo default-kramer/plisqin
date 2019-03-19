@@ -259,9 +259,9 @@ Can we just say @(racket {city.CountryName}) instead?
 Yes, by expanding the definition of @(racket CountryName):
 
 @(codex #<<CODE
-(extend! Country
-         #:procs CountryName CountryPopulation
-         #:to City)
+(via! Country
+      #:link City
+      #:to CountryName CountryPopulation)
 CODE
         )
 

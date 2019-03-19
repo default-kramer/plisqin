@@ -20,7 +20,7 @@ might find something useful anyway.
 @itemlist[
  @item{Compile-time SQL generation for Racket programs}
  @item{as-name inference}
- @item{extend! and maybe def/append! could maybe detect infinite recursion and other errors?}
+ @item{via! and maybe def/append! could maybe detect infinite recursion and other errors?}
  @item{Support for update and delete}
  @item{Overhaul query printing / that to-list stuff}
  @item{rename binding? to attached-join?}
