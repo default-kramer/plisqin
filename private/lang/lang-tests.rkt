@@ -2,9 +2,9 @@
 (module+ test
   (require rackunit)
 
-  ; Use pipes to avoid the custom read of "."
+  ; Pipes are not necessary when not in {braces}
   (define |a.b| "hi")
-  (check-equal? |a.b| "hi")
+  (check-equal? a.b "hi")
 
   ; Make sure rest args work
   (define (test-rest-args a . rest)
@@ -27,6 +27,7 @@
                 '(9 8 7))
 
   (check-true {equal? 10.add1 11})
+  {check-equal? 3.add1.add1 5}
 
   (check-equal? {42} 42)
 
@@ -43,11 +44,11 @@
   (check-equal? {begin {begin {begin 10.add1}}} 11)
   (check-equal? (begin (begin {begin 10.add1})) 11)
 
-  (check-true {41.add1(.* 2)(.equal? 84)})
-  (check-true {41 .add1 (.* 2) (.equal? 84)})
+  (check-true {41.add1{.* 2}{.equal? 84}})
+  (check-true {41 .add1 {.* 2} {.equal? 84}})
 
-  (check-true {if 41.add1(.* 2)(.equal? 84) #t #f})
-  (check-true {if 41 .add1 (.* 2) (.equal? 84) #t #f})
+  (check-true {if 41.add1{.* 2}{.equal? 84} #t #f})
+  (check-true {if 41 .add1 {.* 2} {.equal? 84} #t #f})
 
   {check-true 41.add1 * 2 = 84}
   (check-true {if 41.add1 * 2 = 84 #t #f})
@@ -60,6 +61,12 @@
 
   {define {foo x} x + 10 * 10}
   (check-equal? {foo 4} 104)
+
+  ; We can read decimal numbers
+  {check-true {number? 10.5}}
+  {check-true 10.5 = 10.5}
+  {check-equal? {10 + .5} 10.5}
+  {check-equal? 10 + 0.5 10.5}
 
   ; checks the fragment against the various dialects
   (define (check frag

@@ -12,54 +12,42 @@
                      [runtime/#%app #%app]
                      [runtime/#%do-dot #%do-dot]))
 
-(read-accept-dot #f)
-(read-accept-infix-dot #f)
-
-; Read more dots and return the count, assuming we have already read one.
-(define (read-dots port [count 1])
-  ; port -> int
-  (let ([maybe-another-dot (peek-char port)])
-    (if (equal? #\. maybe-another-dot)
-        (begin
-          (read-char port)
-          (read-dots port (add1 count)))
-        count)))
-
-(define non-id-starters (string->list "(){}[]"))
-
-(define (raise-dot-error stx)
-  (raise-syntax-error #f "Dot must be followed by an identifier" stx))
-
-; A readtable extension that gets invoked when the reader encounters a dot.
-; We have to decide if the dot is
-; 1) chained to the next token, like ".foo"
-; 2) unchained, like ". foo"
-; 3) multiple dots, like "..."
-; This should return one syntax object in all cases
-(define (read-dot char port name line col pos)
-  (define this-dot (datum->syntax #f '|.| (list name line col pos 1)))
+; TODO experimental... not sure if this is wise yet
+; A colon followed immediately by...
+; 1) "string literal"      -> (#%colon "string literal")
+; 2) 123 (number literal)  -> (#%colon 123)
+; 3) whitespace/eof        -> :
+; 4) id (a symbol)         -> :id
+; 5) anything else         -> syntax error
+(define (read-colon char port name line col pos)
   (define next-char (peek-char port))
-  (define (make-single-dot dot-type)
-    (let ([stx (datum->syntax #f '|.|
-                              (list name line col pos 1))])
-      (syntax-property stx rewriter/stx-prop-dot-type dot-type)))
-  (if (or (eof-object? next-char)
-          (char-whitespace? next-char)
-          (member next-char non-id-starters))
-      ; return delimited dot
-      (make-single-dot 'delimited)
-      ; else
-      (let ([dot-count (read-dots port)])
-        ; If we have more than 1 consecutive dot, treat it literally (useful for ellipsis)
-        (if (dot-count . > . 1)
-            ; return multiple dots
-            (datum->syntax #f (string->symbol (make-string dot-count #\.))
-                           (list name line col pos dot-count))
-            ; else return chained dot
-            (make-single-dot 'chained)))))
+  (define single-colon
+    (datum->syntax #f ':
+                   (list name line col pos 1)))
+  (cond
+    [(or (eof-object? next-char)
+         (char-whitespace? next-char))
+     single-colon]
+    [else
+     (let* ([next-stx (read-syntax name port)]
+            [content (syntax-e next-stx)])
+       (cond
+         [(or (string? content)
+              (number? content))
+          (datum->syntax #f `(#%colon ,next-stx))]
+         [(symbol? content)
+          (datum->syntax next-stx
+                         (string->symbol (format ":~a" content))
+                         (list name line col pos
+                               (+ 1 (syntax-span next-stx))))]
+         [else
+          (raise-syntax-error 'plisqin
+                              "illegal use of `:`"
+                              single-colon)]))]))
 
 (define plisqin-readtable
-  (make-readtable #f #\. 'terminating-macro read-dot))
+  (make-readtable #f #\: 'non-terminating-macro read-colon))
+
 
 ; Returns list of syntax objects
 (define (read-all source-name in)
@@ -80,6 +68,7 @@
                       (lang-plisqin-setup!))
                     ,@stxs))
   (set! result (datum->syntax #f result))
+  (set! result (rewriter/rewrite-dots result))
   ; strip-context per https://groups.google.com/forum/#!topic/racket-users/DFBnCqLg0Xk
   (set! result (strip-context result))
   result)
@@ -92,7 +81,7 @@
   (if (eof-object? result)
       result
       ; TODO Not sure if strip-context is desired here...
-      (rewriter/rewrite (strip-context result))))
+      (rewriter/rewrite (strip-context (rewriter/rewrite-dots result)))))
 
 (module+ runtime-help
   (provide lang-plisqin-setup!)

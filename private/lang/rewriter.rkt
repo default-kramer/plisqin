@@ -4,7 +4,8 @@
                      syntax/readerr)
          "rewrite-lib.rkt"
          syntax/readerr)
-(provide (for-syntax rewrite) rewrite
+(provide (for-syntax rewrite rewrite-dots)
+         rewrite rewrite-dots
          stx-prop-dot-type)
 
 ; Duplicate the definitions into begin-for-syntax.
@@ -14,23 +15,13 @@
     forms ...))
 
 (define-everywhere
-  ; This property will be set by the reader to one of two values:
-  ; 1) 'delimited means that the dot is surrouned by whitespace.
-  ;    The default reader gives special treatment to delimited dots,
-  ;    see "1.3.6 Reading Pairs and Lists" of the Reference.
-  ;    IMO, rest args are the most important use case here.
-  ;    I don't care too much if plisqin doesn't support the other patterns.
-  ; 2) 'chained means that the dot is immediately to the left of another
-  ;    token. For example in {foo .bar} and {foo.bar} both dots are chained.
-  ;    And we want to rewrite both to (bar foo)
+  ; This property exists for historical reasons, when the readtable did something with dots.
+  ; That wasn't the right approach, so this property could probably be refactored away now.
   (define stx-prop-dot-type 'plisqin-dot-type)
 
   ;; Syntax -> Any
   (define (chained? stx)
     (eq? 'chained
-         (syntax-property stx stx-prop-dot-type)))
-  (define (delimited? stx)
-    (eq? 'delimited
          (syntax-property stx stx-prop-dot-type)))
 
   (define/contract (make-infix-rewriter symbols)
@@ -70,35 +61,6 @@
                  [else #f]))]
         [else #f])))
 
-  ; Because we customized the read of the dot, (a b c . d)
-  ; will read as (list a b c literally-a-dot d)
-  ; We need to rewrite it to (cons a (cons b (cons c d)))
-  (define (rest-args-pattern stx)
-    (syntax-case stx ()
-      [(args ... dot last)
-       (if (delimited? #'dot)
-           (datum->syntax stx
-                          (append (syntax->list #'(args ...))
-                                  #'last)
-                          stx stx)
-           #f)]
-      [else #f]))
-
-  ; Raises an error if any unresolved dots remain
-  (define (dot-misuse stx)
-    (if (or (delimited? stx)
-            (chained? stx))
-        ; #lang racket calls this a read error.
-        ; For #lang plisqin, this happens in the expander (rewriter).
-        ; Does it matter?
-        (raise-read-error "plisqin: illegal use of `.`"
-                          (syntax-source stx)
-                          (syntax-line stx)
-                          (syntax-column stx)
-                          (syntax-position stx)
-                          (syntax-span stx))
-        #f))
-
   (define (dot-id stx)
     ; rewrite a.b to (#%do-dot a b)
     (syntax-case stx ()
@@ -128,6 +90,15 @@
              [else #f])]
       [else #f]))
 
+  ; TODO - this rule is flimsy and I should probably get rid of it.
+  ; The problem is that if you have
+  #;{foo (.equal? 9)}
+  ; The dot won't get rewritten because it is in (regular parens).
+  ; (We could add a special case for that I suppose...)
+  ; But if you change it to braces, like this:
+  #;{foo {.equal? 9}}
+  ; Now you might trigger more rewrite rules in the inner expression.
+  ; Messy...
   (define (dot-list stx)
     ; rewrite a(.foo bar ...) to (#%do-dot a foo bar ...)
     (syntax-case stx ()
@@ -139,7 +110,7 @@
                              (cons (datum->syntax expr
                                                   (list* '#%do-dot #'val #'func
                                                          (syntax->list #'(args ...)))
-                                                  expr expr)
+                                                  expr) ; drop the props (paren-shape) to avoid further rewriting!
                                    (syntax->list #'(rest ...)))
                              stx stx)]
              [else #f])]
@@ -173,6 +144,81 @@
   (define-syntax-rule (/pass rules ...)
     (/pass-ltr (/filter braced? (/or rules ...))))
 
+  ; Splits "foo.bar.baz" into '("foo" "." "bar" "." "baz")
+  ; Tests at end of file
+  (define (custom-split str)
+    (cond
+      [(equal? str "")
+       (list)]
+      [(equal? #\. (string-ref str 0))
+       (cons "." (custom-split (substring str 1)))]
+      [else
+       (let* ([word (car (regexp-match #rx"[^\\.]+" str))]
+              [rest (substring str (string-length word))])
+         (cons word (custom-split rest)))]))
+
+  ; Takes a list of split strings like '("foo" "." "bar")
+  ; and produces a list of syntax objects.
+  ; We keep the dot here; a later step will rewrite it.
+  (define (convert-strs stx strs offset)
+    ;(-> syntax? (listof string?) int? (listof syntax?))
+    (if (empty? strs)
+        '()
+        (let* ([str (car strs)]
+               [length (string-length str)]
+               [new-offset (+ offset length)]
+               [datum (or (string->number str)
+                          (string->symbol str))]
+               [result
+                (datum->syntax stx datum
+                               (list (syntax-source stx)
+                                     (syntax-line stx)
+                                     (+ offset (syntax-column stx))
+                                     (+ offset (syntax-position stx))
+                                     length)
+                               stx)]
+               ; Set the "chained" property for historical purposes.
+               ; (This could probably be done better.)
+               [result (if (equal? str ".")
+                           (syntax-property result stx-prop-dot-type 'chained)
+                           result)])
+          (cons result (convert-strs stx
+                                     (cdr strs)
+                                     new-offset)))))
+
+  ; If stx is an identifier that can be split, return the list of syntax
+  ; objects to splice in its place. Otherwise return #f.
+  (define (split-dots stx)
+    ;(-> syntax? (or/c #f (listof syntax?)))
+    (define strs
+      (when (identifier? stx)
+        (let ([str (format "~a" (syntax-e stx))])
+          (when (not (string-contains? str ".."))
+            (custom-split str)))))
+    (define stxs
+      (when (and (not (void? strs))
+                 ((length strs) . >= . 2))
+        (convert-strs stx strs 0)))
+    (if (not (void? stxs))
+        stxs
+        #f))
+
+  (define (do-dots stx)
+    (syntax-case stx ()
+      [{a.b rest ...}
+       (if (braced? stx)
+           (let* ([lst (syntax->list stx)]
+                  [a.b (car lst)]
+                  [rest (cdr lst)]
+                  [split (split-dots a.b)])
+             (if split
+                 (datum->syntax stx
+                                (append split rest)
+                                stx stx)
+                 #f))
+           #f)]
+      [else #f]))
+
   (require (only-in "../operators.rkt"
                     plisqin-and
                     plisqin-or
@@ -180,9 +226,6 @@
 
   (define the-rewriter
     (/all
-     ; Dont filter braced for this one:
-     (/pass-ltr rest-args-pattern)
-     ; OK, now do our real rewriting work
      ; Wrap these literals like (identity 'asc) so that we don't infinitely recurse
      ; (Otherwise we get asc -> (quote asc) -> (quote (quote asc)) -> ... forever)
      (/pass (make-literal-rewriter 'asc #'(identity 'asc))
@@ -202,11 +245,22 @@
      (/pass (make-infix-rewriter '(= < > <= >= <> like not-like is is-not)))
      (/pass (make-unary-rewriter '(plisqin-not)))
      (/pass (make-infix-rewriter '(plisqin-and)))
-     (/pass (make-infix-rewriter '(plisqin-or)))
-     ; Now we're done. If there are any unresolved dots, it is a syntax error.
-     ; Don't filter braced for this one:
-     (/pass-ltr dot-misuse)))
+     (/pass (make-infix-rewriter '(plisqin-or)))))
 
   (define/contract (rewrite stx)
     (-> syntax? syntax?)
-    (or (the-rewriter stx) stx)))
+    (or (the-rewriter stx) stx))
+
+  (define dot-rw (/pass-ltr do-dots))
+  (define/contract (rewrite-dots stx)
+    (-> syntax? syntax?)
+    (or (dot-rw stx) stx)))
+
+(module+ test
+  (require rackunit)
+  (check-equal? (custom-split ".foo.bar.baz.")
+                '("." "foo" "." "bar" "." "baz" "."))
+  (check-equal? (custom-split "foo.bar.baz.")
+                '("foo" "." "bar" "." "baz" "."))
+  (check-equal? (custom-split ".foo.bar.baz")
+                '("." "foo" "." "bar" "." "baz")))
