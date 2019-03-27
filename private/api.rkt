@@ -16,7 +16,7 @@
          fragment-kind? join-type? sql-token? token-list?
          queryable? statement? statement-expr?
          binding? join? source? query? injection? attached-join?
-         db-now RS val param)
+         db-now RS param unsafe-val val: list:)
 
 (require "aggregate.rkt")
 (provide aggregate? aggregate)

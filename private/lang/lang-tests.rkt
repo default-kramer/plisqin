@@ -124,28 +124,28 @@
    {{RS scalar "foo"} / {RS scalar "bar"}}
    #:all "(foo / bar)")
   (check
-   {{RS scalar "foo"} = {val "bar"}}
+   {{RS scalar "foo"} = {val: "bar"}}
    #:all "(foo = 'bar')")
   (check
-   {{val "foo"} <> {RS scalar "bar"}}
+   {{val: "foo"} <> {RS scalar "bar"}}
    #:all "('foo' <> bar)")
   (check
-   {{RS scalar "foo"} like {val "bar"}}
+   {{RS scalar "foo"} like {val: "bar"}}
    #:all "(foo like 'bar')")
   (check
-   {{val "foo"} not-like {RS scalar "bar"}}
+   {{val: "foo"} not-like {RS scalar "bar"}}
    #:all "('foo' not like bar)")
   (check
-   {{RS scalar "foo"} < {val "bar"}}
+   {{RS scalar "foo"} < {val: "bar"}}
    #:all "(foo < 'bar')")
   (check
-   {{val "foo"} <= {RS scalar "bar"}}
+   {{val: "foo"} <= {RS scalar "bar"}}
    #:all "('foo' <= bar)")
   (check
-   {{RS scalar "foo"} > {val "bar"}}
+   {{RS scalar "foo"} > {val: "bar"}}
    #:all "(foo > 'bar')")
   (check
-   {{val "foo"} >= {RS scalar "bar"}}
+   {{val: "foo"} >= {RS scalar "bar"}}
    #:all "('foo' >= bar)")
   ; But if there is no SQL involved, it falls back to the built-in Racket
   ; version which allows more than 2 arguments.
@@ -221,7 +221,7 @@
 
   ; String concatenation
   (check
-   {{val "a"} || {val "b"}}
+   {{val: "a"} || {val: "b"}}
    #:ms "('a' + 'b')"
    #:all "('a' || 'b')")
   (check
@@ -305,7 +305,7 @@
          {= x.Bar 1}}})
 
   ; String literal escaping:
-  (check {val "Tasita D'mour"}
+  (check {val: "Tasita D'mour"}
          #:all "'Tasita D''mour'")
 
   ; {select bool-expr} conversion:

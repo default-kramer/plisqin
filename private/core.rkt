@@ -18,7 +18,6 @@
                      [make-binding binding]
                      [make-injection injection]
                      [make-raw-sql raw-sql]
-                     [make-val val]
                      [make-dateadd dateadd]
                      [make-interval interval]
                      [make-limit limit]
@@ -41,6 +40,7 @@
          query-limit query-offset query-distinct?
          attached-join? attached-join-join select-as
          selected-bool? selected-bool-content
+         unsafe-val val: list:
          ; fragments
          select select?
          where where?
@@ -59,11 +59,31 @@
 (define attached-join? binding?)
 (define attached-join-join binding-join)
 
-(define/contract (make-val x)
-  (-> (or/c string? number? value?) value?)
+(define (make-val x)
   (if (value? x)
       x
       (value (empty-metadata) x)))
+
+(define/contract (unsafe-val x)
+  (-> (or/c string? number? value?) value?)
+  (make-val x))
+
+(define-syntax (val: stx)
+  (syntax-case stx ()
+    [(_ x)
+     (let ([content (syntax-e #'x)])
+       (if (or (string? content)
+               (number? content))
+           #'(make-val x)
+           #`(cond
+               [(raw-sql? x)
+                (unsafe-val (raw-sql-content x))]
+               [else
+                (raise-contract-error x #'#,stx #'#,stx 'val:
+                                      "expected string literal, number literal, or value")])))]))
+
+(define-syntax-rule (list: x ...)
+  (list (val: x) ...))
 
 (define (build-raw-sql x)
   (if (raw-sql? x)

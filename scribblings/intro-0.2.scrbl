@@ -269,7 +269,7 @@ And that should do it. Let's try it out:
 @(codex #<<CODE
 (define (big-cities-outside-china)
   {from city (big-cities-with-country)
-        {where city.CountryName not-like {val "%china"}}})
+        {where city.CountryName not-like {val: "%china"}}})
 CODE
         )
 @(show-table "(show-table (big-cities-outside-china))")
@@ -308,7 +308,7 @@ Let me just prove what I said about Belgium is true:
 @(codex #<<CODE
 (define (belgium-orgs)
   {from co Country
-        {where co.CountryName = {val "Belgium"}}
+        {where co.CountryName = {val: "Belgium"}}
         {select co.CountryName}
         {select co.Organizations.OrgShortName}})
 CODE
