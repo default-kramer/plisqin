@@ -318,5 +318,16 @@
   (check {RS scalar "foo" + "bar" ?? "baz"}
          #:all "coalesce((foo + bar), baz)")
 
+  ; in
+  (check {RS {scalar "foo"} in {scalar "bar"}}
+         #:all "foo in bar")
+  (check {RS {scalar "foo"} in {list: 1 2 3}}
+         #:all "foo in (1, 2, 3)")
+  (check {RS {scalar "foo"} not-in {list: "a" "b" "c"}}
+         #:all "not foo in ('a', 'b', 'c')")
+  (check {RS {scalar "foo"} not-in {from x "X"
+                                         {select x".baz"}}}
+         #:all "not foo in (select x.baz from X x)")
+
   ; End test submodule
   )

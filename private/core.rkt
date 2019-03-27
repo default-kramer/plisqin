@@ -68,6 +68,9 @@
   (-> (or/c string? number? value?) value?)
   (make-val x))
 
+(define-for-syntax (change-srcloc to-loc stx)
+  (datum->syntax stx (syntax-e stx) to-loc stx))
+
 (define-syntax (val: stx)
   (syntax-case stx ()
     [(_ x)
@@ -77,10 +80,12 @@
            #'(make-val x)
            #`(cond
                [(raw-sql? x)
-                (unsafe-val (raw-sql-content x))]
-               [else
-                (raise-contract-error x #'#,stx #'#,stx 'val:
-                                      "expected string literal, number literal, or value")])))]))
+                (make-val (raw-sql-content x))]
+               [else #,(change-srcloc
+                        stx
+                        #'(raise-argument-error 'val:
+                                                "literal string or number"
+                                                0 x))])))]))
 
 (define-syntax-rule (list: x ...)
   (list (val: x) ...))

@@ -58,6 +58,8 @@
 
   (struct token (metadata) #:transparent) ; (listof metadata?)
 
+  ; The "in" operator relies on the fact that (sql-token? x) implies (not (list? x))
+  ; So don't change that fact.
   (def-contract sql-token?
     (or/c token?
           number?
