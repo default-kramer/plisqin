@@ -174,7 +174,7 @@
                        "," 'SP (s:interval-qty iv)
                        "," 'SP operand ")"))
              operand))
-       (go 'SP (help (s:dateadd-interval x) (s:dateadd-date x))))]
+       (go (help (s:dateadd-interval x) (s:dateadd-date x))))]
     [(dateadd? x)
      (error "cannot render date math for dialect:" dialect)]
     ; We do not expect joins or injections here
