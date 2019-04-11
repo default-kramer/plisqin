@@ -91,6 +91,8 @@
    (Foo)
    (Foo "custom-alias"))
 
+ The @(racket constructor) is defined using @(racket def/append!), making it appendable.
+
  The @(racket tester?) tests whether its single argument is a @(racket query?) or
  @(racket join?) or @(racket source?) with the correct table name:
  @(interaction
@@ -119,42 +121,78 @@
  Depreacted. Alias of @(racket def-table).
 }
 
-@defform[(field-cases (id arg)
-                      [test-expr then-body] ...)]{
- TODO - deprecate and redocument as def/append!.
+@defform[(def-fields-of table field ...+)
+         #:grammar ([field id])
+         #:contracts ([table (or/c string? table?)])]{
+ Uses @(racket def/append!) to define or append each @(racket field) as a scalar of the given @(racket table).
+ @(interaction
+   #:eval my-eval
+   (def-table Foo)
+   (def-fields-of Foo
+     FooId FooName)
+   (FooId (Foo)))
+}
 
- This is kind of like @(racket cond) but with some important differences.
- It can only be used to define a 1-argument procedure.
+@defform[(def/append! (id arg ...)
+           [test-expr then-body] ...)
+         #:grammar ([id id]
+                    [arg id])]{
+ If @(racket id) is not yet defined, defines @(racket id) as a procedure.
+ If @(racket id) has already been defined using @(racket def/append!), its definition mutated
+ to append the new @(racket [test-expr then-body]) forms to the existing definition.
  The @(racket test-expr)s are evaluated in reverse order and as soon as one returns
  a truthy value, the corresponding @(racket then-body) is evaluated and returned.
- Also, if @(racket id) has already been defined by @(racket field-cases), the definitions append.
  For example:
  @(interaction
    #:eval my-eval
-   (field-cases (twice x)
-                [(integer? x) (* x 2)])
+   (def/append! (twice x)
+     [(integer? x) (* x 2)])
    (code:comment "we can append more conditions to the existing definition of twice:")
-   (field-cases (twice x)
-                [(string? x) (format "~a ~a" x x)])
+   (def/append! (twice x)
+     [(string? x) (format "~a ~a" x x)])
+   (twice 3)
+   (twice "pizza"))
+
+ This appending works even across files.
+ This is to support having one file containing generated code and another containing manual overrides.
+ Here I will override the @(racket integer?) case while leaving the @(racket string?) case intact:
+ @(interaction
+   #:eval my-eval
+   (def/append! (twice x)
+     [(integer? x)
+      (format "Two times ~a is ~a" x (* 2 x))])
    (twice 3)
    (twice "pizza"))
 }
-This appending works even across files.
-This is to support having one file containing generated code and another containing manual overrides.
-Here I will override the @(racket integer?) case while leaving the @(racket string?) case intact:
-@(interaction
-  #:eval my-eval
-  (field-cases (twice x)
-               [(integer? x)
-                (format "Two times ~a is ~a" x (* 2 x))])
-  (twice 3)
-  (twice "pizza"))
+@defform[(field-cases (id arg)
+                      [test-expr then-body] ...)]{
+ Deprecated. Alias of @(racket def/append!).
+}
 
-The above examples are contrived.
-For the most complete explanation of how @(racket field-cases) is meant to be used,
-read @(secref "schema-as-procs").
-For some quick but still realistic examples, look at the definitions of
-@(racket ItemTypeId) or @(racket Item-of/s) or anything from that example schema.
+@defform[(via! bridge #:link from ...+ #:to to ...+)
+         #:grammar ([bridge id]
+                    [from id]
+                    [to id])]{
+ Uses @(racket def/append!) to append to the definition of each @(racket to).
+ Assumes that each @(racket to) is defined given @(racket bridge),
+ and that @(racket bridge) is defined given each @(racket from).
+ For example, consider
+ @(racketblock
+   (via! Country
+         #:link City
+         #:to CountryName CountryPopulation))
+ We assume that @(racket CountryName) and @(racket CountryPopulation) are already defined
+ when given a @(racket Country). We also assume that @(racket Country) is defined when given
+ a @(racket City) (this would be the join from a City to its Country).
+ The result is equivalent to saying
+ @(racketblock
+   (def/append! (CountryName x)
+     [(same-table? City x)
+      (CountryName (Country x))])
+   (def/append! (CountryPopulation x)
+     [(same-table? City x)
+      (CountryPopulation (Country x))]))
+}
 
 @(reset-eval!)
 @defform[(attach-callstacks)]{
@@ -184,6 +222,37 @@ For some quick but still realistic examples, look at the definitions of
     (foo)))
 }
 @(reset-eval!)
+
+@defform[(RS x arg ...)]{
+ "RS" means "raw SQL".
+ Wraps all string literals within the body of @(racket RS) into @(racket raw-sql).
+ If at least 1 @(racket arg) is given, then the result is @(racket (x arg ...)).
+ Otherwise the result is @(racket x).
+ @(interaction
+   #:eval my-eval
+   (RS "some raw sql")
+   (let ([str "hello"])
+     (code:comment "notice that `str` is not a string literal")
+     (RS (list 1 2 3 (list "a" "b" str)))))
+
+ This is needed because the @(racket sql-token?) contract does not accept raw strings.
+ This is to prevent SQL injection. The following example would be an error without @(racket RS).
+ @(interaction
+   #:eval my-eval
+   (display (to-sql (RS from y "Y"
+                        (where y".Foo = 'bar'")
+                        (select y".*")))))
+}
+
+@defform[(val: x)]{
+ Wraps @(racket x), which must be a string or numeric literal, into a trusted value
+ which is accepted by @(racket sql-token?).
+ It is rendered as a string or numeric value within SQL.
+ @(interaction
+   #:eval my-eval
+   (to-sql (RS where "something like " (val: "foo'bar%")))
+   (val: (list "this will fail")))
+}
 
 @section[#:tag "ref-fragments"]{Fragments}
 A fragment is a list of tokens with a @(racket fragment-kind?) attached.

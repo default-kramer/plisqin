@@ -86,7 +86,7 @@
 ; Same as append! except that if the appendable does not yet exist, it gets defined.
 (define-syntax (def/append! stx)
   (syntax-parse stx
-    [(def/append! (a args:id ...)
+    [(def/append! (a:id args:id ...)
        [test-expr:expr then-body:expr]
        ...)
      (define maybe-define-a
