@@ -5,16 +5,6 @@
          (rename-out [def/append! field-cases]
                      [def-table table]))
 
-; TODO there is a bug here.
-; We use identifier-binding plus a hash on the side to track whether something
-; has been defined. But the hash causes a problem if you do
-#;(begin
-    (let ()
-      (def/append! (blah) [#t 'blah]))
-    (let ()
-      (def/append! (blah) [#t 'blah])))
-; because the hash says that `blah` is already defined, but it's not in scope.
-
 (require (except-in (submod "model.rkt" all)
                     raw-sql)
          (only-in "core.rkt"
@@ -27,6 +17,42 @@
 (module+ test
   (require rackunit)
   (require "api.rkt"))
+
+(begin-for-syntax
+  ; A syntax transformer that we can recognize
+  (struct xformer (proc)
+    #:property prop:procedure 0))
+
+;;; (define-if-not id val)
+; Defines id if it hasn't already been defined via define-if-not.
+; Use syntax-local-value instead of identifier-binding because identifier-binding
+; doesn't persist from one scribble example to the next.
+; See https://groups.google.com/forum/#!topic/racket-users/ztrOjIIxSjs
+(define-syntax (define-if-not stx)
+  (syntax-case stx ()
+    [(_ id val)
+     (xformer? (syntax-local-value #'id (lambda () #f)))
+     #'(void)]
+    [(_ id val)
+     #'(define-if-not #:force id val)]
+    [(_ #:force id val)
+     (with-syntax ([ooo (quote-syntax ...)])
+       #'(begin
+           (define private-val val)
+           (define-syntax id
+             (xformer (λ(stx)
+                        (syntax-case stx ()
+                          [(any ooo) #'(#%app any ooo)]
+                          [id #'private-val]))))))]))
+
+(module+ test
+  (let ()
+    (define-if-not foo 1)
+    (define-if-not foo 2)
+    (check-equal? foo 1))
+  (let ()
+    (define-if-not foo 3)
+    (check-equal? foo 3)))
 
 (define empty-proc (λ(arglist) nothing))
 
@@ -79,27 +105,14 @@
                      result))))
            (set-appendable-proc! a new-proc)))]))
 
-; It would be better (I think) to use identifier-binding to know if something
-; is already defined. But, that breaks schema.scrbl. Why?
-(define-for-syntax fields-defined (make-hash))
-
 ; Same as append! except that if the appendable does not yet exist, it gets defined.
 (define-syntax (def/append! stx)
   (syntax-parse stx
     [(def/append! (a:id args:id ...)
        [test-expr:expr then-body:expr]
        ...)
-     (define maybe-define-a
-       (let ([hashkey (syntax->datum #'a)])
-         ; Need to check both our hash and identifier-binding
-         (if (or (hash-has-key? fields-defined hashkey)
-                 (identifier-binding #'a))
-             #'(void)
-             (begin
-               (hash-set! fields-defined hashkey #t)
-               #'(define a (proc empty-proc (~a 'a)))))))
      #`(begin
-         #,maybe-define-a
+         (define-if-not a (proc empty-proc (~a 'a)))
          (append! (a args ...)
                   [test-expr then-body]
                   ...))]))
@@ -146,13 +159,12 @@
     [(def-table ctor:id TABLE-NAME DEFAULT-ALIAS tester?:id)
      #:declare TABLE-NAME (expr/c #'(or/c #f string?))
      #:declare DEFAULT-ALIAS (expr/c #'(or/c #f string?))
-     (hash-set! fields-defined (syntax->datum #'ctor) #t)
      #'(begin
          (define table-name (or TABLE-NAME.c
                                 (format "~a" 'ctor)))
          (define default-alias (or DEFAULT-ALIAS.c
                                    (make-default-alias table-name)))
-         (define ctor
+         (define-if-not #:force ctor
            (table empty-proc table-name default-alias))
          ; Append a rule that says (MyTable) returns a source
          (append! (ctor)
