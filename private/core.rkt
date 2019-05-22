@@ -11,7 +11,7 @@
     (provide (prefix-out s: (struct-out struct-id)))
     ...))
 (provide-struct source fragment query join binding injection
-                raw-sql value interval time-unit dateadd cases)
+                raw-sql value interval time-unit dateadd cases negation)
 (provide source? fragment? query? join? binding? injection?
          raw-sql? value? interval? time-unit? dateadd? cases?)
 (provide (rename-out [make-source source]
@@ -270,14 +270,31 @@
 (define (reset-uid-for-testing!)
   (void))
 
+; Currently, negations are only used internally for date math.
+(define (make-negation x)
+  (negation (empty-metadata) x))
+
+(define/contract (negate x)
+  (-> sql-token? sql-token?)
+  (cond
+    [(number? x) (- x)]
+    [(negation? x) (negation-val x)]
+    [else (make-negation x)]))
+
+(module+ test
+  (check-equal? (negate 3) -3)
+  (check-equal? (negate (negate 4)) 4)
+  (check-equal? (negate (RS scalar "foo"))
+                (make-negation (RS scalar "foo"))))
+
 (define/contract (interval-negate iv)
   (-> interval? interval?)
-  (define child-iv (interval-added-to iv))
-  (struct-copy interval iv
-               [qty (- (interval-qty iv))]
-               [added-to (if child-iv
-                             (interval-negate child-iv)
-                             #f)]))
+  (let ([child-iv (interval-added-to iv)])
+    (struct-copy interval iv
+                 [qty (negate (interval-qty iv))]
+                 [added-to (if child-iv
+                               (interval-negate child-iv)
+                               #f)])))
 
 (define/contract (interval-plus iv1 iv2)
   (-> interval? interval? interval?)

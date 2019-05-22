@@ -43,6 +43,8 @@
            (if root?
                `(raw-sql ,content)
                content)]
+          [(negation _ content)
+           `(negate ,content)]
           [x #:when (list? x)
              (map to-list x)]
           [else x])))
@@ -225,15 +227,17 @@
   ; Intervals are not tokens because we can't render them to SQL
   (struct interval (added-to qty unit) #:transparent
     #:guard (build-guard-proc [added-to (or/c interval? #f)]
-                              [qty real?]
+                              [qty sql-token?]
                               [unit time-unit?]))
 
   (define/contract (apply-time-unit me num)
-    (-> time-unit? real? interval?)
+    (-> time-unit? sql-token? interval?)
     (interval #f num me))
 
   (def-token dateadd dateadd? ([date sql-token?]
                                [interval interval?]))
+
+  (def-token negation negation? ([val sql-token?]))
 
   ; Special nothing for use by "appendable"
   (define nothing (gensym "nothing"))

@@ -141,10 +141,17 @@
          (if (not interval)
              expr
              (recurse
-              (go expr 'SP "+" 'SP
-                  (format "interval '~a ~a'"
-                          (s:interval-qty interval)
-                          (interval-unit interval)))
+              (let ([qty (s:interval-qty interval)])
+                (go expr 'SP "+" 'SP
+                    (if (number? qty)
+                        (format "interval '~a ~a'"
+                                qty
+                                (interval-unit interval))
+                        (go "("
+                            qty " * "
+                            (format "interval '1 ~a'"
+                                    (interval-unit interval))
+                            ")"))))
               (s:interval-added-to interval))))
        (go 'SP "(" (recurse (s:dateadd-date x) (s:dateadd-interval x)) ")"))]
     ; dateadd, sqlite
@@ -155,11 +162,17 @@
            ""
            (let ([qty (s:interval-qty interval)]
                  [child (s:interval-added-to interval)])
-             (format ", '~a~a ~a'~a"
-                     (if (negative? qty) "" "+")
+             (if (number? qty)
+                 (go ", "
+                     (format "'~a~a ~a'"
+                             (if (positive? qty) "+" "")
+                             qty
+                             (interval-unit interval))
+                     (recurse child))
+                 (go ", "
                      qty
-                     (interval-unit interval)
-                     (recurse child)))))
+                     " || ' " (interval-unit interval) "'"
+                     (recurse child))))))
      (go 'SP "datetime(" (s:dateadd-date x) (recurse (s:dateadd-interval x)) ")")]
     ; dateadd, mssql
     [(and (dateadd? x)
@@ -177,6 +190,8 @@
        (go (help (s:dateadd-interval x) (s:dateadd-date x))))]
     [(dateadd? x)
      (error "cannot render date math for dialect:" dialect)]
+    [(s:negation? x)
+     (go "(-" (s:negation-val x) ")")]
     ; We do not expect joins or injections here
     [else (error "got unexpected token: " x)]))
 

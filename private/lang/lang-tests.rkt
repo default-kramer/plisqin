@@ -109,6 +109,14 @@
    #:ms "dateadd(month, 1, dateadd(day, 29, getdate()))"
    #:lite "datetime(datetime('now'), '+29 day', '+1 month')")
 
+  ; Intervals can be based on a column
+  (check
+   {db-now + (RS scalar "foo").months - (RS scalar "bar").days}
+   #:pg "(current_timestamp + (foo * interval '1 month') + ((-bar) * interval '1 day'))"
+   #:ms "dateadd(day, (-bar), dateadd(month, foo, getdate()))"
+   ; SQLite - we can't have the '+' here because it won't work if the dynamic part is negative:
+   #:lite "datetime(datetime('now'), foo || ' month', (-bar) || ' day')")
+
 
   ; These operators are binary with regard to SQL:
   (check
