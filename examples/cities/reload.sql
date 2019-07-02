@@ -26,14 +26,14 @@ create table ImportOrgs (
 .import ./wikidata/orgs.csv ImportOrgs
 
 create table Country (
-  CountryId integer primary key,
+  CountryId integer primary key not null,
   CountryName text not null,
   CountryPopulation real,
   NominalGDP real
 );
 
 create table City (
-  CityId integer primary key,
+  CityId integer primary key not null,
   CountryId integer not null,
   CityName text not null,
   CityPopulation integer,
@@ -41,7 +41,7 @@ create table City (
 );
 
 create table Organization (
-  OrgId integer primary key,
+  OrgId integer primary key not null,
   OrgShortName text not null
 );
 
