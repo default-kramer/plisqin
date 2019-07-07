@@ -61,10 +61,10 @@
 
 (define (reader source-name in)
   (define stxs (read-all source-name in))
-  (define result `(module my-mod plisqin/private/lang/reader
-                    (require plisqin/private/lang/default-require)
+  (define result `(module my-mod plisqin-lib/private/lang/reader
+                    (require plisqin-lib/private/lang/default-require)
                     (module configure-runtime racket
-                      (require (submod plisqin/private/lang/reader runtime-help))
+                      (require (submod plisqin-lib/private/lang/reader runtime-help))
                       (lang-plisqin-setup!))
                     ,@stxs))
   (set! result (datum->syntax #f result))

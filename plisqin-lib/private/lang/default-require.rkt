@@ -3,21 +3,21 @@
 
 ; This module is required by #lang plisqin by default.
 
-(require plisqin)
-(provide (all-from-out plisqin))
+(require plisqin-lib)
+(provide (all-from-out plisqin-lib))
 
-(require plisqin/private/operators)
-(provide (all-from-out plisqin/private/operators))
+(require plisqin-lib/private/operators)
+(provide (all-from-out plisqin-lib/private/operators))
 
 ; TODO still not sure if overriding Racket's "second" is wise...
-(require (submod plisqin/private/core time-units))
-(provide (all-from-out (submod plisqin/private/core time-units)))
+(require (submod plisqin-lib/private/core time-units))
+(provide (all-from-out (submod plisqin-lib/private/core time-units)))
 
-(require plisqin/private/dialect)
-(provide (all-from-out plisqin/private/dialect))
+(require plisqin-lib/private/dialect)
+(provide (all-from-out plisqin-lib/private/dialect))
 
-(require plisqin/private/show-table)
-(provide (all-from-out plisqin/private/show-table))
+(require plisqin-lib/private/show-table)
+(provide (all-from-out plisqin-lib/private/show-table))
 
 ; Special forms only available to #lang plisqin:
 (provide case

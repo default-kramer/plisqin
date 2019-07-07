@@ -24,12 +24,12 @@
 ;; See the current version of the racket style guide here:
 ;; http://docs.racket-lang.org/style/index.html
 
-(require plisqin/private/api)
-(provide (all-from-out plisqin/private/api))
-(require plisqin/private/schema)
-(provide (all-from-out plisqin/private/schema))
-(require plisqin/private/aggregates)
-(provide (all-from-out plisqin/private/aggregates))
+(require plisqin-lib/private/api)
+(provide (all-from-out plisqin-lib/private/api))
+(require plisqin-lib/private/schema)
+(provide (all-from-out plisqin-lib/private/schema))
+(require plisqin-lib/private/aggregates)
+(provide (all-from-out plisqin-lib/private/aggregates))
 
 (module+ test
   ;; Tests to be run with raco test

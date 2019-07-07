@@ -1,5 +1,5 @@
 #lang racket
-(require "../private/util.rkt" plisqin)
+(require "../private/util.rkt" plisqin-lib)
 (provide (all-defined-out))
 
 ; This file contains the definitions for the Video Rental example schema
