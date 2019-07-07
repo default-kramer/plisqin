@@ -1,13 +1,13 @@
 #lang racket
 (require scribble/manual
          scribble/eval
-         plisqin
+         plisqin-lib
          rackunit)
 (require (for-syntax syntax/strip-context
-                     "../private/util.rkt"
+                     plisqin-lib/private/util
                      ; this is required strictly for the side effects of capturing syntaxes
                      ; so we can pull them out using get-captured-syntax
-                     plisqin/examples/video-rental-schema))
+                     plisqin-lib/examples/video-rental-schema))
 
 (provide my-eval reset-eval! reset-uid make-eval show-sql check-sql check-sql2 rb)
 
@@ -16,8 +16,8 @@
     (interaction-eval #:eval eval
                       (require racket/match)
                       (require (only-in racket string-join))
-                      (require plisqin)
-                      (require plisqin/examples/video-rental-schema))
+                      (require plisqin-lib)
+                      (require plisqin-lib/examples/video-rental-schema))
     eval))
 
 (define my-eval (make-eval))

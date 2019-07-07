@@ -1,10 +1,10 @@
 #lang scribble/manual
-@(require (for-label plisqin
+@(require (for-label plisqin-lib
                      "racket.rkt"))
 @(require scribble/eval
           (prefix-in sc: scribble/core)
           (prefix-in sh: scribble/html-properties)
-          plisqin
+          plisqin-lib
           rackunit
           ; Use only-in to avoid accidentally using "my-eval" which contains
           ; the definitions that we are trying to re-implement:

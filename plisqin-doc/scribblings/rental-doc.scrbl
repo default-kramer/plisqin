@@ -1,13 +1,13 @@
 #lang scribble/manual
 @(require racket)
-@(require plisqin/examples/video-rental-schema)
-@(require (for-label plisqin
-                     plisqin/examples/video-rental-schema
+@(require plisqin-lib/examples/video-rental-schema)
+@(require (for-label plisqin-lib
+                     plisqin-lib/examples/video-rental-schema
                      "racket.rkt"))
 @(require "helpers.rkt")
 
 @title{Video Rental Example Schema}
-@(defmodule plisqin/examples/video-rental-schema)
+@(defmodule plisqin-lib/examples/video-rental-schema)
 
 This section documents an example database schema that models a brick-and-mortar
 video rental store.

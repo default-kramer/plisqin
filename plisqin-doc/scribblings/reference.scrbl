@@ -1,13 +1,13 @@
 #lang scribble/manual
-@(require (for-label plisqin
+@(require (for-label plisqin-lib
                      (except-in "racket.rkt" define)
-                     plisqin/examples/video-rental-schema))
+                     plisqin-lib/examples/video-rental-schema))
 @(require "helpers.rkt"
-          plisqin
+          plisqin-lib
           scribble/eval
           "racket.rkt"
-          (prefix-in doc: (submod "../private/model.rkt" all docs))
-          (prefix-in doc: (submod "../private/core.rkt" docs)))
+          (prefix-in doc: (submod plisqin-lib/private/model all docs))
+          (prefix-in doc: (submod plisqin-lib/private/core docs)))
 @(module label-help racket
    (require scribble/manual/lang (for-label racket))
    (define (r:define) (racket define))
@@ -15,7 +15,7 @@
 @(require 'label-help)
 
 @title{Reference}
-@(defmodulelang plisqin)
+@(defmodule plisqin-lib)
 
 @(define-syntax-rule (deffrags ELLIPSIS [ctor tester] ...)
    (deftogether [

@@ -1,11 +1,11 @@
 #lang scribble/manual
-@(require (for-label plisqin/private/lang/default-require)
+@(require (for-label plisqin-lib/private/lang/default-require)
           scribble/core
           scribble/html-properties
           racket/sandbox
           "scribble-code-examples-lib/main.rkt"
           "racket.rkt"
-          "../examples/cities/city-connection.rkt"
+          plisqin-lib/examples/cities/city-connection
           (except-in db statement?))
 
 @(define (path-from-here str)
@@ -75,8 +75,8 @@
 
 @(define (make-eval)
    (define eval (make-code-eval #:lang "plisqin"))
-   (eval '(require (for-label plisqin/scribblings/racket
-                              plisqin/private/lang/default-require)))
+   (eval '(require (for-label plisqin-doc/scribblings/racket
+                              plisqin-lib/private/lang/default-require)))
    eval)
 @(define ex-eval (make-eval))
 @(define ex-here (ex-eval "#'here"))
@@ -123,8 +123,8 @@
            (to-table result sql))))))
 
 @(codex #<<CODE
-(require (for-label plisqin/scribblings/racket
-                    plisqin/private/lang/default-require))
+(require (for-label plisqin-doc/scribblings/racket
+                    plisqin-lib/private/lang/default-require))
 (void select + syntax->datum)
 (current-connection 'cities-example)
 {if 41.add1 = 21 * 1.add1

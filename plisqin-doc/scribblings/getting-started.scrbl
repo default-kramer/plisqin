@@ -1,9 +1,9 @@
 #lang scribble/manual
-@(require (for-label plisqin
+@(require (for-label plisqin-lib
                      "racket.rkt"
-                     plisqin/examples/video-rental-schema))
+                     plisqin-lib/examples/video-rental-schema))
 @(require scribble/eval
-          plisqin
+          plisqin-lib
           rackunit
           "helpers.rkt"
           "racket.rkt")
