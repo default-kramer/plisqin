@@ -153,11 +153,6 @@ HEREDOC
        (disconnect conn)
        (schema->syntax schema stx))]))
 
-(begin
-  (require (for-syntax "../examples/cities/city-connection.rkt"))
-  (define-schema connect-cities)
-  (City? (City)))
-
 (module+ test
   (require rackunit)
   (current-connection 'cities-example)
