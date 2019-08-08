@@ -45,8 +45,8 @@
                               "illegal use of `:`"
                               single-colon)]))]))
 
-(define plisqin-readtable
-  (make-readtable #f #\: 'non-terminating-macro read-colon))
+(define (plisqin-readtable)
+  (make-readtable (current-readtable) #\: 'non-terminating-macro read-colon))
 
 
 ; Returns list of syntax objects
@@ -56,10 +56,15 @@
     (if (not (eof-object? result))
         (helper source-name in (cons result accum))
         (reverse accum)))
-  (parameterize ([current-readtable plisqin-readtable])
+  (parameterize ([current-readtable (plisqin-readtable)])
     (helper source-name in '())))
 
-(define (reader source-name in)
+(define (reader source-name in
+                ; lang at-exp passes us 6 params; we will ignore them
+                [reader-module-path #f]
+                [line #f]
+                [col #f]
+                [pos #f])
   (define stxs (read-all source-name in))
   (define result `(module my-mod plisqin-lib/private/lang/reader
                     (require plisqin-lib/private/lang/default-require)
@@ -75,7 +80,7 @@
 
 (define (read-repl source-name in)
   (define result
-    (parameterize ([current-readtable plisqin-readtable]
+    (parameterize ([current-readtable (plisqin-readtable)]
                    [read-accept-lang #f])
       (read-syntax source-name in)))
   (if (eof-object? result)
