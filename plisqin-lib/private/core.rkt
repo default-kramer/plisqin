@@ -36,7 +36,7 @@
          (struct-out exn:fail:plisqin)
          (struct-out exn:fail:plisqin:invalid-aggregate)
          interval-plus interval-minus interval-negate
-         db-now RS raw-sql-content value-content
+         db-now RS unsafe-raw-sql raw-sql-content value-content
          query-limit query-offset query-distinct?
          attached-join? attached-join-join select-as
          selected-bool? selected-bool-content
@@ -94,6 +94,10 @@
   (if (raw-sql? x)
       x
       (raw-sql (empty-metadata) x)))
+
+(define/contract (unsafe-raw-sql str)
+  (-> string? raw-sql?)
+  (build-raw-sql str))
 
 (define/contract (make-raw-sql . strs)
   (->* () #:rest (listof (or/c string? raw-sql?)) raw-sql?)

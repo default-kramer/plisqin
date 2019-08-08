@@ -244,6 +244,13 @@
                         (select y".*")))))
 }
 
+@defproc[(unsafe-raw-sql [str string?]) sql-token?]{
+ Allows raw SQL.
+ You must make sure the input string comes from a trusted source.
+
+ If possible, use @(racket RS) instead.
+}
+
 @defform[(val: x)]{
  Wraps @(racket x), which must be a string or numeric literal, into a trusted value
  which is accepted by @(racket sql-token?).
