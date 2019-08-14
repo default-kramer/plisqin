@@ -24,10 +24,6 @@
   (or/c number?
         token?))
 
-(define string-ish?
-  (or/c string?
-        token?))
-
 ;; token? -> (listof interval?) -> token?
 (define (+:date d intervals)
   (if (empty? intervals)
@@ -82,13 +78,10 @@
 
 ; || is string concatenation.
 ; In Racket, || is a zero-character identifier, so this might not be the wisest choice...
-(define (|| str1 str2 . args)
-  (set! args (list* str1 str2 args))
-  (check-all args string-ish?
-             '||
-             "a string expression")
+(define/contract (|| str1 str2 . args)
+  (->* (sql-token? sql-token?) #:rest (listof sql-token?) sql-token?)
   ; the symbol 'concat is understood by to-sql based on the dialect
-  (RS scalar "("(interpose args 'concat)")"))
+  (RS scalar "("(interpose (list* str1 str2 args) 'concat)")"))
 
 (define (+ . args)
   (if (empty? args)

@@ -233,7 +233,7 @@
    #:ms "('a' + 'b')"
    #:all "('a' || 'b')")
   (check
-   {(RS scalar "a") || (RS scalar "b") || "c"} ; TODO THIS SHOULD BE AN ERROR!
+   {(RS scalar "a") || (RS scalar "b") || {val: "c"}}
    #:ms "((a + b) + 'c')"
    #:all "((a || b) || 'c')")
 

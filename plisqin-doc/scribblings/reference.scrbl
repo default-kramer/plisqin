@@ -613,6 +613,8 @@ A statement is a value that can be applied to a query to produce a new query.
  An injection is the value created by @(racket inject).
 }
 
+@(include-section "operators.scrbl")
+
 @section{Terminology}
 I have created 3 prepositions for my own naming convention, as well as for this documentation.
 They are all pronounced "of" but carry some extra meaning:
@@ -626,59 +628,3 @@ They are all pronounced "of" but carry some extra meaning:
  @item{"The Copies @deftech{of/p} the Item" means "the Copies that belong to the Item,
   and take note that each Copy will make an individual appearance in the result set."
   The /p refers to the @italic{plural} nature of this relationship.}]
-
-@section{#lang plisqin}
-TODO write this section.
-
-** Dots are read differently: @(racket foo.bar) gets read as @(racket foo .bar).
-You can use bars to suppress this: @(racket |foo.bar|).
-
-** What gets required by default in #lang plisqin.
-
-** The {curly-brace rewrite rules}.
-Note that @(racket a+b) is not the same as @(racket a + b).
-@(define pattern racketplainfont)
-
-@(define (one-of-proc items)
-   (define head
-     (racketplainfont (format "~a" (car items))))
-   (define next
-     (match items
-       [(list a) ""]
-       [(list a rest ...)
-        (elem ", " (one-of-proc rest))]))
-   (elem head next))
-@(define-syntax-rule (one-of stuff ...)
-   (elem "one of " (one-of-proc (list 'stuff ...))))
-
-@(tabular
-  #:sep (hspace 1)
-  #:style 'boxed
-  #:row-properties '(bottom-border)
-  (list (map bold (list "Pattern" "Result" "Notes"))
-        (list @pattern{@italic{LITERAL}}
-              @(racket (quote LITERAL))
-              @elem{When @pattern{@italic{LITERAL}} is @(one-of null asc desc)})
-        (list @(racket x .y)
-              @(racket {y x})
-              @elem{Also works for @(racket x.y) which is read as @(racket x .y)})
-        (list @(racket x || y)
-              @(racket {|| x y})
-              "String concatenation. TODO think about this precedence...")
-        (list @pattern{x @italic{OP} y}
-              @(racket {OP x y})
-              @elem{When @pattern{@italic{OP}} is @(one-of * /)})
-        (list @pattern{x @italic{OP} y}
-              @(racket {OP x y})
-              @elem{When @pattern{@italic{OP}} is @(one-of + -)})
-        (list @(racket x ?? y)
-              @(racket {?? x y})
-              "means \"coalesce(x, y)\" in SQL")
-        (list @pattern{x @italic{CMP} y}
-              @(racket {CMP x y})
-              @elem{When @pattern{@italic{CMP}} is @(one-of = <> like not-like
-                                                            is is-not < <= > >=)})
-        ))
-
-TODO put examples here, to make the motivation clear.
-Such as @(racket {order-by desc x.Foo}) is rewritten to @(racket (order-by 'desc (Foo x)))
