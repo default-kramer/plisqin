@@ -7,7 +7,8 @@
 (provide (all-from-out plisqin-lib))
 
 (require plisqin-lib/private/operators)
-(provide (all-from-out plisqin-lib/private/operators))
+(provide (except-out (all-from-out plisqin-lib/private/operators)
+                     and or not))
 
 ; TODO still not sure if overriding Racket's "second" is wise...
 (require (submod plisqin-lib/private/core time-units))

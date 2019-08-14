@@ -2,7 +2,9 @@
 (provide + - * / || ??
          = <> like not-like is is-not in not-in
          < <= > >=
-         plisqin-and plisqin-or plisqin-not)
+         (rename-out [plisqin-and and]
+                     [plisqin-or or]
+                     [plisqin-not not]))
 
 (module+ test
   (require rackunit))

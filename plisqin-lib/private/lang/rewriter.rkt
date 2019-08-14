@@ -219,10 +219,10 @@
            #f)]
       [else #f]))
 
-  (require (only-in "../operators.rkt"
-                    plisqin-and
-                    plisqin-or
-                    plisqin-not))
+  (require (prefix-in plisqin- (only-in "../operators.rkt"
+                                        and
+                                        or
+                                        not)))
 
   (define the-rewriter
     (/all
