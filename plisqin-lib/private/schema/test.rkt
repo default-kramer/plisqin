@@ -129,7 +129,7 @@
 (require "schema.rkt"
          rackunit
          'just-columns
-         (only-in plisqin
+         (only-in "../api.rkt"
                   scalar? join? join join-on RS))
 
 (define-schema sakila-2

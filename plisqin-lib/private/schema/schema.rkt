@@ -7,13 +7,14 @@
 ; * Should `this` be a syntax parameter?
 ; * Move `property?` into the main lib, and derive the rackunit check from it
 ; * Protect the macro entry point with proper use of syntax/parse stuff
-; * This file and the test should not (require plisqin) - use the filename
+; * Error if a pair of (table-id proc-id) is redefined? Or just override it?
 
 (require (for-syntax syntax/parse)
          rackunit
-         (only-in plisqin
-                  def-table def/append! scalar RS
-                  join join? join-on bool scalar? bool? aggregate?))
+         (only-in "../api.rkt"
+                  scalar RS join join? join-on bool scalar? bool? aggregate?)
+         (only-in "../schema.rkt"
+                  def-table def/append!))
 
 ; The strategy is that if we have
 #;(define-schema id
