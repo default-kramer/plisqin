@@ -45,6 +45,15 @@
 ; All other clauses other than [#:table table-id] will have the form
 #;[#:keyword table-id form]
 
+; Returns a syntax transformer that represents a simple value binding. Example:
+#;(define-syntax foo (make-binder #'value-of-foo))
+(define-for-syntax (make-binder val-stx)
+  (λ(stx)
+    (syntax-case stx ()
+      [(any ...)
+       (syntax/loc stx
+         (#%app any ...))]
+      [_ (quasisyntax/loc stx #,val-stx)])))
 
 ;;; clause->definition
 ; Expands a clause into the definition for the main module
@@ -68,12 +77,7 @@
      (with-syntax ([ooo (quote-syntax ...)])
        #`(def/append! (proc-id x)
            [(#,(make-? #'table-id) x)
-            (syntax-parameterize ([this (λ(stx)
-                                          (syntax-case stx ()
-                                            [(any ooo)
-                                             (syntax/loc stx
-                                               (#%app any ooo))]
-                                            [_ (syntax/loc stx x)]))])
+            (syntax-parameterize ([this (make-binder #'x)])
               proc-body)]))]))
 
 ;;; clause->test
@@ -149,12 +153,7 @@
        #`(begin
            (define the-schema (schema))
            (define-syntax id
-             (xformer (λ(stx)
-                        (syntax-case stx ()
-                          [(anything ooo)
-                           (syntax/loc stx
-                             (#%app anything ooo))]
-                          [_ (syntax/loc stx the-schema)]))
+             (xformer (make-binder #'the-schema)
                       (syntax->list #'(clause ...))))
            ; Generate definitions:
            #,(let* ([definitions (syntax->list #'((clause->definition clause)
