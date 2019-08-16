@@ -326,11 +326,20 @@
   (->* [number? time-unit?] [(or/c interval? #f)] interval?)
   (interval added-to qty unit))
 
+(define (clean-alias alias)
+  #;(-> string? string?)
+  (string-replace (string-replace alias "." "")
+                  "-" "_"))
+
+(module+ test
+  (check-equal? (clean-alias "_sales.Store")
+                "_salesStore"))
+
 (define/contract (make-source alias table #:uid [uid #f])
   (->* (string? (or/c string? subquery?))
        (#:uid any/c)
        source?)
-  (source (empty-metadata) alias table (or uid (next-uid))))
+  (source (empty-metadata) (clean-alias alias) table (or uid (next-uid))))
 
 (module+ test
   (check-equal?
