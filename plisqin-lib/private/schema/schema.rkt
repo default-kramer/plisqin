@@ -1,20 +1,25 @@
 #lang racket
 
-(provide define-schema)
+(provide define-schema this)
 
 ; TODO
 ; * Search this file for TODOs
-; * Should `this` be a syntax parameter?
 ; * Move `property?` into the main lib, and derive the rackunit check from it
 ; * Protect the macro entry point with proper use of syntax/parse stuff
 ; * Error if a pair of (table-id proc-id) is redefined? Or just override it?
 
 (require (for-syntax syntax/parse)
          rackunit
+         racket/stxparam
          (only-in "../api.rkt"
                   scalar RS join join? join-on bool scalar? bool? aggregate?)
          (only-in "../schema.rkt"
-                  def-table def/append!))
+                  def-table def/append!)
+         (prefix-in |.| "../operators.rkt"))
+
+(define-syntax-parameter this
+  (λ(stx)
+    (raise-syntax-error 'plisqin "`this` used out of context" stx)))
 
 ; The strategy is that if we have
 #;(define-schema id
@@ -40,6 +45,7 @@
 ; All other clauses other than [#:table table-id] will have the form
 #;[#:keyword table-id form]
 
+
 ;;; clause->definition
 ; Expands a clause into the definition for the main module
 (define-syntax (clause->definition stx)
@@ -52,18 +58,23 @@
           (scalar x (RS #,(datum->syntax #'here
                                          (format ".~a" (syntax-e #'column-id)))))])]
     [(keyword table-id [join-table-id #:using join-column-id ...])
-     (with-syntax ([this (datum->syntax #'table-id 'this #'table-id)])
-       #'(clause->definition
-          (keyword table-id
-                   [join-table-id (join other (join-table-id)
-                                        ; TODO import plisqin's `=` here
-                                        (join-on (RS bool (join-column-id other)
-                                                     " = " (join-column-id this)))
-                                        ...)])))]
+     #'(clause->definition
+        (keyword table-id
+                 [join-table-id (join other (join-table-id)
+                                      (join-on (.= (join-column-id other)
+                                                   (join-column-id this)))
+                                      ...)]))]
     [((~or* #:has-one #:property) table-id:id [proc-id:id proc-body:expr])
-     (with-syntax ([this (datum->syntax #'table-id 'this #'table-id)])
-       #`(def/append! (proc-id this)
-           [(#,(make-? #'table-id) this) proc-body]))]))
+     (with-syntax ([ooo (quote-syntax ...)])
+       #`(def/append! (proc-id x)
+           [(#,(make-? #'table-id) x)
+            (syntax-parameterize ([this (λ(stx)
+                                          (syntax-case stx ()
+                                            [(any ooo)
+                                             (syntax/loc stx
+                                               (#%app any ooo))]
+                                            [_ (syntax/loc stx x)]))])
+              proc-body)]))]))
 
 ;;; clause->test
 ; Expands a clause into a test for the test submodule
@@ -134,23 +145,27 @@
   (syntax-case stx ()
     [(_ id
         clause ...)
-     #`(begin
-         (define the-schema (schema))
-         (define-syntax id
-           ; TODO make it so that (id anything ...) raises the usual
-           ; "value is not a procedure" error
-           (xformer (λ(stx) #'the-schema)
-                    (syntax->list #'(clause ...))))
-         ; Generate definitions:
-         #,(let* ([definitions (syntax->list #'((clause->definition clause)
-                                                ...))]
-                  [definitions (sort definitions sorter)])
-             #`(begin #,@definitions))
-         ; Generate tests (unhygenic `test` here):
-         ; TODO this fails on the REPL - should check for 'top-level vs 'module
-         (module+ #,(datum->syntax stx 'test)
-           #,@(syntax->list #'((clause->test clause)
-                               ...))))]))
+     (with-syntax ([ooo (quote-syntax ...)])
+       #`(begin
+           (define the-schema (schema))
+           (define-syntax id
+             (xformer (λ(stx)
+                        (syntax-case stx ()
+                          [(anything ooo)
+                           (syntax/loc stx
+                             (#%app anything ooo))]
+                          [_ (syntax/loc stx the-schema)]))
+                      (syntax->list #'(clause ...))))
+           ; Generate definitions:
+           #,(let* ([definitions (syntax->list #'((clause->definition clause)
+                                                  ...))]
+                    [definitions (sort definitions sorter)])
+               #`(begin #,@definitions))
+           ; Generate tests (unhygenic `test` here):
+           ; TODO this fails on the REPL - should check for 'top-level vs 'module
+           (module+ #,(datum->syntax stx 'test)
+             #,@(syntax->list #'((clause->test clause)
+                                 ...)))))]))
 
 
 (begin-for-syntax
