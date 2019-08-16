@@ -12,6 +12,9 @@
          plisqin-examples/sakila)
 (require (prefix-in db: db))
 
+(require (only-in plisqin-lib/private/generate-schema
+                  define-schema))
+
 (define-schema connect-sakila)
 
 (define conn (connect-sakila))

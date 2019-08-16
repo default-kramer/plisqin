@@ -30,8 +30,8 @@
 (provide (all-from-out plisqin-lib/private/schema))
 (require plisqin-lib/private/aggregates)
 (provide (all-from-out plisqin-lib/private/aggregates))
-(require plisqin-lib/private/generate-schema)
-(provide define-schema)
+(require plisqin-lib/private/schema/schema)
+(provide define-schema this)
 
 (module+ test
   ;; Tests to be run with raco test
