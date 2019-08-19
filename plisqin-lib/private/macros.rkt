@@ -42,11 +42,21 @@
           [q (create-query src srcvar)])
      (apply-all q statements ...))))
 
+(define (get-join-type x)
+  #;(-> any/c join-type?)
+  (cond
+    [(attached-join? x)
+     (get-join-type (attached-join-join x))]
+    [(join? x)
+     (s:join-type x)]
+    [else 'inner-join]))
+
 (define-syntax-rule (join srcvar MAYBE-MACRO statements ...)
   (query-scope
    (let* ([src MAYBE-MACRO]
           [srcvar (handle-from src (format "~a" (syntax->datum #'srcvar)))]
-          [j (create-join 'inner-join src srcvar)])
+          [join-type (get-join-type src)]
+          [j (create-join join-type src srcvar)])
      (apply-all j statements ...))))
 
 (define-syntax apply-all
@@ -92,4 +102,13 @@
   ; simple test of referential transparency
   (check-equal?
    (RS from x "X" (join y "Y" (join-on y".YID = "x".YID")))
-   (RS from x "X" (join y "Y" (join-on y".YID = "x".YID")))))
+   (RS from x "X" (join y "Y" (join-on y".YID = "x".YID"))))
+
+  ; check that the join-type is preserved when appending
+  (check-equal?
+   (join j (join j "J" 'cross-apply))
+   (join j "J" 'cross-apply))
+  ; default join type is 'inner-join
+  (check-equal?
+   (join j "J")
+   (join j "J" 'inner-join)))
