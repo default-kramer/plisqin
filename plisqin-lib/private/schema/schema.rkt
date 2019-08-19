@@ -73,7 +73,7 @@
                                       (join-on (.= (join-column-id other)
                                                    (join-column-id this)))
                                       ...)]))]
-    [((~or* #:has-one #:property) table-id:id [proc-id:id proc-body:expr])
+    [((~or* #:has-one #:has-group #:property) table-id:id [proc-id:id proc-body:expr])
      (with-syntax ([ooo (quote-syntax ...)])
        #`(def/append! (proc-id x)
            [(#,(make-? #'table-id) x)
@@ -95,12 +95,19 @@
     [(#:has-one table-id [proc-id proc-body])
      (syntax/loc #'proc-body
        (check-join? (proc-id (table-id))))]
+    [(#:has-group table-id [proc-id proc-body])
+     (syntax/loc #'proc-body
+       (check-grouped-join? (proc-id (table-id))))]
     [(#:has-one else ...)
      (error "plisqin internal error: unrecognized #:has-one clause:" stx)]
     [else #'(void)]))
 
 ; Custom checks for the test submodule:
 (define-simple-check (check-join? x)
+  (join? x))
+
+(define-simple-check (check-grouped-join? x)
+  ; TODO also check that it is grouped
   (join? x))
 
 ; Let's say that a property must be a scalar, bool, or aggregate.
