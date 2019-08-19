@@ -1,5 +1,5 @@
 #lang racket
-(provide def-doc test flattenof build-guard-proc)
+(provide def-doc test flattenof build-guard-proc def/c)
 (provide (all-from-out "new-way-to-walk.rkt"))
 (provide (all-from-out "capture-syntax.rkt"))
 
@@ -72,3 +72,10 @@
              (contract c field #f #f))
            field))
      ...)))
+
+(define-syntax-rule (def/c head contract body ...)
+  #;(define/contract head
+      contract
+      body ...)
+  (define head
+    body ...))

@@ -204,7 +204,8 @@
   (def-token selected-bool selected-bool? ([content bool?]))
 
   (def-contract join-type?
-    (or/c 'inner-join
+    (or/c 'infer-join-type
+          'inner-join
           'left-join
           'cross-apply
           'outer-apply))

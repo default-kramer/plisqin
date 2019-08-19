@@ -1,7 +1,7 @@
 #lang racket
 (require "core.rkt" "util.rkt" "ordered-joins.rkt" "deduplicate.rkt"
          "auto-inject.rkt" "auto-inject-aggregates.rkt" "make-unique-aliases.rkt"
-         "resolve-injections.rkt" "dialect.rkt" "param-binder.rkt")
+         "resolve-injections.rkt" "dialect.rkt" "param-binder.rkt" "infer-join-type.rkt")
 (module+ test
   (require rackunit)
   (require "macros.rkt")
@@ -225,12 +225,13 @@
   (-> join? string?)
   (let* ([src (get-src j)]
          [query (s:join-query j)]
-         [type-string (match (s:join-type j)
+         [join-type (infer-join-type j)]
+         [type-string (match join-type
                         ['inner-join "inner join"]
                         ['left-join "left join"]
                         ['cross-apply "cross apply"]
                         ['outer-apply "outer apply"])]
-         [is-apply (match (s:join-type j)
+         [is-apply (match join-type
                      ['cross-apply #t]
                      ['outer-apply #t]
                      [else #f])]
@@ -405,6 +406,25 @@ HEREDOC
 select x.ONE
 from (
     select y.ONE from Y y) x
+HEREDOC
+   )
+
+  ; check that infer-join-type is working
+  (check-sql
+   (RS from x "X"
+       (define y
+         (join y "Y"
+               'left-join
+               (join-on y".foo = "x".foo")))
+       ; z is inferred to be a left join because it depends on y (which is left)
+       (join z "Z"
+             (join-on z".bar = "y".bar"))
+       (select z".baz"))
+   #<<HEREDOC
+select z.baz
+from X x
+left join Y y on y.foo = x.foo
+left join Z z on z.bar = y.bar
 HEREDOC
    )
 

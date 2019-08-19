@@ -49,7 +49,7 @@
      (get-join-type (attached-join-join x))]
     [(join? x)
      (s:join-type x)]
-    [else 'inner-join]))
+    [else 'infer-join-type]))
 
 (define-syntax-rule (join srcvar MAYBE-MACRO statements ...)
   (query-scope
@@ -108,7 +108,7 @@
   (check-equal?
    (join j (join j "J" 'cross-apply))
    (join j "J" 'cross-apply))
-  ; default join type is 'inner-join
+  ; default join type is 'infer-join-type
   (check-equal?
    (join j "J")
-   (join j "J" 'inner-join)))
+   (join j "J" 'infer-join-type)))
