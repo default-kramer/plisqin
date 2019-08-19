@@ -46,7 +46,7 @@
   (query-scope
    (let* ([src MAYBE-MACRO]
           [srcvar (handle-from src (format "~a" (syntax->datum #'srcvar)))]
-          [j (create-join 'InnerJoin src srcvar)])
+          [j (create-join 'inner-join src srcvar)])
      (apply-all j statements ...))))
 
 (define-syntax apply-all

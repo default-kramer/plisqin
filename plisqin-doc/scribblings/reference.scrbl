@@ -547,9 +547,9 @@ You can also use @(racket subquery) to make a "literal" subquery, which I someti
 when I want a result set that has exactly one row:
 @(racketblock
   (RS from one-row (subquery "select 1 as ONE_ROW")
-      (join a "A" 'LeftJoin
+      (join a "A" 'left-join
             (join-on a".ID = 3"))
-      (join b "B" 'LeftJoin
+      (join b "B" 'left-join
             (join-on b".ID = 9"))
       (select (coalesce
                (scalar a".Name")

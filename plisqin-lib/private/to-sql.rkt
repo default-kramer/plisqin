@@ -226,13 +226,13 @@
   (let* ([src (get-src j)]
          [query (s:join-query j)]
          [type-string (match (s:join-type j)
-                        ['InnerJoin "inner join"]
-                        ['LeftJoin "left join"]
-                        ['CrossApply "cross apply"]
-                        ['OuterApply "outer apply"])]
+                        ['inner-join "inner join"]
+                        ['left-join "left join"]
+                        ['cross-apply "cross apply"]
+                        ['outer-apply "outer apply"])]
          [is-apply (match (s:join-type j)
-                     ['CrossApply #t]
-                     ['OuterApply #t]
+                     ['cross-apply #t]
+                     ['outer-apply #t]
                      [else #f])]
          [default-on-string (if is-apply
                                 ""
@@ -362,7 +362,7 @@ HEREDOC
 
   (check-sql
    (RS from x "X"
-       (join y "Y" 'LeftJoin
+       (join y "Y" 'left-join
              (join-on "(1 = 1)"))
        (select 1))
    #<<HEREDOC
@@ -376,7 +376,7 @@ HEREDOC
   ; TODO should we auto-convert join-on clauses to where clauses if the join type is an apply?
   (check-sql
    (RS from x "X"
-       (join y "Y" 'CrossApply
+       (join y "Y" 'cross-apply
              (where y".XID = "x".XID"))
        (select y".BLAH"))
    #<<HEREDOC

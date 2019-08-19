@@ -204,10 +204,10 @@
   (def-token selected-bool selected-bool? ([content bool?]))
 
   (def-contract join-type?
-    (or/c 'InnerJoin
-          'LeftJoin
-          'CrossApply
-          'OuterApply))
+    (or/c 'inner-join
+          'left-join
+          'cross-apply
+          'outer-apply))
 
   ; A value that can be added to a query.
   (def-contract statement?
