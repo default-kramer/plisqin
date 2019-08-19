@@ -4,5 +4,5 @@
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib" "sandbox-lib"))
 (define scribblings '())
 (define pkg-desc "SQL Generator")
-(define version "0.2")
-(define pkg-authors '(Ryan Kramer))
+(define version "0.3")
+(define pkg-authors '(|Ryan Kramer|))
