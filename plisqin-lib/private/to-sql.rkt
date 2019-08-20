@@ -39,22 +39,22 @@
 ; The symbol 'SP represents a space that can be collapsed.
 (define reduction? (or/c string? 'SP (recursive-contract (listof reduction?))))
 
-(define/contract (reduce x dialect)
+(def/c (reduce x dialect)
   (-> sql-token? dialect? reduction?)
   ; helpers to recurse
-  (define/contract (recurse1 x)
+  (def/c (recurse1 x)
     (-> (or/c sql-token? reduction?) reduction?)
     (cond
       [(list? x) x] ; Do we know this is fully reduced?
       [else (reduce x dialect)]))
-  (define/contract (recurseM things)
+  (def/c (recurseM things)
     (-> (listof (or/c sql-token? reduction?)) reduction?)
     (map recurse1 things))
-  (define/contract (go . args)
+  (def/c (go . args)
     (->* () #:rest (listof (or/c sql-token? reduction?)) reduction?)
     (recurseM args))
   ; helper to format the time unit
-  (define/contract (interval-unit iv)
+  (def/c (interval-unit iv)
     (-> interval? string?)
     (~a (s:time-unit-symbol (s:interval-unit iv))))
   ; main body
@@ -110,7 +110,12 @@
     [(source? x) (s:source-alias x)]
     [(subquery? x) (go "("(change-kind 'Sql x)")")]
     [(select? x)
-     (let ([as (select-as x)])
+     (let* ([as (select-as x)]
+            [as (cond
+                  [(not as) #f]
+                  [(symbol? as) (format "~a" as)]
+                  [(raw-sql? as) (raw-sql-content as)]
+                  [(error "unhandled type of select-as" as)])])
        (go (recurseM (s:fragment-tokens x))
            (or (and as
                     (list 'SP "as" 'SP as))
@@ -427,6 +432,12 @@ left join Y y on y.foo = x.foo
 left join Z z on z.bar = y.bar
 HEREDOC
    )
+
+  ; check as with raw-sql
+  (check-sql
+   (RS from x "X"
+       (select x".foo" #:as "bar"))
+   "select x.foo as bar from X x")
 
   (define-syntax-rule (with-MS forms ...)
     (parameterize ([current-dialect (mssql)])

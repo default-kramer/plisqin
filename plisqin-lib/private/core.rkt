@@ -184,8 +184,8 @@
 ; This is the likely place to add "as-name inference" meaning that if we have
 #;(select (scalar "foo" #:as "bar"))
 ; We can infer that the select fragment's name should also be "bar"
-(define/contract (select-as token)
-  (-> fragment? (or/c string? #f))
+(def/c (select-as token)
+  (-> fragment? (or/c #f symbol? raw-sql?))
   (metadata-get select-as-key token))
 
 ; Add an #:as keyword to some of the fragment constructors
@@ -194,13 +194,10 @@
     ; If we set `#:rest token-list?` it fails, I'm not sure why.
     ; Something about the flattening surprises the chaperone that gets generated
     ; by define/contract I think... See the following test.
-    (->* () (#:as (or/c string? raw-sql? #f)) #:rest any/c return-contract)
+    (->* () (#:as (or/c symbol? raw-sql? #f)) #:rest any/c return-contract)
     (define frag (apply raw-ctor tokens))
     (if as
-        (metadata-set select-as-key frag (if (raw-sql? as)
-                                             (raw-sql-content as)
-                                             as)
-                      #:hidden? #f)
+        (metadata-set select-as-key frag as #:hidden? #f)
         frag)))
 
 (define (select-shim . tokens)
@@ -223,7 +220,7 @@
   ; Make sure #:as works
   (check-equal?
    (select-as (RS scalar (list "x" ".") #:as "as-name" "foo"))
-   "as-name"))
+   (RS "as-name")))
 
 
 ; What can be used to start a query

@@ -351,8 +351,8 @@ Notice that @(racket CitiesG) always occurs inside an aggregate:
 (define (city-stats-by-country)
   {from co Country
         {select co.CountryName}
-        {select {count co.CitiesG} as "CountCitiesG"}
-        {select {sum co.CitiesG.CityPopulation} as "SumCityPopulation"}
+        {select {count co.CitiesG} as 'CountCitiesG}
+        {select {sum co.CitiesG.CityPopulation} as 'SumCityPopulation}
         {order-by desc {count co.CitiesG}}
         {limit 10}})
 CODE
@@ -383,8 +383,8 @@ Let's remove that clause to make a reusable version:
 @(codex #<<CODE
 (define (city-stats X)
   {from x X
-        {select {count x.CitiesG} as "CountCitiesG"}
-        {select {sum x.CitiesG.CityPopulation} as "SumCityPopulation"}
+        {select {count x.CitiesG} as 'CountCitiesG}
+        {select {sum x.CitiesG.CityPopulation} as 'SumCityPopulation}
         {order-by desc {count x.CitiesG}}
         {limit 10}})
 CODE
@@ -422,8 +422,8 @@ TODO guide what to read next.
             {when co.CountryPopulation >   1.million then "'medium'"}
             {else "'small'"}}}
         {group-by co.Size}
-        {select co.Size as "Size"}
-        {select co.count as "Count"}})
+        {select co.Size as 'Size}
+        {select co.count as 'Count}})
 CODE
         )
 @(show-table "(show-table (case-example))")
