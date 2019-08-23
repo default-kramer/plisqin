@@ -609,3 +609,11 @@
          Demographics
          rowguid
          ModifiedDate))
+
+(define (task1/revision1)
+  (from subcat ProductSubcategory
+        (join cat ProductCategory
+              (join-on (.= (ProductCategoryID cat)
+                           (ProductCategoryID subcat))))
+        (select (Name subcat) #:as 'SubcategoryName)
+        (select (Name cat) #:as 'CategoryName)))

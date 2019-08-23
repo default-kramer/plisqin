@@ -1,6 +1,7 @@
 #lang scribble/manual
 @(require (for-label plisqin-lib
                      (except-in "racket.rkt" define)
+                     (prefix-in db: db)
                      plisqin-lib/examples/video-rental-schema))
 @(require "helpers.rkt"
           plisqin-lib
@@ -257,6 +258,16 @@ Note that @(racket (require plisqin)) is equivalent to
    #:eval my-eval
    (to-sql (RS where "something like " (val: "foo'bar%")))
    (val: (list "this will fail")))
+}
+
+@defparam[current-connection conn (or/c #f db:connection?)]{
+ A database connection.
+}
+
+@defproc[(show-table [x (or/c query? string?)]) any/c]{
+ This procedure is only intended for documentation purposes.
+
+ Displays the result when @(racket x) is run against the @(racket current-connection).
 }
 
 @section[#:tag "ref-fragments"]{Fragments}

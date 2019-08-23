@@ -16,7 +16,8 @@
 (define current-connection
   (make-parameter #f guard-current-connection))
 
-(define (show-table x)
+(define/contract (show-table x)
+  (-> (or/c query? string?) any/c)
   (define conn (current-connection))
   (when (not (db:connection? conn))
     (error "current-connection is not set"))

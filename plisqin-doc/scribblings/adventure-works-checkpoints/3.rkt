@@ -316,7 +316,12 @@
          ProductCategoryID
          Name
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:has-one
+         [ProductCategory
+          (join cat ProductCategory
+                (join-on (.= (ProductCategoryID cat)
+                             (ProductCategoryID this))))])
   (table ScrapReason
          #:column
          ScrapReasonID
@@ -609,3 +614,23 @@
          Demographics
          rowguid
          ModifiedDate))
+
+(define (task1/revision1)
+  (from subcat ProductSubcategory
+        (join cat ProductCategory
+              (join-on (.= (ProductCategoryID cat)
+                           (ProductCategoryID subcat))))
+        (select (Name subcat) #:as 'SubcategoryName)
+        (select (Name cat) #:as 'CategoryName)))
+
+(define (task1/revision2)
+  (from subcat ProductSubcategory
+        (join cat (ProductCategory subcat))
+        (select (Name subcat) #:as 'SubcategoryName)
+        (select (Name cat) #:as 'CategoryName)))
+
+(define (task1/revision3)
+  (from subcat ProductSubcategory
+        ; The join is no longer here!
+        (select (Name subcat) #:as 'SubcategoryName)
+        (select (Name (ProductCategory subcat)) #:as 'CategoryName)))
