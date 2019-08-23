@@ -15,6 +15,12 @@
 @(require 'label-help)
 
 @title{Reference}
+
+Note that @(racket (require plisqin)) is equivalent to
+@(racketblock
+  (require plisqin-lib)
+  (require (prefix-in |.| plisqin-lib/operators)))
+
 @(defmodule plisqin-lib)
 
 @(define-syntax-rule (deffrags ELLIPSIS [ctor tester] ...)
