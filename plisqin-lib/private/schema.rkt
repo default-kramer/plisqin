@@ -1,9 +1,6 @@
 #lang racket
 (provide def! def/append! append! via!
-         def-table def-fields-of
-         ; legacy compatibility:
-         (rename-out [def/append! field-cases]
-                     [def-table table]))
+         def-table def-fields-of)
 
 (require (except-in (submod "model.rkt" all)
                     raw-sql)

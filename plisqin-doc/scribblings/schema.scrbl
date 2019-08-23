@@ -98,7 +98,7 @@ First we use @(racket table) to define our tables. We can use the information
 schema to generate this code. For example, running this query in SQL Server:
 
 @(show-sql #<<HEREDOC
-select '(table '+TABLE_NAME+')'
+select '(def-table '+TABLE_NAME+')'
 from INFORMATION_SCHEMA.TABLES
 where TABLE_TYPE='BASE TABLE'
 order by TABLE_NAME
@@ -112,18 +112,18 @@ gives us the following Racket code:
  This helps avoid name clashes and enhances readability for me.
 }
 @(CODE
-  (table Account)
-  (table Checkout)
-  (table Copy)
-  (table Customer)
-  (table District)
-  (table Employee)
-  (table Genre)
-  (table Item)
-  (table ItemGenre)
-  (table ItemType)
-  (table Rental)
-  (table Store))
+  (def-table Account)
+  (def-table Checkout)
+  (def-table Copy)
+  (def-table Customer)
+  (def-table District)
+  (def-table Employee)
+  (def-table Genre)
+  (def-table Item)
+  (def-table ItemGenre)
+  (def-table ItemType)
+  (def-table Rental)
+  (def-table Store))
 
 These table definitions can be used with @(racket from) and @(racket join) like this:
 @(INTERACT
@@ -220,13 +220,13 @@ Let's define @(racket Copy-of/s) which should return a valid value for everythin
 most 1 Copy:
 
 @(CODE
-  (field-cases (Copy-of/s x)
-               [(Rental? x)
-                (RS join c (Copy)
-                    (join-on (CopyId c)" = "(CopyId x)))]
-               [(Copy? x) x]))
+  (def/append! (Copy-of/s x)
+    [(Rental? x)
+     (RS join c (Copy)
+         (join-on (CopyId c)" = "(CopyId x)))]
+    [(Copy? x) x]))
 
-Using @(racket field-cases) is kind of like Racket's built-in @(racket cond), but one difference
+Using @(racket def/append!) is kind of like Racket's built-in @(racket cond), but one difference
 is that the conditions are checked in reverse order (bottom to top). So our definition of
 @(racket (Copy-of/s x)) means "If x is already a Copy, just return it. If x is a Rental return
 a join using CopyId. Otherwise, none of the conditions match and it is an error."
@@ -235,13 +235,13 @@ My convention says that singular joins are allowed to contain other singular joi
 To demonstrate, let's do one more singular join:
 
 @(CODE
-  (field-cases (Item-of/s x)
-               [(Copy? x)
-                (RS join i (Item)
-                    (join-on (ItemId i)" = "(ItemId x)))]
-               [(Rental? x)
-                (Item-of/s (Copy-of/s x))]
-               [(Item? x) x]))
+  (def/append! (Item-of/s x)
+    [(Copy? x)
+     (RS join i (Item)
+         (join-on (ItemId i)" = "(ItemId x)))]
+    [(Rental? x)
+     (Item-of/s (Copy-of/s x))]
+    [(Item? x) x]))
 
 The use of recursion in the @(racket Rental?) condition is a common pattern.
 We have @(racket (Item-of/s copy)) working already.
@@ -257,16 +257,16 @@ and Item:ItemGenre is also One:Many.
 First we define @(racket ItemGenres-of/p)
 
 @(CODE
-  (field-cases (ItemGenres-of/p x)
-               [(Item? x)
-                (RS join ig (ItemGenre)
-                    (join-on (ItemId ig)" = "(ItemId x)))]
-               [(Genre? x)
-                (RS join ig (ItemGenre)
-                    (join-on (GenreId ig)" = "(GenreId x)))]
-               [(or (Copy? x)
-                    (Rental? x))
-                (ItemGenres-of/p (Item-of/s x))]))
+  (def/append! (ItemGenres-of/p x)
+    [(Item? x)
+     (RS join ig (ItemGenre)
+         (join-on (ItemId ig)" = "(ItemId x)))]
+    [(Genre? x)
+     (RS join ig (ItemGenre)
+         (join-on (GenreId ig)" = "(GenreId x)))]
+    [(or (Copy? x)
+         (Rental? x))
+     (ItemGenres-of/p (Item-of/s x))]))
 If the argument is an Item, we join its ItemGenres on ItemId.
 If the argument is a Genre, we join its ItemGenres on GenreId.
 If the argument is a Copy or a Rental, we recurse using its Item.
@@ -276,13 +276,13 @@ We will only be thinking about Items and Genres. For example, join all the
 Genres for a given Item/Copy/Rental. We can define @(racket Genres-of/p) like this:
 
 @(CODE
-  (field-cases (Genres-of/p x)
-               [(Item? x)
-                (RS join g (Genre)
-                    (join-on (GenreId g)" = "(GenreId (ItemGenres-of/p x))))]
-               [(or (Copy? x)
-                    (Rental? x))
-                (Genres-of/p (Item-of/s x))]))
+  (def/append! (Genres-of/p x)
+    [(Item? x)
+     (RS join g (Genre)
+         (join-on (GenreId g)" = "(GenreId (ItemGenres-of/p x))))]
+    [(or (Copy? x)
+         (Rental? x))
+     (Genres-of/p (Item-of/s x))]))
 If the argument is an Item, we use its ItemGenres to get its Genres.
 If the argument is a Copy or a Rental, we recurse usings its Item.
 
@@ -290,10 +290,10 @@ Let's also define @(racket Copies-of/p). There isn't really much to explain here
 but we will need these definitions later.
 
 @(CODE
-  (field-cases (Copies-of/p x)
-               [(Item? x)
-                (RS join c (Copy)
-                    (join-on (ItemId c)" = "(ItemId x)))]))
+  (def/append! (Copies-of/p x)
+    [(Item? x)
+     (RS join c (Copy)
+         (join-on (ItemId c)" = "(ItemId x)))]))
 
 @subsection{Grouped Join Examples}
 A grouped join is a join that contains a group-by clause.
@@ -301,16 +301,16 @@ The definition of @(racket (Rentals-of/g x)) should return the correct grouped
 join for any @(racket x) that has a group of @(racket Rental)s:
 
 @(CODE
-  (field-cases (Rentals-of/g x)
-               [(Copy? x)
-                (RS join r (Rental)
-                    (join-on (CopyId r)" = "(CopyId x))
-                    (group-by (CopyId r)))]
-               [(Item? x)
-                (RS join r (Rental)
-                    (join c (Copy-of/s r))
-                    (join-on (ItemId c)" = "(ItemId x))
-                    (group-by (ItemId c)))]))
+  (def/append! (Rentals-of/g x)
+    [(Copy? x)
+     (RS join r (Rental)
+         (join-on (CopyId r)" = "(CopyId x))
+         (group-by (CopyId r)))]
+    [(Item? x)
+     (RS join r (Rental)
+         (join c (Copy-of/s r))
+         (join-on (ItemId c)" = "(ItemId x))
+         (group-by (ItemId c)))]))
 
 Having just defined a polymorphic @(racket Rentals-of/g), let's take a quick detour
 to appreciate its power. The following @(racket rental-summary) defines a query
@@ -376,19 +376,19 @@ This is a very common type of derived scalar.
 It says that the ItemName of a Copy or Rental is the ItemName of its (singular) Item:
 
 @(CODE
-  (field-cases (ItemName x)
-               [(or (Copy? x)
-                    (Rental? x))
-                (ItemName (Item-of/s x))]))
+  (def/append! (ItemName x)
+    [(or (Copy? x)
+         (Rental? x))
+     (ItemName (Item-of/s x))]))
 
 But didn't we already define @(racket ItemName) earlier, in the @secref{Columns} section?
-Yes, but @(racket field-cases) allows you to append to previously existing definitions, even across files:
+Yes, but @(racket def/append!) allows you to append to previously existing definitions, even across files:
 
 @(INTERACT
-  (field-cases (twice x)
-               [(integer? x) (* x 2)])
-  (field-cases (twice x)
-               [(string? x) (format "~a ~a" x x)])
+  (def/append! (twice x)
+    [(integer? x) (* x 2)])
+  (def/append! (twice x)
+    [(string? x) (format "~a ~a" x x)])
   (twice 3)
   (twice "pizza"))
 
@@ -398,9 +398,9 @@ To prove this, let's override the @(racket integer?) case
 of @(racket twice), and notice that the @(racket string?) case still works the same:
 
 @(INTERACT
-  (field-cases (twice x)
-               [(integer? x)
-                (format "Overridden: ~a" (* x 2))])
+  (def/append! (twice x)
+    [(integer? x)
+     (format "Overridden: ~a" (* x 2))])
   (twice 3)
   (twice "pizza"))
 
@@ -408,10 +408,10 @@ Now let's do one more derived scalar. This one will involved a grouped join.
 Remember that grouped joins are singular, so they are allowed in scalars.
 
 @(CODE
-  (field-cases (NumRentals x)
-               [(or (Item? x)
-                    (Copy? x))
-                (count (Rentals-of/g x))]))
+  (def/append! (NumRentals x)
+    [(or (Item? x)
+         (Copy? x))
+     (count (Rentals-of/g x))]))
 
 Now we can get the number of Rentals for a given Item or Copy.
 Let's test both @(racket NumRentals) and the extended definition of @(racket ItemName).

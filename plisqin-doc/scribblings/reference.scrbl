@@ -123,10 +123,6 @@ Note that @(racket (require plisqin)) is equivalent to
    (def-table MyTable "MyTable" "_myTable" MyTable?))
 }
 
-@defform[(table constructor [table-name] [default-alias] [tester?])]{
- Depreacted. Alias of @(racket def-table).
-}
-
 @defform[(def-fields-of table field ...+)
          #:grammar ([field id])
          #:contracts ([table (or/c string? table?)])]{
@@ -169,10 +165,6 @@ Note that @(racket (require plisqin)) is equivalent to
       (format "Two times ~a is ~a" x (* 2 x))])
    (twice 3)
    (twice "pizza"))
-}
-@defform[(field-cases (id arg)
-                      [test-expr then-body] ...)]{
- Deprecated. Alias of @(racket def/append!).
 }
 
 @defform[(via! bridge #:link from ...+ #:to to ...+)
