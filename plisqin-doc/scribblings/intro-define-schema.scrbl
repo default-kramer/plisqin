@@ -122,31 +122,45 @@ To avoid cluttering this documentation, I'll add a limit clause:
    (from subcat (task1/revision1)
          (limit 5))))
 
+@(define truncated (italic "truncated ..."))
+@(define illustrative "For illustrative purposes only. Do not add this code to your file.")
+
 @subsection{Making the Join Reusable}
 But we can do better.
 We've just determined that every ProductCategory has exactly 1 ProductCategory.
 This is a join that we will probably want to reuse often.
 So let's modify our @(racket define-schema) form by adding the hilighted code:
 @margin-note{The highlighted change can also be seen in this diff [TODO link it!]}
+@margin-note{This change could also be written
+ @(racket #:has-one [ProductCategory #:using ProductCategoryID]).
+ See the documentation of @(racket define-schema) for more shortcuts.}
 @(racketblock
   (define-schema adventure-works-schema
-    ...
+    #,truncated
     (table ProductSubcategory
-           ...
+           #,truncated
            (code:hilite #:has-one)
            (code:hilite [ProductCategory
                          (join cat ProductCategory
                                (join-on (.= (ProductCategoryID cat)
                                             (ProductCategoryID this))))]))
-    ...))
+    #,truncated))
 @(load-checkpoint! "3.rkt")
 
 In English, this says that a ProductSubcategory has one ProductCategory.
-In more Rackety terms, this says that @itemlist[
- @item{the procedure @(racket ProductCategory)}
- @item{when given a single argument (bound to @(racket this))}
- @item{such that @(racket (ProductSubcategory? this)) is truthy}
- @item{will return the highlighted @(racket join) expression.}]
+In Racket, it contributes to the definition of @(racket ProductCategory) by
+generating something like the following code:
+@(racketblock
+  (code:comment #,illustrative)
+  (define ((code:hilite ProductCategory) . args)
+    (match args
+      [(list subcat)
+       #:when (ProductSubcategory? subcat)
+       (let ([this subcat])
+         (code:hilite (join cat ProductCategory
+                            (join-on (.= (ProductCategoryID cat)
+                                         (ProductCategoryID this))))))]
+      #,(italic "maybe-more-match-clauses ..."))))
 
 Now we can use that join:
 @(racketblock
@@ -167,7 +181,7 @@ that ProductSubcategory has one ProductCategory.
 
 @subsection{Making the Property Reusable}
 But we can do better.
-In Plisqin, joins are values, meaning they can appear almost anywhere inside a query.
+In Plisqin, joins are values and they can appear almost anywhere inside a query.
 We can immediately write a third revision:
 @(racketblock
   (define (task1/revision3)
@@ -183,21 +197,27 @@ We can modify our @(racket define-schema) again to add this as a @tech{property}
 @margin-note{The highlighted change can also be seen in this diff [TODO link it!]}
 @(racketblock
   (define-schema adventure-works-schema
-    ...
+    #,truncated
     (table ProductSubcategory
-           ...
+           #,truncated
            (code:hilite #:property)
            (code:hilite [CategoryName
                          (Name (ProductCategory this))]))
-    ...))
+    #,truncated))
 @(load-checkpoint! "4.rkt")
 
 In English, this says that CategoryName is a property of ProductSubcategory.
-In more Rackety terms, this says that @itemlist[
- @item{the procedure @(racket CategoryName)}
- @item{when given a single argument (bound to @(racket this))}
- @item{such that @(racket (ProductSubcategory? this)) is truthy}
- @item{will return @(racket (Name (ProductCategory this))).}]
+In Racket, it contributes to the definition of @(racket CategoryName) by generating
+something like the following code:
+@(racketblock
+  (code:comment #,illustrative)
+  (define ((code:hilite CategoryName) . args)
+    (match args
+      [(list subcat)
+       #:when (ProductSubcategory? subcat)
+       (let ([this subcat])
+         (code:hilite (Name (ProductCategory this))))]
+      #,(italic "maybe-more-match-clauses ..."))))
 
 This allows us to be even more concise:
 @(racketblock
@@ -219,15 +239,103 @@ Again, this might not seem like a big improvement at first, but as we write many
 more queries and build up our definitions of joins and properties, it will save us
 a lot of typing and thinking.
 
-@section{A Closer Look}
-TODO now seems to be the time to explain what define-schema is really doing.
-Maybe enhance @(racket CategoryName) such that the resulting definition is equivalent to
+@section{Task 2}
+@bossquote{Show me a list of Products with Subcategory and Category names.}
+
+Let's start by looking at the Product table
+@(repl-query
+  (show-table
+   (from prd Product
+         (limit 5))))
+
+OK, it looks like there is a join from Product to ProductSubcategory using the
+ProductSubcategoryID column. But at least some of the records have a null value.
+So this is a @(racket #:has-one) relationship, but we will define it as a left join.
+Add the following hilighted code to your file:
 @(racketblock
-  (define (CategoryName this)
-    (cond
-      [(ProductCategory? this)
-       (Name this)]
-      [(ProductSubcategory? this)
-       (Name (ProductCategory this))]
-      [else
-       (error "CategoryName is undefined for" this)])))
+  (define-schema adventure-works-schema
+    #,truncated
+    (table Product
+           #,truncated
+           (code:hilite #:has-one)
+           (code:hilite [ProductSubcategory
+                         (join subcat ProductSubcategory
+                               'left-join
+                               (join-on (.= (ProductSubcategoryID subcat)
+                                            (ProductSubcategoryID this))))]))
+    #,truncated))
+
+In English, this says that a Product has one optional ProductSubcategory.
+In Racket, it contributes to the definition of ProductSubcategory by generating
+something like the following code:
+@(racketblock
+  (code:comment #,illustrative)
+  (define ((code:hilite ProductSubcategory) . args)
+    (match args
+      [(list prd)
+       #:when (Product? prd)
+       (let ([this prd])
+         (code:hilite (join subcat ProductSubcategory
+                            'left-join
+                            (join-on (.= (ProductSubcategoryID subcat)
+                                         (ProductSubcategoryID this))))))]
+      #,(italic "maybe-more-match-clauses ..."))))
+
+Now we can write our first revision of this task.
+@(racketblock
+  (define (task2/revision1)
+    (from prd Product
+          (join subcat (ProductSubcategory prd))
+          (select (Name prd) #:as 'ProductName)
+          (select (ProductNumber prd))
+          (select (Name subcat) #:as 'Subcategory)
+          (select (CategoryName subcat) #:as 'Category))))
+@(load-checkpoint! "5.rkt")
+
+Let's try it out
+@(repl-query
+  (show-table
+   (from prd (task2/revision1)
+         (limit 5))))
+
+The first 5 rows still have nulls.
+This is correct -- their ProductCategoryID is null so the join fails,
+and the null propogates to any values based on that join.
+Just for demonstration purposes, I will show some records that won't have nulls:
+@(repl-query
+  (show-table
+   (from prd (task2/revision1)
+         (where (.is-not (ProductSubcategoryID prd)
+                         'null))
+         (limit 5))))
+
+Perhaps your boss will ask for an @(racket order-by) clause later, but
+@(racket task2/revision1) is an acceptable solution.
+
+@subsubsub*section{TODO}
+Add the (ProductCategory product) join.
+
+Add properties so that we can rewrite it as:
+@(racketblock
+  (from prd Product
+        (select (Name prd))
+        (select (ProductNumber prd))
+        (select (SubcategoryName prd))
+        (select (CategoryName prd))))
+
+Now imagine that the boss only wants to see Products that have non-zero sales.
+He explains that our Product catalog needs culling, but for now "has sales?" is
+the easy way to filter out obsolete Products.
+You get the impression that "has sales?" is an important property of Product,
+and will very likely be a part of future tasks.
+You create a purely synthetic property HasSales? so that you can write
+@(racketblock
+  (from prd Product
+        (select (Name prd))
+        (select (ProductNumber prd))
+        (select (SubcategoryName prd))
+        (select (CategoryName prd))
+        (where (HasSales? prd))))
+
+Explain the value of insulation here.
+Today it is a subquery, but tomorrow it may be denormalized (like SalesOrderHeader.SubTotal).

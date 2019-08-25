@@ -24,6 +24,8 @@
   (make-style "PShowSql" P-props))
 (define PShowTable
   (make-style "PShowTable" P-props))
+(define PTableContainer
+  (make-style "PTableContainer" P-props))
 
 (define/contract (to-table result sql)
   (-> rows-result? string? table?) ; returns a scribble table
@@ -56,18 +58,28 @@
     (define rows (map vector->list (rows-result-rows result)))
     (map (λ(row) (map ~a row)) rows))
 
+  ; Wraps the element inside a PTableContainer so we can set overflow-x to show
+  ; a horizontal scrollbar when the result set has a lot of columns.
+  (define (contain x)
+    ; It would be nice to use a simple div as the container,
+    ; but it doesn't look like that will be easy. So just use a table instead.
+    ; We can use CSS to make it behave like a div.
+    (tabular #:style PTableContainer
+             (list (list x))))
+
   (let ([col-info (get-column-info result)])
-    (tabular
-     #:style PTableWrapper
-     (list
-      (list (elem
-             (elem #:style PShowTable "Show Table")
-             (elem #:style PShowSql "Show SQL")))
-      (list (tabular #:style PSql
-                     (list (list (verbatim sql)))))
+    (contain
+     (tabular
+      #:style PTableWrapper
       (list
-       (tabular
-        #:style PQueryResults
-        #:column-properties (map cdr col-info)
-        (list* (map car col-info)
-               (get-rows result))))))))
+       (list (elem
+              (elem #:style PShowTable "Show Table")
+              (elem #:style PShowSql "Show SQL")))
+       (list (tabular #:style PSql
+                      (list (list (verbatim sql)))))
+       (list
+        (tabular
+         #:style PQueryResults
+         #:column-properties (map cdr col-info)
+         (list* (map car col-info)
+                (get-rows result)))))))))
