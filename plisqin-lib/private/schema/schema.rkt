@@ -227,10 +227,9 @@
   (syntax-parse stx
     [(_ schema-id:id
         (~optional (~seq #:append-to append-id:id))
-        ; TODO want literal table here, ignoring bindings
-        (table table-id:id
-               form
-               ...)
+        ((~datum table) table-id:id
+                        form
+                        ...)
         ...)
      ; If append-id was given, it must be bound to an xformer so we can pull
      ; its clauses out and reuse them.

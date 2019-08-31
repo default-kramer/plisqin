@@ -12,8 +12,6 @@
    (define cp-path (string-append "./adventure-works-checkpoints/" checkpoint))
    (reset-eval!)
    (my-eval `(begin
-               #;(require (only-in plisqin-lib/private/lang/default-require
-                                   show-table current-connection))
                (require plisqin-examples/adventure-works)
                (require ,cp-path)
                (current-connection (connect-adventure-works)))))
@@ -312,17 +310,76 @@ Just for demonstration purposes, I will show some records that won't have nulls:
 Perhaps your boss will ask for an @(racket order-by) clause later, but
 @(racket task2/revision1) is an acceptable solution.
 
-@subsubsub*section{TODO}
-Add the (ProductCategory product) join.
+@subsection{Adding Joins and Properties}
+Again, we have discovered some facts about our database schema and we should
+encode these facts as procedures using @(racket define-schema).
+Specifically, we learned that
+@itemlist[@item{Product has one ProductSubcategory}
+          @item{Product has one ProductCategory}
+          @item{Product has a property SubcategoryName}
+          @item{Product has a property CategoryName}]
 
-Add properties so that we can rewrite it as:
+We already defined @(racket ProductSubcategory) in the previous section,
+so let's do the other 3 items now. Add the highlighted code to your file:
 @(racketblock
-  (from prd Product
-        (select (Name prd))
-        (select (ProductNumber prd))
-        (select (SubcategoryName prd))
-        (select (CategoryName prd))))
+  (define-schema adventure-works-schema
+    #,truncated
+    (table Product
+           #,truncated
+           (code:hilite #:has-one)
+           (code:hilite [ProductCategory
+                         (ProductCategory (ProductSubcategory this))])
+           (code:hilite #:property)
+           (code:hilite [SubcategoryName
+                         (Name (ProductSubcategory this))])
+           (code:hilite [CategoryName
+                         (Name (ProductCategory this))]))
+    #,truncated))
+@(load-checkpoint! "6.rkt")
 
+The properties should be self-explanatory.
+But this definition of @(racket ProductCategory) is interesting.
+We define @(racket ProductCategory) @tech{given} @(racket Product) as
+@(racketblock
+  (ProductCategory (ProductSubcategory this)))
+
+This works because we previously defined @(racket ProductSubcategory) @tech{given}
+@(racket Product) as well as @(racket ProductCategory) @tech{given} @(racket ProductSubcategory).
+We simply compose them, passing the result of the first into the second.
+The return value is the join from Product to ProductSubcategory to ProductCategory.
+We can verify that this join works with a quick one-off query:
+@margin-note{The careful reader will notice that both joins in the generated SQL
+ are left joins. TODO write up how @(racket 'infer-join-type) works and link to it?
+ Or is that just a distraction at this point?}
+@(repl-query
+  (show-table
+   (from p Product
+         (join cat (ProductCategory p))
+         (select (Name p) #:as 'ProductName)
+         (select (Name cat) #:as 'CategoryName)
+         (limit 3))))
+
+Getting back on task, we can now rewrite our answer as:
+@(racketblock
+  (define (task2/revision2)
+    (from prd Product
+          (select (Name prd) #:as 'ProductName)
+          (select (ProductNumber prd))
+          (select (SubcategoryName prd) #:as 'Subcategory)
+          (select (CategoryName prd) #:as 'Category))))
+
+And let's just make sure it still works:
+@(repl-query
+  (show-table
+   (from prd (task2/revision2)
+         (where (.is-not (ProductSubcategoryID prd)
+                         'null))
+         (limit 5))))
+
+OK, we still have the same query but we have beefed up our @(racket define-schema)
+with a new join and two new properties that will come in handy in future queries.
+
+@subsection{A new kind of Property}
 Now imagine that the boss only wants to see Products that have non-zero sales.
 He explains that our Product catalog needs culling, but for now "has sales?" is
 the easy way to filter out obsolete Products.
