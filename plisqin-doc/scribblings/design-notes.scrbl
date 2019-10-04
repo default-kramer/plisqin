@@ -85,6 +85,86 @@ There would also be something like @(racket trust-cardinality) which would say
 
 But... it might be difficult to make it smart enough to solve actual problems.
 
+@subsection{Naming Convention?}
+Another take on this is to simply use a naming convention.
+Just as Racket uses the exclamation point (e.g. @(racket set!)) to indicate mutation,
+I think Plisqin could use a naming convention to indicate cardinality.
+How about this:
+@(tabular
+  #:sep (hspace 2)
+  (list (map bold (list "Name" "Meaning" "May Duplicate?" "May Eliminate?"))
+        (list (racket (foo* x)) "zero or more" "yes" "yes")
+        (list (racket (foo+ x)) "one or more" "yes" "no")
+        (list (racket (foo- x)) "one or fewer" "no" "yes")
+        (list (racket (foo x)) "exactly one" "no" "no")))
+
+Let's assume that we are only dealing with inner joins.
+"May Duplicate?" means that including the expression in the query may increase the
+cardinality of the result set.
+"May Eliminate?" means that including the expression in the query may filter the
+result set.
+
+If we use a left join instead of an inner join, then "May Eliminate?" means
+"May Introduce Null?" instead.
+
+So I think we have 3 separate concepts: duplication, elimination, and nullability.
+I think they are orthogonal?
+It is possible to have an expression that does all three.
+For example, assume that @(racket (orders* product)) is an inner join
+representing the "zero or more" orders that a product has.
+This join may duplicate some products and eliminate others.
+Now if we have
+@(racketblock
+  (define (blah___ product)
+    (code:comment "assume shipment-date is a nullable column of the order table")
+    (shipment-date/? (orders* product))))
+What do we want @(racket blah___) to be named?
+It may duplicate some products, eliminate other products, and finally introduce
+nulls on any rows that remain.
+
+Perhaps I am not thinking precisely enough about nullability.
+A failed left join really represents "potential nullability" - a null will not appear
+until I try to access a column.
+Perhaps it is a mistake to conflate the "potential nullability" of join with the
+"actual nullability" of a scalar?
+
+Ah ha, I forgot that my @(racket blah___) example from earlier is not allowed by my
+personal convention: inline joins may not be duplicating.
+So perhaps it doesn't matter.
+
+Just to help me think, how ridiculous could I get with this?
+Let's say we encode all 3 concepts into the naming convention.
+@(tabular
+  #:sep (hspace 2)
+  (list (map bold (list "Name" "Duplicating?" "Eliminating?" "Nullable?"))
+        (list (racket foo+-?) "yes" "yes" "yes")
+        (list (racket foo+-) "yes" "yes" "no")
+        (list (racket foo+?) "yes" "no" "yes")
+        (list (racket foo+) "yes" "no" "no")
+        (list (racket foo-?) "no" "yes" "yes")
+        (list (racket foo-) "no" "yes" "no")
+        (list (racket foo?) "no" "no" "yes")
+        (list (racket foo) "no" "no" "no")))
+Well, that's the answer I guess.
+All eight kinds of expressions are possible.
+But what an ugly naming convention that would be.
+Not to mention that the question mark is reserved for predicates.
+
+Does this look any better?
+@(tabular
+  #:sep (hspace 2)
+  (list (map bold (list "Name" "Duplicating?" "Eliminating?" "Nullable?"))
+        (list (racket /foo*) "yes" "yes" "yes")
+        (list (racket foo*) "yes" "yes" "no")
+        (list (racket /foo+) "yes" "no" "yes")
+        (list (racket foo+) "yes" "no" "no")
+        (list (racket /foo-) "no" "yes" "yes")
+        (list (racket foo-) "no" "yes" "no")
+        (list (racket /foo) "no" "no" "yes")
+        (list (racket foo) "no" "no" "no")))
+
+Maybe, but still too cumbersome to be practical I'd bet.
+
 @section{The Reader - Lessons Learned}
 This has tripped me up twice now, so let me write down my thoughts while they are fresh.
 It seems that Scribble works using the output of @(racket read-syntax).
