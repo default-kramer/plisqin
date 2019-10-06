@@ -226,7 +226,13 @@
          SellEndDate
          DiscontinuedDate
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:has-one
+         [ProductSubcategory
+          (join subcat ProductSubcategory
+                'left-join
+                (join-on (.= (ProductSubcategoryID subcat)
+                             (ProductSubcategoryID this))))])
   (table ProductCategory
          #:column
          ProductCategoryID
@@ -642,3 +648,11 @@
   (from subcat ProductSubcategory
         (select (Name subcat) #:as 'SubcategoryName)
         (select (CategoryName subcat) #:as 'CategoryName)))
+
+(define (task2/revision1)
+  (from prd Product
+        (join subcat (ProductSubcategory prd))
+        (select (Name prd) #:as 'ProductName)
+        (select (ProductNumber prd))
+        (select (Name subcat) #:as 'Subcategory)
+        (select (CategoryName subcat) #:as 'Category)))

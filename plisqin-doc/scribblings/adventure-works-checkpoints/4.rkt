@@ -321,7 +321,10 @@
          [ProductCategory
           (join cat ProductCategory
                 (join-on (.= (ProductCategoryID cat)
-                             (ProductCategoryID this))))])
+                             (ProductCategoryID this))))]
+         #:property
+         [CategoryName
+          (Name (ProductCategory this))])
   (table ScrapReason
          #:column
          ScrapReasonID
@@ -634,3 +637,8 @@
         ; The join is no longer here!
         (select (Name subcat) #:as 'SubcategoryName)
         (select (Name (ProductCategory subcat)) #:as 'CategoryName)))
+
+(define (task1/revision4)
+  (from subcat ProductSubcategory
+        (select (Name subcat) #:as 'SubcategoryName)
+        (select (CategoryName subcat) #:as 'CategoryName)))

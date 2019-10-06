@@ -232,7 +232,14 @@
           (join subcat ProductSubcategory
                 'left-join
                 (join-on (.= (ProductSubcategoryID subcat)
-                             (ProductSubcategoryID this))))])
+                             (ProductSubcategoryID this))))]
+         [ProductCategory
+          (ProductCategory (ProductSubcategory this))]
+         #:property
+         [SubcategoryName
+          (Name (ProductSubcategory this))]
+         [CategoryName
+          (Name (ProductCategory this))])
   (table ProductCategory
          #:column
          ProductCategoryID
@@ -656,3 +663,10 @@
         (select (ProductNumber prd))
         (select (Name subcat) #:as 'Subcategory)
         (select (CategoryName subcat) #:as 'Category)))
+
+(define (task2/revision2)
+  (from prd Product
+        (select (Name prd) #:as 'ProductName)
+        (select (ProductNumber prd))
+        (select (SubcategoryName prd) #:as 'Subcategory)
+        (select (CategoryName prd) #:as 'Category)))
