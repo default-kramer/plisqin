@@ -239,7 +239,11 @@
          [SubcategoryName
           (Name (ProductSubcategory this))]
          [CategoryName
-          (Name (ProductCategory this))])
+          (Name (ProductCategory this))]
+         [HasSales?
+          (exists (from sod SalesOrderDetail
+                        (where (.= (ProductID sod)
+                                   (ProductID this)))))])
   (table ProductCategory
          #:column
          ProductCategoryID
@@ -670,3 +674,13 @@
         (select (ProductNumber prd))
         (select (SubcategoryName prd) #:as 'Subcategory)
         (select (CategoryName prd) #:as 'Category)))
+
+(define (task2/revision3 #:include-zero-sales? [include-zero-sales? #f])
+  (from prd Product
+        (select (Name prd) #:as 'ProductName)
+        (select (ProductNumber prd))
+        (select (SubcategoryName prd) #:as 'Subcategory)
+        (select (CategoryName prd) #:as 'Category)
+        (if include-zero-sales?
+            (list)
+            (where (HasSales? prd)))))
