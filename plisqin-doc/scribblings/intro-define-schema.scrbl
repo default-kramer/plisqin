@@ -385,14 +385,54 @@ He explains that our Product catalog needs culling, but for now "has sales?" is
 the easy way to filter out obsolete Products.
 You get the impression that "has sales?" is an important property of Product,
 and will very likely be a part of future tasks.
-You create a purely synthetic property HasSales? so that you can write
+So let's add @(racket HasSales?) as a @(racket #:property) of the Product table.
+Add the highlighted code to your file:
 @(racketblock
-  (from prd Product
-        (select (Name prd))
-        (select (ProductNumber prd))
-        (select (SubcategoryName prd))
-        (select (CategoryName prd))
-        (where (HasSales? prd))))
+  (define-schema adventure-works-schema
+    #,truncated
+    (table Product
+           #,truncated
+           (code:hilite #:property)
+           (code:hilite [HasSales?
+                         (exists (from sod SalesOrderDetail
+                                       (where (.= (ProductID sod)
+                                                  (ProductID this)))))]))
+    #,truncated))
 
-Explain the value of insulation here.
-Today it is a subquery, but tomorrow it may be denormalized (like SalesOrderHeader.SubTotal).
+Now we can use @(racket HasSales?) just as we would use any other property of Product.
+Let's write a new revision that will exclude zero-sale Products by default:
+@margin-note{
+ When @(racket include-zero-sales?) is true, we add the empty list to the query.
+ The empty list here represents a list of zero clauses.
+ Adding an empty list to any query produces the same query.
+}
+@(racketblock
+  (define (task2/revision3 #:include-zero-sales? [include-zero-sales? #f])
+    (from prd Product
+          (select (Name prd) #:as 'ProductName)
+          (select (ProductNumber prd))
+          (select (SubcategoryName prd) #:as 'Subcategory)
+          (select (CategoryName prd) #:as 'Category)
+          (if include-zero-sales?
+              (list)
+              (where (HasSales? prd))))))
+@(load-checkpoint! "7.rkt")
+
+Let's test that our filter is working:
+@(repl-query
+  (show-table
+   (from x (task2/revision3)
+         (limit 5))))
+@(repl-query
+  (show-table
+   (from x (task2/revision3 #:include-zero-sales? #t)
+         (limit 5))))
+
+Notice the encapsulation that @(racket (HasSales? product)) provides.
+Today it is implemented using @(racket exists), but in the future we might
+decide to denormalize and add a HasSales column to the Product table.
+The important point is that we can choose a different implementation
+without breaking any calling code - the calling code will always remain
+@(racket (HasSales? product)).
+This is not true in SQL - switching from an "exists" implementation to a
+simple column access would require updating all the call sites.
