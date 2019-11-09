@@ -637,3 +637,89 @@ They are all pronounced "of" but carry some extra meaning:
  @item{"The Copies @deftech{of/p} the Item" means "the Copies that belong to the Item,
   and take note that each Copy will make an individual appearance in the result set."
   The /p refers to the @italic{plural} nature of this relationship.}]
+
+@section{Substitution Rules}
+Two expressions are said to be @deftech{equivalent} if and only if
+substituting one expression for the other does not change the generated SQL.
+Note that two equivalent expressions are not necessarily @(racket equal?).
+
+@subsection[#:tag "subst:join->proc"]{Extracting a Join as a Procedure}
+Given that we have a query
+@(racketblock
+  (define orig-query
+    (from x "X"
+          (join y "Y"
+                #,(italic (racket (some-join-clauses x y)))
+                #,(italic "..."))
+          #,(italic (racket (some-query-clauses x y)))
+          #,(italic "..."))))
+We can refactor the join into a procedure @(racket y/given-x) as follows:
+@(racketblock
+  (define (y/given-x x)
+    (join y "Y"
+          #,(italic (racket (some-join-clauses x y)))
+          #,(italic "...")))
+  (define refactored-query
+    (from x "X"
+          (join y (y/given-x x))
+          #,(italic (racket (some-query-clauses x y)))
+          #,(italic "..."))))
+The @(racket orig-query) and @(racket refactored-query) are @tech{equivalent}.
+This is a useful transformation to avoid repeating the definition of
+@(racket y/given-x) all over our project.
+
+@subsection[#:tag "subst:detach"]{Detaching a Join}
+@bold{Warning!} This substitution does not guarantee that the result will be @tech{equivalent}
+to the original. But it is still a useful transformation in practice.
+TODO link to the explanation of attached vs detached joins.
+
+Given that we have a query
+@(racketblock
+  (define orig-query
+    (from x "X"
+          (join y (y/given-x x))
+          #,(italic (racket (some-query-clauses x y)))
+          #,(italic "..."))))
+We can replace the attached join with an inline join as follows:
+@(racketblock
+  (define refactored-query
+    (from x "X"
+          #,(italic (racket (some-query-clauses x (y/given-x x))))
+          #,(italic "..."))))
+
+This substitution is not very useful on its own, but it becomes very valuable
+when paired with the transformation described in @(secref "subst:expr->proc").
+
+@subsection[#:tag "subst:expr->proc"]{Extracting any Expression as a Procedure}
+Given that we have a query
+@(racketblock
+  (define orig-query
+    (from x "X"
+          (select (foo/given-y (y/given-x x))))))
+We can refactor to create @(racket foo/given-x) as follows:
+@(racketblock
+  (define (foo/given-x x)
+    (foo/given-y (y/given-x x)))
+  (define refactored-query
+    (from x "X"
+          (select (foo/given-x x)))))
+The @(racket orig-query) and @(racket refactored-query) are @tech{equivalent}.
+This transformation is very useful because it allows us to represent all the
+properties of any table as single-argument procedures.
+This uniformity is important. Consider the following example:
+@(racketblock
+  (from p "Product"
+        (select (ProductName p))
+        (select (CategoryName p))
+        (select (TotalSales p))))
+Without reading the definitions, we could guess that
+@(itemlist
+  @item{@(racket (ProductName p)) might simply access the ProductName column of the Product table.}
+  @item{@(racket (CategoryName p)) might include an inline join from Product to Category,
+ and then access the CategoryName column of the Category table}
+  @item{@(racket (TotalSales p)) might be a subquery which sums
+ the SalesOrderDetail records that match the given Product.})
+But the caller doesn't care!
+The caller can use all different kinds of properties interchangeably,
+which leads to maximum composability.
+Meanwhile, the implementor can change the implementation without breaking the calling code.
