@@ -88,7 +88,7 @@ This agrees with @(racket (require plisqin)), which imports the operators prefix
             (list (list (italic stuff ...))
                   (list @nested{-- your boss}))))
 
-@section{Task 1}
+@section{Task 1 (Joins)}
 @bossquote{I want to see a list of Subcategories with the Category that they belong to.}
 
 Let's start by looking at the Subcategory table.
@@ -237,7 +237,7 @@ Again, this might not seem like a big improvement at first, but as we write many
 more queries and build up our definitions of joins and properties, it will save us
 a lot of typing and thinking.
 
-@section{Task 2}
+@section{Task 2 (More Joins)}
 @bossquote{Show me a list of Products with Subcategory and Category names.}
 
 Let's start by looking at the Product table
@@ -310,7 +310,7 @@ Just for demonstration purposes, I will show some records that won't have nulls:
 Perhaps your boss will ask for an @(racket order-by) clause later, but
 @(racket task2/revision1) is an acceptable solution.
 
-@subsection{Adding Joins and Properties}
+@subsection{Making the Joins and Properties Reusable}
 Again, we have discovered some facts about our database schema and we should
 encode these facts as procedures using @(racket define-schema).
 Specifically, we learned that
@@ -436,3 +436,158 @@ without breaking any calling code - the calling code will always remain
 @(racket (HasSales? product)).
 This is not true in SQL - switching from an "exists" implementation to a
 simple column access would require updating all the call sites.
+
+@section{Task 3 - Sales by Product}
+@(define task3-quote
+   @bossquote{Show me a list of the best-selling Products of all time.
+ Sort by total revenue. Include total quantity sold and subcategory.})
+@task3-quote
+
+TODO write prose from here to the end.
+
+@(racketblock
+  (define (task3/revision1)
+    (from prd Product
+          (select (ProductNumber prd))
+          (select (SubcategoryName prd) #:as 'Subcategory)
+          (join detailsG SalesOrderDetail
+                (group-by (ProductID detailsG))
+                (join-on (.= (ProductID detailsG)
+                             (ProductID prd))))
+          (select (round (sum (LineTotal detailsG)) 2) #:as 'SalesAmount)
+          (select (sum (OrderQty detailsG)) #:as 'SalesQty)
+          (order-by 'desc (sum (LineTotal detailsG))))))
+@(load-checkpoint! "8.rkt")
+@(repl-query
+  (show-table (from x (task3/revision1)
+                    (limit 5))))
+
+@subsection{Making the Grouped Join Reusable}
+@(racketblock
+  (define-schema adventure-works-schema
+    #,truncated
+    (table Product
+           #,truncated
+           (code:hilite #:has-group)
+           (code:hilite [DetailsG
+                         (join detailsG SalesOrderDetail
+                               (group-by (ProductID detailsG))
+                               (join-on (.= (ProductID detailsG)
+                                            (ProductID this))))]))
+    #,truncated))
+
+@(racketblock
+  (define (task3/revision2)
+    (from prd Product
+          (select (ProductNumber prd))
+          (select (SubcategoryName prd) #:as 'Subcategory)
+          (join detailsG (DetailsG prd))
+          (select (round (sum (LineTotal detailsG)) 2) #:as 'SalesAmount)
+          (select (sum (OrderQty detailsG)) #:as 'SalesQty)
+          (order-by 'desc (sum (LineTotal detailsG))))))
+@(load-checkpoint! "9.rkt")
+@(repl-query
+  (show-table (from x (task3/revision1)
+                    (limit 5))))
+
+@section{Task 4 - Sales by Subcategory}
+@(define task4-quote
+   @bossquote{Show me a list of the best-selling Subcategories of all time.
+ Sort by total revenue. Include total quantity sold and category name.})
+@task4-quote
+
+For this task, we will skip the more basic revisions and make reusable joins and properties right away.
+
+This task is similar to the previous task, except we need to group the SalesOrderDetail
+records by their Subcategory rather than their Product.
+Specifically, we would like to group by @(racket ProductSubcategoryID) which is the primary
+key of the Subcategory table.
+The following change will help us with that. It defines "Product given SalesOrderDetail"
+and "ProductSubcategoryID given SalesOrderDetail".
+@(racketblock
+  (define-schema adventure-works-schema
+    #,truncated
+    (table SalesOrderDetail
+           #,truncated
+           (code:hilite #:has-one)
+           (code:hilite [Product
+                         (join prd Product
+                               (join-on (.= (ProductID prd)
+                                            (ProductID this))))])
+           (code:hilite #:property)
+           (code:hilite [ProductSubcategoryID
+                         (ProductSubcategoryID (Product this))]))
+    #,truncated))
+
+Now that ProductSubcategoryID is defined for SalesOrderDetail, we can use it
+to help us define "DetailsG ProductSubcategory" (read "Details Grouped by ProductSubcategory").
+@(racketblock
+  (define-schema adventure-works-schema
+    #,truncated
+    (table ProductSubcategory
+           #,truncated
+           (code:hilite #:has-group)
+           (code:hilite [DetailsG
+                         (join detailsG SalesOrderDetail
+                               (group-by (ProductSubcategoryID detailsG))
+                               (join-on (.= (ProductSubcategoryID detailsG)
+                                            (ProductSubcategoryID this))))]))
+    #,truncated))
+
+Now we are ready to complete this task using a pattern similar to the previous task:
+@(racketblock
+  (define (task4/revision1)
+    (from subcat ProductSubcategory
+          (select (Name subcat) #:as 'Subcategory)
+          (select (CategoryName subcat) #:as 'Category)
+          (join detailsG (DetailsG subcat))
+          (select (round (sum (LineTotal detailsG)) 2) #:as 'SalesAmount)
+          (select (sum (OrderQty detailsG)) #:as 'SalesQty)
+          (order-by 'desc (sum (LineTotal detailsG))))))
+@(load-checkpoint! "10.rkt")
+@(repl-query
+  (show-table (from x (task4/revision1)
+                    (limit 5))))
+
+@section{Task 5 - Sales by Anything}
+Let's look at the previous two tasks.
+@task3-quote
+@task4-quote
+
+We can generalize this to
+@italic{Show me a list of the best-selling THINGS of all time.
+ Sort by total revenue. Include total quantity sold and SOME_OTHER_STUFF.}
+
+TODO: Show the two completed queries.
+Make a generalized sales report.
+Plug in Product and Subcategory, show that they are equivalent to the final revisions of previous tasks.
+Add an optional start-date and end-date filter to the generalized sales report.
+Explain the contract of the generalized sales report - it takes any query for which DetailsG is defined
+and returns the same query with some clauses appended to it.
+
+Extra Credit: Extend the definition of DetailsG so that it is defined for Category, SalesPerson, and Territory.
+Try plugging those tables into the generalized sales report.
+
+Extra Credit: Instead of using appendable queries, implement the generalized sales report
+as a procedure that returns a list of the relevant clauses.
+Are they equivalent? No, because the join has become detached.
+But will they generate the same SQL anyway? Yes, because the detached join didn't get passed into a subquery.
+
+@void{
+ Task 3 (aggregates)
+ 1) show list of Products with Sales[Qty, Price]
+ 2) make the joins and properties reusable
+ Task 4 (more aggregates)
+ 1) show list of Subcategories with Sales[Qty, Price]
+ 2) make the joins and properties reusable
+ Task 5 (generalized Sales Report)
+ 1) the skeleton
+ 2) by Product
+ 3) by Subcategory
+ 4) by Category
+ 5) by SalesPerson
+ 6) by Territory
+}
+@(void '(SalesReport table
+                     [start-date #f]
+                     [end-date #f]))
