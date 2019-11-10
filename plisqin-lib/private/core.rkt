@@ -30,7 +30,7 @@
          make-cases make-param param? param-name param-value
          token-list? fragment-kind? convert-to-subquery
          get-src get-alias reset-uid-for-testing! next-uid normalize
-         exists query-scope replace make-injection-placeholder
+         exists round query-scope replace make-injection-placeholder
          statement? statement-expr? queryable?
          token? metadata-get metadata-set fragment-contract
          (struct-out exn:fail:plisqin)
@@ -469,6 +469,10 @@
      (RS bool "exists ("(convert-to-subquery x)")")]
     [else
      (RS bool "exists (" tokens ")")]))
+
+(define/contract (round expr [places 0])
+  (-> sql-token? integer? sql-token?)
+  (RS scalar "round("expr", "places")"))
 
 ;(: filter-frags (-> (Listof Fragment) (Listof FragmentKind) (Listof Fragment)))
 (define (filter-frags frags kinds)

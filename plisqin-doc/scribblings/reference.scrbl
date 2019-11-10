@@ -399,6 +399,13 @@ If any of these returns true, then @(racket fragment?) will also return true.
                                              (join-on y".foo = "x".bar"))))))))
 }
 
+@defproc[(round [expr sql-token?] [places integer? 0]) sql-token?]{
+ Rounds a numeric expression to @(racket places) decimal places.
+ @(interaction
+   #:eval my-eval
+   (display (to-sql (RS (round "foo" 3)))))
+}
+
 @defform[(case-when maybe-of terms ...+ maybe-else)
          #:grammar [(maybe-of (code:line)
                               (code:line #:of of-expr))

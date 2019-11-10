@@ -12,7 +12,7 @@
          bool bool?
          subquery subquery?
          sql sql?
-         fragment? exists reset-uid-for-testing!
+         fragment? exists round reset-uid-for-testing!
          fragment-kind? join-type? sql-token? token-list?
          queryable? statement? statement-expr?
          binding? join? source? query? injection? attached-join?
