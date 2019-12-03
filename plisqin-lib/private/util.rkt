@@ -1,10 +1,8 @@
 #lang racket
 (provide def-doc test flattenof build-guard-proc def/c)
-(provide (all-from-out "new-way-to-walk.rkt"))
 (provide (all-from-out "capture-syntax.rkt"))
 
 (require (for-syntax syntax/strip-context))
-(require "new-way-to-walk.rkt")
 (require "capture-syntax.rkt")
 
 ; Use to define a scribble expression in the "docs" submodule.
