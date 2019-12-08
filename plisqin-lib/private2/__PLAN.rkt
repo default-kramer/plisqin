@@ -7,6 +7,6 @@
          "Also, utility functions as needed")
    (sql #:depends-on [core]
         "Implement SQL Expressions such as "(from join avg like = + * etc...)
-        "Comes in 3 variations: untyped, loose, and strict")
+        "Comes in 3 variations: unsafe, loose, and strict")
    (schema #:depends-on [core]
            "Implement def-table, def/append! and define-schema"))

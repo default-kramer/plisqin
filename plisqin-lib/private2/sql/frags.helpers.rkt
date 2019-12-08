@@ -1,8 +1,9 @@
 #lang racket
 
-(provide def tokens parens insert-ands interpose)
+(provide def tokens parens insert-ands interpose export)
 
 (require "fragment.rkt"
+         "../_types.rkt"
          racket/stxparam)
 
 (module+ test
@@ -75,3 +76,24 @@
   (check-equal?
    (interpose '+ '(1 2 3 4))
    '(1 + 2 + 3 + 4)))
+
+
+(define-for-syntax (unintern-id id)
+  (datum->syntax id
+                 (string->uninterned-symbol (format "~a" (syntax-e id)))))
+
+(define-syntax (export-single stx)
+  (syntax-case stx ()
+    [(_ keyword raw-id)
+     (let ([table (syntax-case #'keyword ()
+                    [#:unsafe :unsafe-table]
+                    [#:loose :loose-table]
+                    [#:strict :strict-table])])
+       (with-syntax ([id (unintern-id #'raw-id)])
+         (quasisyntax/loc stx
+           (begin
+             (provide (rename-out [id raw-id]))
+             (define id #,(table #'raw-id))))))]))
+
+(define-syntax-rule (export keyword id ...)
+  (begin (export-single keyword id) ...))

@@ -24,15 +24,18 @@
 ;; See the current version of the racket style guide here:
 ;; http://docs.racket-lang.org/style/index.html
 
-(require plisqin-lib/private/api)
-(provide (all-from-out plisqin-lib/private/api))
-(require plisqin-lib/private/schema)
-(provide (all-from-out plisqin-lib/private/schema))
-(require plisqin-lib/private/aggregates)
-(provide (all-from-out plisqin-lib/private/aggregates))
+(require (submod plisqin-lib/private2/sql unsafe))
+(provide (all-from-out (submod plisqin-lib/private2/sql unsafe)))
 
-(require plisqin-lib/private/schema/schema)
-(provide define-schema this)
+;(require plisqin-lib/private/api)
+;(provide (all-from-out plisqin-lib/private/api))
+;(require plisqin-lib/private/schema)
+;(provide (all-from-out plisqin-lib/private/schema))
+;(require plisqin-lib/private/aggregates)
+;(provide (all-from-out plisqin-lib/private/aggregates))
+
+;(require plisqin-lib/private/schema/schema)
+;(provide define-schema this)
 
 (require plisqin-lib/private/show-table)
 (provide show-table current-connection)

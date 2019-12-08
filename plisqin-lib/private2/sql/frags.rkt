@@ -7,7 +7,8 @@
 ; Move as much code to frag-helpers.rkt as possible.
 ; We are about to redefine things like `and` and `+` so we want to avoid writing
 ; much code in this namespace.
-(require "frags.helpers.rkt")
+(require "frags.helpers.rkt"
+         (for-syntax "../_types.rkt"))
 
 
 
@@ -98,56 +99,47 @@
 (def-math + - * /)
 
 
+; Export with types via submodules
+(define-syntax-rule (do-export mod-id keyword)
+  (module+ mod-id
+    (export keyword
+            select where group-by having order-by join-on
+            scalar bool aggregate subquery sql
+            count avg min max sum exists)
+    (module+ operators
+      (export keyword
+              and or not
+              = <> < <= > >=
+              like not-like
+              is is-not
+              in not-in
+              + - * /))))
 
-; Begin providing
-(module+ untyped
-  (provide select group-by order-by
-           where join-on having))
+(do-export unsafe #:unsafe)
+(do-export loose #:loose)
+(do-export strict #:strict)
 
-; The `type` macro should create a wrapper function that checks the argument
-; types and assign!s the return type.
-; It can also store the type for Scribble to extract.
-; So be careful not to use a macro that will ruin typesetting.
-; Here `f` is a hypothetical construct that probably exists only for documentation.
-; See "guard.rkt" for a partial implementation.
-#;(module+ loose
-    (type select   (f [content? ...+ -> Token]))
-    (type group-by (f [content? ...+ -> Token]))
-    (type order-by (f [content? ...+ -> Token]))
-    (type where    (f [content? ...+ -> Token]))
-    (type join-on  (f [content? ...+ -> Token]))
-    (type having   (f [content? ...+ -> Token])))
+(module+ test
+  (require rackunit
+           (submod ".." unsafe)
+           (submod ".." unsafe operators))
 
-#;(module+ strict
-    (type select   (f [Scalar -> Token]
-                      [Bool -> Token]))
-    (type group-by (f [Scalar -> Token]
-                      [Bool -> Token]))
-    (type order-by (f [Scalar -> Token]
-                      [Bool -> Token]))
+  ; Check that each id is bound to a fragment constructor.
+  (define-syntax-rule (check-frags frag-id ...)
+    (begin
+      ; The unsafe fragment constructor should accept any arguments
+      (let* ([result (frag-id 1 "2" '(three four))]
+             [expected (format "(~a 1 \"2\" '(three four))" 'frag-id)]
+             [actual (format "~v" result)])
+        (check-equal? expected actual))
+      ...))
 
-    (type where   (f [Bool -> Token]))
-    (type join-on (f [Bool -> Token]))
-    (type having  (f [Bool -> Token])))
-
-(module+ untyped
-  (provide scalar aggregate bool sql subquery))
-
-(module+ untyped
-  (provide count avg max min sum exists))
-
-; Here is where typing gets slightly interesting. For example:
-#;(module+ strict
-    (type min (f [Number -> Number]
-                 [String -> String]
-                 [Datetime -> Datetime]))
-    (type avg (f [Number -> Number])))
-
-(module+ untyped
-  (module+ operators
-    (provide and or not
-             = <> < <= > >=
-             like not-like
-             is is-not
-             in not-in
-             + - * /)))
+  (check-frags select where group-by having order-by join-on
+               scalar bool aggregate subquery sql
+               count avg min max sum exists)
+  (check-frags and or not
+               = <> < <= > >=
+               like not-like
+               is is-not
+               in not-in
+               + - * /))

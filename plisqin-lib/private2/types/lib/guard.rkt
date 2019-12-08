@@ -1,28 +1,19 @@
 #lang racket
 
-(provide guard)
+(provide guard func-name return-handler)
 
-; Wraps the given procedure with argument validation. Expands
-#;(guard blah
-         [integer? integer? -> any]
-         [string? string? -> any])
-; to something like
-#;(lambda arglist
-    (match arglist
-      [(list a b)
-       #:when (and (integer? a)
-                   (integer? b))
-       (blah a b)]
-      [(list a b)
-       #:when (and (string? a)
-                   (string? b))
-       (blah a b)]
-      [else (raise-argument-error stuff...)]))
-; My testing has shown that this performs faster than `->` which is the fastest
-; of the built-in procedure contract constructors.
-; TODO still need to handle the return type though.
+; Consider
+#;(guard foo
+         [integer? integer? -> integer?]
+         [string? ...+ -> list?])
+; This says that `foo` will accept two integers and return an integer,
+; or it will accept one or more strings and return a list.
+; Any other argument list is an error. Keyword arguments are not supported.
+; NOTE - the return contract is not enforced by default; you may
+; syntax-parameterize the `return-handler` to handle this.
 
-(require (for-syntax syntax/parse))
+(require (for-syntax syntax/parse)
+         racket/stxparam)
 
 (begin-for-syntax
   (define-syntax-rule (matches-any? a b ...)
@@ -53,16 +44,16 @@
               return/c:contract-expr]))
 
   ;;; spec->match-clause
-  ; spec   : syntax?
-  ; return : (-> syntax? (or/c #f (listof identifier?)) syntax?)
-  ;
   ; Given a spec like [foo? bar? -> baz?] expand to something like
   #;[(list a b)
      #:when (and (foo? a)
                  (bar? b))
-     (return baz? (a b))]
-  ; If there is a rest argument, we (return baz? #f) instead.
-  (define (spec->match-clause spec return)
+     (let ([retval (func a b)])
+       (handle-return-type retval baz?))]
+  ; If the spec has ... or ...+ in it, we will need to bind retval to
+  #;(apply func arglist)
+  ; instead, but `(func a b)` is faster if we have already matched all the args.
+  (define (spec->match-clause spec func arglist)
     (syntax-parse spec
       [s:contract-spec
        (let* ([rest-mod (syntax->list #'((~? s.rest-mod)))]
@@ -89,42 +80,41 @@
                           #,@(if has...+
                                  (list #'(pair? rest-id)) ; ensure the list is not empty
                                  (list)))
-              #,(return #'s.return/c
-                        (if has-rest?
-                            #f
-                            (syntax->list #'(arg-id ...))))])))])))
+              (let ([retval #,(if has-rest?
+                                  #`(apply #,func #,arglist)
+                                  #`(#,func arg-id ...))])
+                (return-handler retval s.return/c))])))])))
 
 (define (format-specs specs)
   (string-join (map ~a specs) "\n"))
 
+(define-syntax-parameter func-name (λ (stx) #'#f))
+
+(define-syntax-parameter return-handler
+  (λ (stx) (syntax-case stx ()
+             [(_ retval contract)
+              ; just assume that it satisfies the contract
+              #'retval])))
+
 (define-syntax (guard stx)
   (syntax-parse stx
     [(_ func:id spec ...+)
-     (syntax/loc stx
-       (guard #:name func func spec ...))]
-    [(_ #:name name:id func:id spec ...+)
      (with-syntax ([arglist #'arglist])
-       (let ([return (λ (return/c arg-ids)
-                       ; just ignore return/c for now
-                       (if arg-ids
-                           #`(func #,@arg-ids)
-                           #`(apply func arglist)))])
-         (quasisyntax/loc stx
-           (lambda arglist
-             (match arglist
-               #,@(map (λ(spec) (spec->match-clause spec return))
-                       (syntax->list #'(spec ...)))
-               [else
-                (raise-argument-error
-                 'name
-                 (format "An argument list satisfying one of the following:\n~a"
-                         (format-specs '(spec ...)))
-                 arglist)])))))]))
+       (quasisyntax/loc stx
+         (lambda arglist
+           (match arglist
+             #,@(map (λ(spec) (spec->match-clause spec #'func #'arglist))
+                     (syntax->list #'(spec ...)))
+             [else
+              (raise-argument-error
+               (or (func-name) 'func)
+               (format "An argument list satisfying one of the following:\n~a"
+                       (format-specs '(spec ...)))
+               arglist)]))))]))
 
 (module+ test
   (define (blah . args) args)
 
   (define blah1 (guard blah
                        [integer? integer? -> any]
-                       [string? string? -> any]))
-  )
+                       [string? string? -> any])))

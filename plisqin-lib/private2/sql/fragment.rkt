@@ -4,12 +4,16 @@
 
 (require morsel-lib
          morsel-lib/sql
-         racket/struct)
+         racket/struct
+         "../_types.rkt")
 
 (define fragment%
-  (class* object% (sql-token<%> equal<%> printable<%>)
+  (class* object% (sql-token<%> equal<%> printable<%> typed<%>)
     (init-field kind id content reduction)
     (super-new)
+
+    ; typed<%>
+    (define-typed-stuff)
 
     ; token<%>
     (define/public (token-kind) kind)

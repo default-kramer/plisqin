@@ -61,36 +61,3 @@
     (string-join (map format-row rows) "\n"))
 
   (format-table rows))
-
-(module+ test
-  (require rackunit
-           "../examples/cities/city-connection.rkt")
-
-  (define conn (connect-cities))
-
-  (define result
-    (query conn #<<HEREDOC
-select CountryName, CountryPopulation
-from Country
-where CountryName like 'U%'
-order by CountryName
-HEREDOC
-           ))
-
-  (define str (rows-result->string result))
-  (define expected #<<HEREDOC
-CountryName             	CountryPopulation
----                     	---              
-Uganda                  	37578876.0       
-United Arab Emirates    	9346129.0        
-United Kingdom          	65102385.0       
-United States of America	325145963.0      
-Uruguay                 	3407062.0        
-Uzbekistan              	31576400.0       
-HEREDOC
-    )
-  ; This may pass in DrRacket but fail in raco unless we remove \r
-  (check-equal? (string-replace str "\r" "")
-                (string-replace expected "\r" ""))
-
-  (disconnect conn))

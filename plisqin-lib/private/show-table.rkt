@@ -2,14 +2,13 @@
 (provide show-table current-connection)
 
 (require (prefix-in db: db)
-         "rows-result-to-string.rkt"
-         "../examples/cities/city-connection.rkt")
+         "rows-result-to-string.rkt")
 
 (define/contract (guard-current-connection x)
   (-> (or/c #f 'cities-example db:connection?)
       (or/c #f db:connection?))
   (match x
-    ['cities-example (connect-cities)]
+    ['cities-example (error "TODO")]
     [else x]))
 
 (define current-connection
