@@ -27,6 +27,12 @@
 (require (submod plisqin-lib/private2/sql unsafe))
 (provide (all-from-out (submod plisqin-lib/private2/sql unsafe)))
 
+(require "./private2/sql/fragment.rkt")
+(provide >>)
+
+(require plisqin-lib/private2/define-schema)
+(provide define-schema this)
+
 ;(require plisqin-lib/private/api)
 ;(provide (all-from-out plisqin-lib/private/api))
 ;(require plisqin-lib/private/schema)

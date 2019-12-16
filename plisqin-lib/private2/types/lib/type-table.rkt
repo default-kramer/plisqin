@@ -11,7 +11,7 @@
     [(_ retval Type)
      ; This should always succeed, unless we start returning non-typed<%> objects,
      ; or using return contracts that are not types.
-     #'(assign-type! retval Type)]))
+     #'(assign-type retval Type)]))
 
 (define-syntax (guard2 stx)
   (syntax-case stx ()

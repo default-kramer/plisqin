@@ -25,7 +25,10 @@
     [(_ id [given-id given-body] ...)
      (syntax/loc #'id
        (define (id x)
-         (syntax-parameterize ([this (λ (stx) #'x)])
+         (syntax-parameterize ([this (λ (stx) (syntax-case stx ()
+                                                [a (identifier? #'a) #'x]
+                                                [_ (raise-syntax-error
+                                                    'this "cannot be used as a procedure" stx)]))])
            (let ([x-queryable (get-queryable x)])
              (cond
                [(equal? (get-queryable given-id) x-queryable) given-body]

@@ -8,6 +8,7 @@
 ; We are about to redefine things like `and` and `+` so we want to avoid writing
 ; much code in this namespace.
 (require "frags.helpers.rkt"
+         "fragment.rkt"
          (for-syntax "../_types.rkt"))
 
 
@@ -22,10 +23,18 @@
   ; `select` should do bool->scalar conversion, but when?
   ; Either during construction or during reduction (to sql)... not sure which is better.
   ; Also, maybe `group-by` and `order-by` should do the same?
-  select group-by order-by
+  group-by order-by
   where join-on having)
 
-
+(def select #:kind 'select
+  #:reduce (let ([as-name (match tokens
+                            [(list a)
+                             #:when (fragment? a)
+                             (fragment-as-name a)]
+                            [else #f])])
+             (if as-name
+                 (list tokens " as " (~a as-name))
+                 tokens)))
 
 ; == Fragments ==
 ; we can reuse def-clauses for now

@@ -42,8 +42,12 @@
               [id ':id]
               [kind :kind]
               [content content]
-              [reduction (syntax-parameterize ([tokens (TODO #'content)])
-                           :reduction)])))]))
+              [type #f]
+              [as-name #f]
+              [reducer
+               (λ (content)
+                 (syntax-parameterize ([tokens (TODO #'content)])
+                   :reduction))])))]))
 
 
 ;;; insert-ands

@@ -1,7 +1,7 @@
 #lang racket
 
 (require "./types/lib/core.rkt")
-(provide typed<%> define-typed-stuff typed? get-type assign-type! type?)
+(provide typed<%> typed? get-type type?)
 
 (require "./types/frag-types.rkt")
 (provide unsafe-table (for-syntax :unsafe-table)

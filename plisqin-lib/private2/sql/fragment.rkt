@@ -1,6 +1,6 @@
 #lang racket
 
-(provide fragment%)
+(provide fragment% fragment? >> fragment-as-name)
 
 (require morsel-lib
          morsel-lib/sql
@@ -9,21 +9,38 @@
 
 (define fragment%
   (class* object% (sql-token<%> equal<%> printable<%> typed<%>)
-    (init-field kind id content reduction)
+    (init-field kind
+                id
+                content
+                reducer
+                type
+                as-name)
     (super-new)
 
+    (define/public (change #:cast [type type]
+                           #:as [as-name as-name])
+      (new fragment%
+           [kind kind]
+           [id id]
+           [content content]
+           [reducer reducer]
+           [type type]
+           [as-name as-name]))
+
     ; typed<%>
-    (define-typed-stuff)
+    (define/public (get-type) type)
+    (define/public (assign-type t)
+      (change #:cast t))
 
     ; token<%>
     (define/public (token-kind) kind)
     (define/public (token-content) content)
     (define-token-aspect-stuff)
-    (define/public (sql-token-reduce) reduction)
+    (define/public (sql-token-reduce) (reducer content))
 
     ; equal<%>
     (define/public (equal-content)
-      (list (token-kind) (token-content)))
+      (list kind content type as-name))
     (define/public (equal-to? other recur)
       (recur (equal-content) (send other equal-content)))
     (define/public (equal-hash-code-of hasher)
@@ -39,8 +56,13 @@
     (define/public (custom-display port)
       (fragment-printer this port #f))))
 
+(define fragment? (is-a?/c fragment%))
 (define fragment-id (class-field-accessor fragment% id))
 (define fragment-content (class-field-accessor fragment% content))
+(define fragment-as-name (class-field-accessor fragment% as-name))
 
 (define fragment-printer
   (make-constructor-style-printer fragment-id fragment-content))
+
+(define-syntax-rule (>> frag stuff ...)
+  (send frag change stuff ...))

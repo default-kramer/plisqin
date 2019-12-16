@@ -1,6 +1,6 @@
 #lang racket
 
-(provide typed<%> define-typed-stuff typed? get-type assign-type!
+(provide typed<%> typed? get-type assign-type
          type? define-types)
 
 ; Runtime representation of a type
@@ -17,7 +17,7 @@
 (define typed<%>
   (interface ()
     get-type      #;(-> this (or/c #f type?))
-    assign-type!  #;(-> this type? void?)
+    assign-type   #;(-> this type? new-this)
     ))
 
 (define typed? (is-a?/c typed<%>))
@@ -25,18 +25,8 @@
 (define (get-type x)
   (and (typed? x)
        (send x get-type)))
-(define (assign-type! x type)
-  (send x assign-type! type)
-  x)
-
-; Implementes typed<%> when used in a class definition
-(define-syntax-rule (define-typed-stuff)
-  (begin
-    (define type #f)
-    (define/public (get-type) type)
-    (define/public (assign-type! t)
-      (set! type t))))
-
+(define (assign-type x type)
+  (send x assign-type type))
 
 
 (define (all-types x)
