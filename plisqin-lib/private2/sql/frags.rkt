@@ -23,7 +23,7 @@
   ; `select` should do bool->scalar conversion, but when?
   ; Either during construction or during reduction (to sql)... not sure which is better.
   ; Also, maybe `group-by` and `order-by` should do the same?
-  group-by order-by
+  group-by
   where join-on having)
 
 (def select #:kind 'select
@@ -35,6 +35,13 @@
              (if as-name
                  (list tokens " as " (~a as-name))
                  tokens)))
+
+(def order-by #:kind 'order-by
+  #:reduce (match tokens
+             [(list dir rest ...)
+              #:when (member dir '(asc desc))
+              (list rest (format " ~a" dir))]
+             [else tokens]))
 
 ; == Fragments ==
 ; we can reuse def-clauses for now

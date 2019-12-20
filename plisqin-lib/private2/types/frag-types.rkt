@@ -61,10 +61,14 @@
     [content? ...+ -> Number])])
 
 (def-type-table strict-table :strict-table
-  [(select group-by order-by)
+  [(select group-by)
    (token-constructor
     [Scalar -> Token]
     [Bool -> Token])]
+  [(order-by)
+   (token-constructor
+    [(or/c 'asc 'desc) (or/c Scalar Bool) -> Token]
+    [(or/c Scalar Bool) -> Token])]
   [(where join-on having)
    (token-constructor
     [Bool -> Token])]
