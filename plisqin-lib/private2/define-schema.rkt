@@ -20,20 +20,30 @@
   [(define (write-proc me port mode)
      (write-string (table-name me) port))])
 
+; The return value of any function might tack on an #:as name
+(require (only-in "sql/fragment.rkt" fragment? >>))
+(define (wrap-retval x as-name)
+  (if (fragment? x)
+      (>> x #:as as-name)
+      x))
+
+; Given that `(CategoryName Category)` and `(CategoryName Product)` are both defined
+; via define-schema, this builds the procedure `(CategoryName x)` which uses cond
+; to choose the correct body based on `(get-queryable x)`
 (define-syntax (def-dispatch-proc stx)
   (syntax-case stx ()
-    [(_ id [given-id given-body] ...)
-     (syntax/loc #'id
-       (define (id x)
+    [(_ proc-id [table-id cond-body] ...)
+     (syntax/loc #'proc-id
+       (define (proc-id x)
          (syntax-parameterize ([this (λ (stx) (syntax-case stx ()
                                                 [a (identifier? #'a) #'x]
                                                 [_ (raise-syntax-error
                                                     'this "cannot be used as a procedure" stx)]))])
            (let ([x-queryable (get-queryable x)])
              (cond
-               [(equal? (get-queryable given-id) x-queryable) given-body]
+               [(equal? (get-queryable table-id) x-queryable) cond-body]
                ...
-               [else (raise-argument-error 'id (format "one of ~a" '(given-id ...)) x)])))))]))
+               [else (raise-argument-error 'proc-id (format "one of ~a" '(table-id ...)) x)])))))]))
 
 (define-for-syntax (unintern-id id)
   (datum->syntax id (string->uninterned-symbol (format "~a" (syntax-e id))) id #f))
@@ -59,15 +69,31 @@
   (struct :func (id conds table?) #:transparent)
   (struct :cond (id expr) #:transparent)
 
+  ; We are also going to collect a big datum for metadata purposes.
+  (define meta-datum-collector (make-parameter (list)))
+
+  ; func-id : identifier?
   (define (add-table dict func-id)
     (let ([key (syntax-e func-id)])
+      (meta-datum-collector (cons `(,(syntax->datum func-id) => #:table)
+                                  (meta-datum-collector)))
       (dict-set dict key (:func func-id (list) #t))))
+
+  ; This is a first pass that just collects all the table-ids.
+  (define (find-tables dict stx)
+    (syntax-case stx ()
+      [((table id stuff ...) rest ...)
+       (find-tables (add-table dict #'id)
+                    #'(rest ...))]
+      [() dict]))
 
   ; func-id : identifier?
   ; cond-id : identifier?
   ; body    : syntax?
   (define (add dict func-id cond-id body)
-    (let* ([key (syntax-e func-id)]
+    (let* ([orig-body body]
+           [body #`(wrap-retval #,body (quote #,func-id))]
+           [key (syntax-e func-id)]
            [func (dict-ref dict key #f)]
            [found? func]
            [func (or func
@@ -75,6 +101,10 @@
            [func (struct-copy :func func
                               [conds (cons (:cond cond-id body)
                                            (:func-conds func))])])
+      (meta-datum-collector (cons (list (syntax->datum #`(#,func-id #,cond-id))
+                                        '=>
+                                        (syntax->datum orig-body))
+                                  (meta-datum-collector)))
       (dict-set dict key func)))
 
   (define (parse0 dict stx)
@@ -90,13 +120,6 @@
        dict]
       [(table id clause ...)
        (parse2 dict #'id #'(clause ...))]))
-
-  (define (find-tables dict stx)
-    (syntax-case stx ()
-      [((table id stuff ...) rest ...)
-       (find-tables (add-table dict #'id)
-                    #'(rest ...))]
-      [() dict]))
 
   (define (kw? x)
     (keyword? (syntax-e x)))
@@ -117,10 +140,11 @@
                cond-id
                #'(#:column rest ...))]
       ; Automatically set join #:to if not set
-      [(#:has-one [id (join a b c stuff ...)] rest ...)
-       (not (kw? #'c))
+      [(join-kw [id (join a b c stuff ...)] rest ...)
+       (and (not (kw? #'c))
+            (member (syntax-e #'join-kw) '(#:has-one #:has-group)))
        (parse2 dict cond-id
-               #'(#:has-one [id (join a b #:to this c stuff ...)] rest ...))]
+               #'(join-kw [id (join a b #:to this c stuff ...)] rest ...))]
       [(keyword [id body] rest ...)
        ; TODO verify that it is a keyword we recognize
        (kw? #'keyword)
@@ -128,55 +152,125 @@
                cond-id
                #'(keyword rest ...))])))
 
+; Creates a procedure that searches the meta-datums for '(ProcSym x) and returns x.
+(define (proc-matcher ProcSym)
+  (λ (form)
+    ; form is something like '((f x) => body)
+    (match (car form)
+      [(list a b)
+       #:when (equal? a ProcSym)
+       b]
+      [else #f])))
+
+; Creates a procedure that searches the meta-datums for '(x TableSym) and returns x.
+(define (table-matcher TableSym)
+  (λ (form)
+    ; form is something like '((f x) => body)
+    (match (car form)
+      [(list a b)
+       #:when (equal? b TableSym)
+       a]
+      [else #f])))
+
+; Applies the result of `proc-matcher` or `table-matcher`
+(define (search meta-datums matcher)
+  (sort (filter identity (map matcher meta-datums)) symbol<?))
+
+(define (get-tables meta-datums)
+  (let* ([tables (map (λ (form)
+                        (match form
+                          [(list Table '=> '#:table)
+                           Table]
+                          [else #f]))
+                      meta-datums)]
+         [tables (filter identity tables)])
+    (sort tables symbol<?)))
+
+(define (make-schema-function meta-datums)
+  (lambda (pattern)
+    (match pattern
+      ['(_ _) meta-datums]
+      ['tables
+       (get-tables meta-datums)]
+      [(list '_ TableSym)
+       (search meta-datums (table-matcher TableSym))]
+      [(list ProcSym '_)
+       (search meta-datums (proc-matcher ProcSym))]
+      [else (error "invalid pattern:" pattern)])))
+
 ; TODO need to use syntax-parse
 (define-syntax (define-schema stx)
   (syntax-case stx ()
     [(_ schema-id clause ...)
-     ; collect into association list
-     (let* ([lst (find-tables (list) #'(clause ...))]
-            [lst (parse0 lst #'(clause ...))]
-            [funcs (map cdr lst)]
-            [new-stx
-             (quasisyntax/loc stx
-               (begin
-                 ; This is handy, but expansion takes too much time and space on large schemas
-                 #;(define-syntax (schema-id stx)
-                     (syntax-case stx (#,@(map :func-id funcs))
-                       #,@(flatten
-                           (for/list ([func funcs])
-                             (for/list ([cond (:func-conds func)])
-                               (quasisyntax
-                                [(_ (#,(:func-id func) #,(:cond-id cond)))
-                                 #'(quote #,(:cond-expr cond))]))))
-                       [(_ (a b))
-                        #'(quote undefined)]
-                       ; I guess that this was the perf-killer, but disabling it doesn't
-                       ; seem to make a noticable difference:
-                       #;[(_ a)
-                          #'(begin #,@(for/list ([func funcs])
-                                        #`(let ([body (schema-id (#,(:func-id func) a))])
-                                            (if (equal? 'undefined body)
-                                                (void)
-                                                (begin
-                                                  (displayln '(#,(:func-id func) this))
-                                                  (display "  => ")
-                                                  (writeln body))))))]))
-                 ; A normal procedure that works on symbols performs much better.
-                 ; The caller must provide a quoted pattern like '(CategoryName Product)
-                 (define (schema-id pattern)
-                   (case pattern
-                     #,@(flatten
-                         (for/list ([func funcs])
-                           (for/list ([cond (:func-conds func)])
-                             #`[((#,(:func-id func) #,(:cond-id cond)))
-                                (quote #,(:cond-expr cond))])))
-                     [else 'undefined]))
-                 #,@(for/list ([func funcs])
-                      (quasisyntax/loc (:func-id func)
-                        (#,(if (:func-table? func)
-                               #'def-table
-                               #'def-dispatch-proc)
-                         #,(:func-id func)
-                         #,@(map (λ(c) #`[#,(:cond-id c) #,(:cond-expr c)])
-                                 (:func-conds func)))))))])
-       new-stx)]))
+     (let-values ([(lst tables meta-datums)
+                   (parameterize ([meta-datum-collector (list)])
+                     ; collect into association list
+                     (let* ([lst (find-tables (list) #'(clause ...))]
+                            ; make `tables` a list of symbols, one for each table
+                            [tables (map car lst)]
+                            [tables (sort tables symbol<?)]
+                            [lst (parse0 lst #'(clause ...))])
+                       (values lst tables (meta-datum-collector))))])
+       (let* ([funcs (map cdr lst)]
+              [new-stx
+               (quasisyntax/loc stx
+                 (begin
+                   ; This might be more Racket-y, but expansion takes
+                   ; too much time and space on large schemas
+                   #;(define-syntax (schema-id stx)
+                       (syntax-case stx (#,@(map :func-id funcs))
+                         #,@(flatten
+                             (for/list ([func funcs])
+                               (for/list ([cond (:func-conds func)])
+                                 (quasisyntax
+                                  [(_ (#,(:func-id func) #,(:cond-id cond)))
+                                   #'(quote #,(:cond-expr cond))]))))
+                         [(_ (a b))
+                          #'(quote undefined)]
+                         ; I guess that this was the perf-killer, but disabling it doesn't
+                         ; seem to make a noticable difference:
+                         #;[(_ a)
+                            #'(begin #,@(for/list ([func funcs])
+                                          #`(let ([body (schema-id (#,(:func-id func) a))])
+                                              (if (equal? 'undefined body)
+                                                  (void)
+                                                  (begin
+                                                    (displayln '(#,(:func-id func) this))
+                                                    (display "  => ")
+                                                    (writeln body))))))]))
+                   ; Define the metadata/schema function.
+                   ; A normal procedure that works on symbols performs much better.
+                   ; Especially if we just define the big datum once to keep the size
+                   ; of the macro expansion as small as possible.
+                   (define raw-forms (quote #,meta-datums))
+                   (define schema-id (make-schema-function raw-forms))
+
+                   ; Define the functions
+                   #,@(for/list ([func funcs])
+                        (quasisyntax/loc (:func-id func)
+                          (#,(if (:func-table? func)
+                                 #'def-table
+                                 #'def-dispatch-proc)
+                           #,(:func-id func)
+                           #,@(map (λ(c) #`[#,(:cond-id c) #,(:cond-expr c)])
+                                   (:func-conds func)))))))])
+         new-stx))]))
+
+
+(module+ test
+  (require rackunit)
+
+  (define-schema $$
+    (table A #:column Foo Bar)
+    (table B #:column Bar Baz))
+
+  (check-equal? ($$ 'tables)
+                '(A B))
+  (check-equal? ($$ '(_ A))
+                '(Bar Foo))
+  (check-equal? ($$ '(_ B))
+                '(Bar Baz))
+  (check-equal? ($$ '(Foo _))
+                '(A))
+  (check-equal? ($$ '(Bar _))
+                '(A B)))
