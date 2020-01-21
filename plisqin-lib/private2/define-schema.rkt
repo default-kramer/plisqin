@@ -3,6 +3,7 @@
 (provide define-schema this)
 
 (require (only-in morsel-lib gen:queryable get-queryable)
+         (only-in "sql/fragment.rkt" fragment? >>)
          (prefix-in %% (only-in plisqin-lib/unsafe/main scalar)))
 
 (require racket/stxparam
@@ -20,8 +21,17 @@
   [(define (write-proc me port mode)
      (write-string (table-name me) port))])
 
+(define-syntax (handle-column stx)
+  (syntax-case stx ()
+    [(_ [id options ... #:dbname dbname])
+     (string? (syntax-e #'dbname))
+     #`(>> (%%scalar this #,(format ".~a" (syntax-e #'dbname)))
+           options ...)]
+    [(_ [id options ...])
+     #`(handle-column [id options ... #:dbname #,(format "~a" (syntax-e #'id))])]))
+
 ; The return value of any function might tack on an #:as name
-(require (only-in "sql/fragment.rkt" fragment? >>))
+; TODO should check that it doesn't already have one
 (define (wrap-retval x as-name)
   (if (fragment? x)
       (>> x #:as as-name)
@@ -135,10 +145,12 @@
        (and (kw? #'a)
             (kw? #'b))
        (parse2 dict cond-id #'(b rest ...))]
-      [(#:column id rest ...)
-       (parse2 (add dict #'id cond-id #`(%%scalar this #,(format ".~a" (syntax-e #'id))))
+      [(#:column [id options ...] rest ...)
+       (parse2 (add dict #'id cond-id #'(handle-column [id options ...]))
                cond-id
                #'(#:column rest ...))]
+      [(#:column id rest ...)
+       (parse2 dict cond-id #'(#:column [id] rest ...))]
       ; Automatically set join #:to if not set
       [(join-kw [id (join a b c stuff ...)] rest ...)
        (and (not (kw? #'c))
@@ -258,19 +270,37 @@
 
 
 (module+ test
-  (require rackunit)
+  (require rackunit
+           (only-in morsel-lib from)
+           (only-in morsel-lib/sql to-sql)
+           plisqin-lib/unsafe/main)
 
   (define-schema $$
-    (table A #:column Foo Bar)
-    (table B #:column Bar Baz))
+    (table A
+           #:column
+           Foo
+           Bar)
+    (table B
+           #:column
+           Bar
+           Baz
+           [Carrot #:as 'Carat #:dbname "car_rot"]))
 
   (check-equal? ($$ 'tables)
                 '(A B))
   (check-equal? ($$ '(_ A))
                 '(Bar Foo))
   (check-equal? ($$ '(_ B))
-                '(Bar Baz))
+                '(Bar Baz Carrot))
   (check-equal? ($$ '(Foo _))
                 '(A))
   (check-equal? ($$ '(Bar _))
-                '(A B)))
+                '(A B))
+
+  (let ([q (from b B
+                 (select (Carrot b)))])
+    (check-equal? (to-sql q) #<<HEREDOC
+select b.car_rot as Carat
+from B b
+HEREDOC
+                  )))
