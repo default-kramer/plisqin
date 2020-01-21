@@ -63,7 +63,7 @@
 (def-aggs count avg max min sum)
 
 (def exists #:kind 'bool
-  #:reduce (list "exists" (parens tokens)))
+  #:reduce (list "exists " (parens tokens)))
 
 #;(def round #:kind 'scalar
     #:reduce (error "TODO need dialect here"))
