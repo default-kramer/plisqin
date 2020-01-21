@@ -226,13 +226,33 @@
          SellEndDate
          DiscontinuedDate
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:has-one
+         [ProductSubcategory
+          (join subcat ProductSubcategory
+                (join-type 'left)
+                (join-on (.= (ProductSubcategoryID subcat)
+                             (ProductSubcategoryID this))))]
+         #:property
+         [ProductName
+          (Name this)]
+         [SubcategoryName
+          (SubcategoryName (ProductSubcategory this))]
+         [CategoryName
+          (CategoryName (ProductSubcategory this))]
+         [HasSales?
+          (exists (from dtl SalesOrderDetail
+                        (where (.= (ProductID dtl)
+                                   (ProductID this)))))])
   (table ProductCategory
          #:column
          ProductCategoryID
          Name
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:property
+         [CategoryName
+          (Name this)])
   (table ProductCostHistory
          #:column
          ProductID
@@ -324,7 +344,9 @@
                              (ProductCategoryID this))))]
          #:property
          [CategoryName
-          (Name (ProductCategory this))])
+          (CategoryName (ProductCategory this))]
+         [SubcategoryName
+          (Name this)])
   (table ScrapReason
          #:column
          ScrapReasonID
@@ -617,28 +639,3 @@
          Demographics
          rowguid
          ModifiedDate))
-
-(define (task1/revision1)
-  (from subcat ProductSubcategory
-        (join cat ProductCategory
-              (join-on (.= (ProductCategoryID cat)
-                           (ProductCategoryID subcat))))
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name cat) #:as 'CategoryName)))
-
-(define (task1/revision2)
-  (from subcat ProductSubcategory
-        (join cat (ProductCategory subcat))
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name cat) #:as 'CategoryName)))
-
-(define (task1/revision3)
-  (from subcat ProductSubcategory
-        ; The join is no longer here!
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name (ProductCategory subcat)) #:as 'CategoryName)))
-
-(define (task1/revision4)
-  (from subcat ProductSubcategory
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (CategoryName subcat) #:as 'CategoryName)))

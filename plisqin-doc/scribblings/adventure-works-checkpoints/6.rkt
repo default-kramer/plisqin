@@ -230,22 +230,35 @@
          #:has-one
          [ProductSubcategory
           (join subcat ProductSubcategory
-                'left-join
+                (join-type 'left)
                 (join-on (.= (ProductSubcategoryID subcat)
                              (ProductSubcategoryID this))))]
-         [ProductCategory
-          (ProductCategory (ProductSubcategory this))]
+         #:has-group
+         [DetailsG
+          (join detailsG SalesOrderDetail
+                (group-by (ProductID detailsG))
+                (join-on (.= (ProductID detailsG)
+                             (ProductID this))))]
          #:property
+         [ProductName
+          (Name this)]
          [SubcategoryName
-          (Name (ProductSubcategory this))]
+          (SubcategoryName (ProductSubcategory this))]
          [CategoryName
-          (Name (ProductCategory this))])
+          (CategoryName (ProductSubcategory this))]
+         [HasSales?
+          (exists (from dtl SalesOrderDetail
+                        (where (.= (ProductID dtl)
+                                   (ProductID this)))))])
   (table ProductCategory
          #:column
          ProductCategoryID
          Name
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:property
+         [CategoryName
+          (Name this)])
   (table ProductCostHistory
          #:column
          ProductID
@@ -335,9 +348,17 @@
           (join cat ProductCategory
                 (join-on (.= (ProductCategoryID cat)
                              (ProductCategoryID this))))]
+         #:has-group
+         [DetailsG
+          (join detailsG SalesOrderDetail
+                (group-by (ProductSubcategoryID detailsG))
+                (join-on (.= (ProductSubcategoryID detailsG)
+                             (ProductSubcategoryID this))))]
          #:property
          [CategoryName
-          (Name (ProductCategory this))])
+          (CategoryName (ProductCategory this))]
+         [SubcategoryName
+          (Name this)])
   (table ScrapReason
          #:column
          ScrapReasonID
@@ -508,7 +529,15 @@
          UnitPriceDiscount
          LineTotal
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:has-one
+         [Product
+          (join prd Product
+                (join-on (.= (ProductID prd)
+                             (ProductID this))))]
+         #:property
+         [ProductSubcategoryID
+          (ProductSubcategoryID (Product this))])
   (table SalesOrderHeader
          #:column
          SalesOrderID
@@ -630,43 +659,3 @@
          Demographics
          rowguid
          ModifiedDate))
-
-(define (task1/revision1)
-  (from subcat ProductSubcategory
-        (join cat ProductCategory
-              (join-on (.= (ProductCategoryID cat)
-                           (ProductCategoryID subcat))))
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name cat) #:as 'CategoryName)))
-
-(define (task1/revision2)
-  (from subcat ProductSubcategory
-        (join cat (ProductCategory subcat))
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name cat) #:as 'CategoryName)))
-
-(define (task1/revision3)
-  (from subcat ProductSubcategory
-        ; The join is no longer here!
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name (ProductCategory subcat)) #:as 'CategoryName)))
-
-(define (task1/revision4)
-  (from subcat ProductSubcategory
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (CategoryName subcat) #:as 'CategoryName)))
-
-(define (task2/revision1)
-  (from prd Product
-        (join subcat (ProductSubcategory prd))
-        (select (Name prd) #:as 'ProductName)
-        (select (ProductNumber prd))
-        (select (Name subcat) #:as 'Subcategory)
-        (select (CategoryName subcat) #:as 'Category)))
-
-(define (task2/revision2)
-  (from prd Product
-        (select (Name prd) #:as 'ProductName)
-        (select (ProductNumber prd))
-        (select (SubcategoryName prd) #:as 'Subcategory)
-        (select (CategoryName prd) #:as 'Category)))

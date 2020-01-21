@@ -10,18 +10,14 @@
          rackunit
          "to-table.rkt")
 (require (for-syntax syntax/strip-context
-                     plisqin-lib/private/util
-                     ; this is required strictly for the side effects of capturing syntaxes
-                     ; so we can pull them out using get-captured-syntax
-                     plisqin-lib/examples/video-rental-schema))
+                     plisqin-lib/private/util))
 
 (define (make-eval)
   (let ([eval (make-base-eval)])
     (interaction-eval #:eval eval
                       (require racket/match)
                       (require (only-in racket string-join))
-                      (require plisqin)
-                      (require plisqin-lib/examples/video-rental-schema))
+                      (require plisqin))
     eval))
 
 (define my-eval (make-eval))

@@ -8,14 +8,21 @@
           (for-label plisqin
                      "racket.rkt"))
 
+@(define-syntax-rule (bossquote stuff ...)
+   (tabular #:row-properties '(left right)
+            (list (list (italic stuff ...))
+                  (list @nested{-- your boss}))))
+
 @(define (load-checkpoint! checkpoint)
    (define cp-path (string-append "./adventure-works-checkpoints/" checkpoint))
    (reset-eval!)
    (my-eval `(begin
-               (require plisqin-examples/adventure-works)
+               (require plisqin-examples/adventure-works
+                        plisqin-lib/unsafe/main
+                        (only-in morsel-lib/sql/dialect current-dialect sqlite))
                (require ,cp-path)
-               (current-connection (connect-adventure-works)))))
-@(load-checkpoint! "1.rkt")
+               (current-connection (connect-adventure-works))
+               (current-dialect (sqlite)))))
 
 @(define (show-results query-datum)
    ; Use `my-eval` to get the sql from the query-datum.
@@ -24,12 +31,16 @@
    ; will work exactly the same in both evaluation contexts.
    (define sql
      (with-handlers ([exn? (λ(ex)
-                             (error 'show-results "eval failed\n~a\n~a"
-                                    query-datum (exn->string ex)))])
+                             (begin
+                               ; TODO not sure why `error` isn't enough in some cases?
+                               (println ex)
+                               (error 'show-results "eval failed\n~a\n~a"
+                                      query-datum (exn->string ex))))])
        (my-eval `(to-sql ,query-datum))))
    (define result
      (let* ([conn (connect-adventure-works)]
-            [result (db:query conn sql)])
+            [result (with-handlers ([exn? (λ(ex) (displayln sql) (raise ex))])
+                      (db:query conn sql))])
        (db:disconnect conn)
        result))
    (to-table result sql))
@@ -49,198 +60,195 @@
             (racketinput show-table-form)
             (show-results '#,query-datum)))]))
 
+
 @title{Using define-schema}
-This section is opinionated:
-it attempts to show you a somewhat rigid way to realize the benefits of Plisqin.
-But using @(racket define-schema) is optional; Plisqin's core is schemaless and flexible.
+@section{Motivation}
+@(load-checkpoint! "final.rkt")
+The benefits of @(racket define-schema) are most evident when you are working with
+a mature schema. This section demonstrates the power of a mature schema.
+Later sections will walk through how to build this schema from the ground up.
+For now, just imagine this scenario...
 
-This section is "top-down":
-it does not attempt to explain everything completely.
-
-You might prefer to learn "bottom-up", in which case you could start [TODO link].
-Then you could return to this section, or you might decide that @(racket define-schema)
-is not a good fit for your project.
-
-@section{Initial Setup}
-This page uses the AdventureWorks example database.
-We will use @(racket define-schema) to encode facts about our database as Racket procedures.
-Start with this file [TODO link to starting file].
-If you are using DrRacket, you need to Run (ctrl + R) the file first.
-
-Now let's try some basic queries on the REPL:
+I have been working with the AdventureWorks database for some time and
+building up my schema definition along the way.
+My boss just asked to see our top 3 best-selling Products of all-time,
+including the Product Name, Category Name, and Total Sales.
+So I need to write a query.
+Thanks to my schema definition, I nail it on the first try:
 @(repl-query
   (show-table
-   (from cat ProductCategory)))
-@(repl-query
-  (show-table
-   (from cat ProductCategory
-         (where (.> (ProductCategoryID cat) 1))
-         (select (Name cat))
-         (select (ModifiedDate cat)))))
+   (from p Product
+         (limit 3)
+         (select (ProductName p))
+         (select (CategoryName p))
+         (select (TotalSales p))
+         (order-by 'desc (TotalSales p)))))
 
-Notice: In this document, all of Plisqin's operators are prefixed with a dot.
-When you see a procedure that begins with a dot (such as @(racket .>)),
-it refers to an operator from @(racket plisqin-lib/operators).
-This agrees with @(racket (require plisqin)), which imports the operators prefixed with a dot.
+@margin-note{Seeing the generated SQL might make you worry about performance.
+ I found that in a real project, Plisqin generated queries that were equivalent
+ to my hand-written queries most of the time.}
+Click on "Show SQL" and you might be surprised!
+The generated SQL is much larger than the Plisqin query.
+This demonstrates the reason to use @(racket define-schema) -- it acts as a repository of
+reusable properties. I have previously defined @(racket (ProductName Product)),
+@(racket (CategoryName Product)), and @(racket (TotalSales Product)).
+Now I can reuse them whenever I am working with the @(racket Product) table.
+Furthermore, these property definitions are:
+@(itemlist
+  @item{@bold{Powerful} - If the database contains a fact about some table,
+ then it is possible to encode that fact as a property of that table.
+ A property may contain anything, including joins, aggregations and subqueries.}
+  @item{@bold{Uniform} - All properties have the same call-site syntax.
+ No matter how simple or complex, the caller always writes @(racket (TheProperty x)).
+ This allows the property's implementation to change without breaking any call sites.}
+  @item{@bold{Reusable} - If a property is defined for some table, it can be used
+ anywhere we have an instance of that table.
+ 
+ TODO I like that phrase "an instance of that table" - perhaps @(racket (instanceof Foo))
+ means @(racket (or/c (tupleof Foo) (joinof Foo)))...}
+  @item{@bold{Polymorphic} - The definition of @(racket (CategoryName x)) can mean something
+ different depending on what @(racket x) is. For example, if @(racket x) is a Category
+ then it probably just accesses a column of the Category table, but if @(racket x) is a
+ Product then it probably includes a join from Product to Category.})
 
-@(define-syntax-rule (bossquote stuff ...)
-   (tabular #:row-properties '(left right)
-            (list (list (italic stuff ...))
-                  (list @nested{-- your boss}))))
+@subsection{My Personal Motivation}
+During my software development career, many of my tasks could be described
+as "fetch data from an SQL database and display that data."
+Some tasks have very little display logic, such as a report that simply
+shows an SQL result set verbatim.
+Other tasks have more complicated display logic, such as a web page that shows
+a musical artist, their albums, and the track listings for each album.
+But regardless of how complex the display logic might be, I found that my favorite
+strategy for these tasks is usually
+@(itemlist
+  #:style 'ordered
+  @item{Imagine the ideal result set(s) for the task.}
+  @item{Use SQL to produce those result sets.}
+  @item{Use something else to display the results.})
 
-@section{Task 1 (Joins)}
+It is step 2 that Plisqin aims to improve.
+SQL and all the SQL alternatives I have tried are lacking in some way.
+I always end up duplicating fragments of queries and joins all over the place.
+Using Plisqin allows me to reduce duplication to what I suspect is the theoretical minimum.
+
+@section{Building a Schema}
+Now I will show how we can grow our schema from the ground up.
+In this scenario, we are working with the AdventureWorks example database.
+TODO show how to connect and execute raw queries.
+
+TODO definitely need to make sure people understand that `from` and `join`
+introduce identifiers and what they mean.
+Do I want to say that @(racket (from p Product ....)) binds @(racket p)
+as "an instance of @(racket Product)"?
+
+TODO show how to generate the starting file.
+Save it as "aw-schema.rkt" or something like that.
+Whenever I ask you to @deftech{perform} a refactoring recipe, you will have to update
+this file.
+
+TODO is this the place to mention the @(racket (.= a b)) operator naming convention?
+
+TODO explain how each task is going to work.
+1) Prerequisites
+2) Create the query
+3) Refactor to make stuff reusable
+
+@(load-checkpoint! "1.rkt")
+@section{Task 1: Subcategories & Categories}
 @bossquote{I want to see a list of Subcategories with the Category that they belong to.}
 
-Let's start by looking at the Subcategory table.
+We need to write a query.
+The first task, as always, is to determine which table we need to query.
+(TODO link to a recipe here?)
+The @(racket ProductSubcategory) table looks promising.
+Let's see what it contains:
 @(repl-query
   (show-table
    (from subcat ProductSubcategory
          (limit 5))))
 
-OK, this is a start but we need to join the Category table to satisfy the request.
-@(examples
-  #:eval my-eval
-  #:no-result
-  #:no-prompt
-  (define (task1/revision1)
-    (from subcat ProductSubcategory
-          (join cat ProductCategory
-                (join-on (.= (ProductCategoryID cat)
-                             (ProductCategoryID subcat))))
-          (select (Name subcat) #:as 'SubcategoryName)
-          (select (Name cat) #:as 'CategoryName))))
+This is a good start.
+Our boss didn't say exactly what columns he wants to see, but he did say
+to include "the Category". It looks like ProductCategoryID is a foreign key.
+Based on the name, we conclude that it points to the @(racket ProductCategory) table.
+It makes sense that a Subcategory would belong to a single Category.
+We need to add a join to our query:
+@(racketblock
+  (from subcat ProductSubcategory
+        (limit 5)
+        (join cat ProductCategory
+              (join-on (.= (ProductCategoryID cat)
+                           (ProductCategoryID subcat))))))
 
-The definition of @(racket task1/revision1) is an acceptable solution.
-If you want to see all the results, you can do
-@(racketinput (show-table (task1/revision1)))
-
-To avoid cluttering this documentation, I'll add a limit clause:
+You can run that query, but it will produce the same result set.
+Even though we have added a join, this query does not contain any @(racket select)
+clauses, so it just shows the primary table by default.
+(The primary table is @(racket ProductSubcategory) here.)
+Let's add some @(racket select) clauses to control which columns get displayed:
 @(repl-query
   (show-table
-   (from subcat (task1/revision1)
-         (limit 5))))
+   (from subcat ProductSubcategory
+         (limit 5)
+         (join cat ProductCategory
+               (join-on (.= (ProductCategoryID cat)
+                            (ProductCategoryID subcat))))
+         (select (Name subcat))
+         (select (Name cat)))))
 
-@(define truncated (italic "truncated ..."))
-@(define illustrative "For illustrative purposes only. Do not add this code to your file.")
-
-@subsection{Making the Join Reusable}
-But we can do better.
-We've just determined that every ProductCategory has exactly 1 ProductCategory.
-This is a join that we will probably want to reuse often.
-So let's modify our @(racket define-schema) form by adding the hilighted code:
-@margin-note{The highlighted change can also be seen in this diff [TODO link it!]}
-@margin-note{This change could also be written
- @(racket #:has-one [ProductCategory #:using ProductCategoryID]).
- See the documentation of @(racket define-schema) for more shortcuts.}
+That's better, but we can see that @(racket Name) is not a very good name.
+@tech{Perform} refactoring recipe TODO so that the following query works:
 @(racketblock
-  (define-schema adventure-works-schema
-    #,truncated
-    (table ProductSubcategory
-           #,truncated
-           (code:hilite #:has-one)
-           (code:hilite [ProductCategory
-                         (join cat ProductCategory
-                               (join-on (.= (ProductCategoryID cat)
-                                            (ProductCategoryID this))))]))
-    #,truncated))
-@(load-checkpoint! "3.rkt")
+  (from subcat ProductSubcategory
+        (limit 5)
+        (join cat ProductCategory
+              (join-on (.= (ProductCategoryID cat)
+                           (ProductCategoryID subcat))))
+        (select (SubcategoryName subcat))
+        (select (CategoryName cat))))
 
-In English, this says that a ProductSubcategory has one ProductCategory.
-In Racket, it contributes to the definition of @(racket ProductCategory) by
-generating something like the following code:
+That looks good. But we are not done refactoring.
+@tech{Perform} refactoring recipe TODO so that the following query works:
 @(racketblock
-  (code:comment #,illustrative)
-  (define ((code:hilite ProductCategory) . args)
-    (match args
-      [(list subcat)
-       #:when (ProductSubcategory? subcat)
-       (let ([this subcat])
-         (code:hilite (join cat ProductCategory
-                            (join-on (.= (ProductCategoryID cat)
-                                         (ProductCategoryID this))))))]
-      #,(italic "maybe-more-match-clauses ..."))))
+  (from subcat ProductSubcategory
+        (limit 5)
+        (join cat (ProductCategory subcat))
+        (select (SubcategoryName subcat))
+        (select (CategoryName cat))))
 
-Now we can use that join:
+But we are still not done refactoring.
+Use refactoring recipe to produce this equivalent query:
 @(racketblock
-  (define (task1/revision2)
-    (from subcat ProductSubcategory
-          (code:hilite (join cat (ProductCategory subcat)))
-          (select (Name subcat) #:as 'SubcategoryName)
-          (select (Name cat) #:as 'CategoryName))))
+  (from subcat ProductSubcategory
+        (limit 5)
+        (select (SubcategoryName subcat))
+        (select (CategoryName (ProductCategory subcat)))))
 
-Note that @(racket (task1/revision2)) is equivalent to @(racket (task1/revision1)), meaning they will
-generate the same SQL. (They might not be @(racket equal?) though.)
-
-For just one query, this revision might not seem like a big improvement.
-But having the @(racket (ProductCategory subcat)) join at our fingertips will
-surely pay dividends as we write more queries.
-Also, moving that join into @(racket define-schema) serves as documentation of the fact
-that ProductSubcategory has one ProductCategory.
-
-@subsection{Making the Property Reusable}
-But we can do better.
-In Plisqin, joins are values and they can appear almost anywhere inside a query.
-We can immediately write a third revision:
-@(racketblock
-  (define (task1/revision3)
-    (from subcat ProductSubcategory
-          (code:hilite (code:comment "The join is no longer here!"))
-          (select (Name subcat) #:as 'SubcategoryName)
-          (code:hilite (select (Name (ProductCategory subcat)) #:as 'CategoryName)))))
-
-This is another equivalent revision.
-And now we might notice that the expression @(racket (Name (ProductCategory subcat)))
-could be returned from a function.
-We can modify our @(racket define-schema) again to add this as a @tech{property}.
-@margin-note{The highlighted change can also be seen in this diff [TODO link it!]}
-@(racketblock
-  (define-schema adventure-works-schema
-    #,truncated
-    (table ProductSubcategory
-           #,truncated
-           (code:hilite #:property)
-           (code:hilite [CategoryName
-                         (Name (ProductCategory this))]))
-    #,truncated))
-@(load-checkpoint! "4.rkt")
-
-In English, this says that CategoryName is a property of ProductSubcategory.
-In Racket, it contributes to the definition of @(racket CategoryName) by generating
-something like the following code:
-@(racketblock
-  (code:comment #,illustrative)
-  (define ((code:hilite CategoryName) . args)
-    (match args
-      [(list subcat)
-       #:when (ProductSubcategory? subcat)
-       (let ([this subcat])
-         (code:hilite (Name (ProductCategory this))))]
-      #,(italic "maybe-more-match-clauses ..."))))
-
-This allows us to be even more concise:
-@(racketblock
-  (define (task1/revision4)
-    (from subcat ProductSubcategory
-          (select (Name subcat) #:as 'SubcategoryName)
-          (code:hilite (select (CategoryName subcat) #:as 'CategoryName)))))
+But we are still not done refactoring.
+@tech{Perform} refactoring recipe TODO so that the following query works:
+@(load-checkpoint! "2.rkt")
 @(repl-query
   (show-table
-   (from x (task1/revision4)
-         (limit 5))))
+   (from subcat ProductSubcategory
+         (limit 5)
+         (select (SubcategoryName subcat))
+         (select (CategoryName subcat)))))
 
-This is the final revision, and it is ideal.
-We determined that CategoryName is a property of ProductSubcategory,
-so now we can use throughout our project without having to think about which
-joins might be involved.
+And now we are done!
 
-Again, this might not seem like a big improvement at first, but as we write many
-more queries and build up our definitions of joins and properties, it will save us
-a lot of typing and thinking.
+@subsubsub*section{Refactoring Recap}
+While refactoring our query, we made the following enhancements to our schema.
+@(racketblock
+  (SubcategoryName ProductSubcategory)
+  (CategoryName ProductCategory)
+  (ProductCategory ProductSubcategory)
+  (CategoryName ProductSubcategory))
 
-@section{Task 2 (More Joins)}
+@section{Task 2: Products & Subcategories & Categories}
 @bossquote{Show me a list of Products with Subcategory and Category names.}
 
-Let's start by looking at the Product table
+The first task, as always, is to determine which table we need to query.
+The @(racket Product) table looks promising.
+Let's see what it contains:
 @(repl-query
   (show-table
    (from prd Product
@@ -248,187 +256,146 @@ Let's start by looking at the Product table
 
 OK, it looks like there is a join from Product to ProductSubcategory using the
 ProductSubcategoryID column. But at least some of the records have a null value.
-So this is a @(racket #:has-one) relationship, but we will define it as a left join.
-Add the following hilighted code to your file:
+So this should be a left join to avoid eliminating Products from the result set:
 @(racketblock
-  (define-schema adventure-works-schema
-    #,truncated
-    (table Product
-           #,truncated
-           (code:hilite #:has-one)
-           (code:hilite [ProductSubcategory
-                         (join subcat ProductSubcategory
-                               'left-join
-                               (join-on (.= (ProductSubcategoryID subcat)
-                                            (ProductSubcategoryID this))))]))
-    #,truncated))
+  (from prd Product
+        (limit 5)
+        (join subcat ProductSubcategory
+              (join-type 'left)
+              (join-on (.= (ProductSubcategoryID subcat)
+                           (ProductSubcategoryID prd))))))
 
-In English, this says that a Product has one optional ProductSubcategory.
-In Racket, it contributes to the definition of ProductSubcategory by generating
-something like the following code:
-@(racketblock
-  (code:comment #,illustrative)
-  (define ((code:hilite ProductSubcategory) . args)
-    (match args
-      [(list prd)
-       #:when (Product? prd)
-       (let ([this prd])
-         (code:hilite (join subcat ProductSubcategory
-                            'left-join
-                            (join-on (.= (ProductSubcategoryID subcat)
-                                         (ProductSubcategoryID this))))))]
-      #,(italic "maybe-more-match-clauses ..."))))
-
-Now we can write our first revision of this task.
-@(racketblock
-  (define (task2/revision1)
-    (from prd Product
-          (join subcat (ProductSubcategory prd))
-          (select (Name prd) #:as 'ProductName)
-          (select (ProductNumber prd))
-          (select (Name subcat) #:as 'Subcategory)
-          (select (CategoryName subcat) #:as 'Category))))
-@(load-checkpoint! "5.rkt")
-
-Let's try it out
+And now let's add some select clauses:
 @(repl-query
   (show-table
-   (from prd (task2/revision1)
-         (limit 5))))
+   (from prd Product
+         (limit 5)
+         (join subcat ProductSubcategory
+               (join-type 'left)
+               (join-on (.= (ProductSubcategoryID subcat)
+                            (ProductSubcategoryID prd))))
+         (select (Name prd))
+         (select (ProductNumber prd))
+         (select (SubcategoryName subcat)))))
 
-The first 5 rows still have nulls.
-This is correct -- their ProductCategoryID is null so the join fails,
-and the null propogates to any values based on that join.
-Just for demonstration purposes, I will show some records that won't have nulls:
-@(repl-query
-  (show-table
-   (from prd (task2/revision1)
-         (where (.is-not (ProductSubcategoryID prd)
-                         'null))
-         (limit 5))))
+It looks like we are on the right track.
+The top 5 rows have a null SubcategoryName, but this seems to be correct.
+If you remove the @(racket limit) clause you will see some rows with non-null Subcategories.
+Now we just need to include the name of the Category.
+Hang on, we've worked with @(racket CategoryName) in the past, haven't we?
+Let's see what it is defined for:
+@(repl (adventure-works-schema '(CategoryName _)))
 
-Perhaps your boss will ask for an @(racket order-by) clause later, but
-@(racket task2/revision1) is an acceptable solution.
-
-@subsection{Making the Joins and Properties Reusable}
-Again, we have discovered some facts about our database schema and we should
-encode these facts as procedures using @(racket define-schema).
-Specifically, we learned that
-@itemlist[@item{Product has one ProductSubcategory}
-          @item{Product has one ProductCategory}
-          @item{Product has a property SubcategoryName}
-          @item{Product has a property CategoryName}]
-
-We already defined @(racket ProductSubcategory) in the previous section,
-so let's do the other 3 items now. Add the highlighted code to your file:
-@(racketblock
-  (define-schema adventure-works-schema
-    #,truncated
-    (table Product
-           #,truncated
-           (code:hilite #:has-one)
-           (code:hilite [ProductCategory
-                         (ProductCategory (ProductSubcategory this))])
-           (code:hilite #:property)
-           (code:hilite [SubcategoryName
-                         (Name (ProductSubcategory this))])
-           (code:hilite [CategoryName
-                         (Name (ProductCategory this))]))
-    #,truncated))
-@(load-checkpoint! "6.rkt")
-
-The properties should be self-explanatory.
-But this definition of @(racket ProductCategory) is interesting.
-We define @(racket ProductCategory) @tech{given} @(racket Product) as
-@(racketblock
-  (ProductCategory (ProductSubcategory this)))
-
-This works because we previously defined @(racket ProductSubcategory) @tech{given}
-@(racket Product) as well as @(racket ProductCategory) @tech{given} @(racket ProductSubcategory).
-We simply compose them, passing the result of the first into the second.
-The return value is the join from Product to ProductSubcategory to ProductCategory.
-We can verify that this join works with a quick one-off query:
+Sweet!
+We can see that @(racket CategoryName) is defined for @(racket ProductSubcategory).
+We did this as part of the previous task's refactoring.
+That investment pays off now, because our current query has an instance of
+@(racket ProductSubcategory), so we can pass it into @(racket CategoryName):
 @margin-note{The careful reader will notice that both joins in the generated SQL
- are left joins. TODO write up how @(racket 'infer-join-type) works and link to it?
+ are left joins. TODO write up how @(racket (join-type 'infer)) works and link to it?
  Or is that just a distraction at this point?}
 @(repl-query
   (show-table
-   (from p Product
-         (join cat (ProductCategory p))
-         (select (Name p) #:as 'ProductName)
-         (select (Name cat) #:as 'CategoryName)
-         (limit 3))))
+   (from prd Product
+         (limit 5)
+         (join subcat ProductSubcategory
+               (join-type 'left)
+               (join-on (.= (ProductSubcategoryID subcat)
+                            (ProductSubcategoryID prd))))
+         (select (Name prd))
+         (select (ProductNumber prd))
+         (select (SubcategoryName subcat))
+         (select (CategoryName subcat)))))
 
-Getting back on task, we can now rewrite our answer as:
+This query looks good!
+That means it's refactoring time.
+@tech{Perform} refactoring recipe TODO to make the join reusable,
+so that the following query works:
 @(racketblock
-  (define (task2/revision2)
-    (from prd Product
-          (select (Name prd) #:as 'ProductName)
-          (select (ProductNumber prd))
-          (select (SubcategoryName prd) #:as 'Subcategory)
-          (select (CategoryName prd) #:as 'Category))))
+  (from prd Product
+        (limit 5)
+        (join subcat (ProductSubcategory prd))
+        (select (Name prd))
+        (select (ProductNumber prd))
+        (select (SubcategoryName subcat))
+        (select (CategoryName subcat))))
 
-And let's just make sure it still works:
+@tech{Perform} refactoring recipe TODO to generate this equivalent query:
+@(racketblock
+  (from prd Product
+        (limit 5)
+        (select (Name prd))
+        (select (ProductNumber prd))
+        (select (SubcategoryName prd))
+        (select (CategoryName prd))))
+
+@tech{Perform} refactoring recipe TODO to rename @(racket (Name prd)):
+@(load-checkpoint! "3.rkt")
 @(repl-query
   (show-table
-   (from prd (task2/revision2)
-         (where (.is-not (ProductSubcategoryID prd)
-                         'null))
-         (limit 5))))
+   (from prd Product
+         (limit 5)
+         (select (ProductName prd))
+         (select (ProductNumber prd))
+         (select (SubcategoryName prd))
+         (select (CategoryName prd)))))
 
-OK, we still have the same query but we have beefed up our @(racket define-schema)
-with a new join and two new properties that will come in handy in future queries.
+And now we are done!
 
-@subsection{A new kind of Property}
-Now imagine that the boss only wants to see Products that have non-zero sales.
-He explains that our Product catalog needs culling, but for now "has sales?" is
-the easy way to filter out obsolete Products.
-You get the impression that "has sales?" is an important property of Product,
-and will very likely be a part of future tasks.
-So let's add @(racket HasSales?) as a @(racket #:property) of the Product table.
-Add the highlighted code to your file:
+@subsubsub*section{Refactoring Recap}
+While refactoring our query, we made the following enhancements to our schema.
 @(racketblock
-  (define-schema adventure-works-schema
-    #,truncated
-    (table Product
-           #,truncated
-           (code:hilite #:property)
-           (code:hilite [HasSales?
-                         (exists (from sod SalesOrderDetail
-                                       (where (.= (ProductID sod)
-                                                  (ProductID this)))))]))
-    #,truncated))
+  (ProductSubcategory Product)
+  (SubcategoryName Product)
+  (CategoryName Product)
+  (ProductName Product))
 
-Now we can use @(racket HasSales?) just as we would use any other property of Product.
-Let's write a new revision that will exclude zero-sale Products by default:
-@margin-note{
- When @(racket include-zero-sales?) is true, we add the empty list to the query.
- The empty list here represents a list of zero clauses.
- Adding an empty list to any query produces the same query.
-}
-@(racketblock
-  (define (task2/revision3 #:include-zero-sales? [include-zero-sales? #f])
-    (from prd Product
-          (select (Name prd) #:as 'ProductName)
-          (select (ProductNumber prd))
-          (select (SubcategoryName prd) #:as 'Subcategory)
-          (select (CategoryName prd) #:as 'Category)
-          (if include-zero-sales?
-              (list)
-              (where (HasSales? prd))))))
-@(load-checkpoint! "7.rkt")
+@section{Task 3: Products with Non-Zero Sales}
+@bossquote{Show me a list of Products that have non-zero sales,
+ with Subcategory and Category names.}
+This just adds the "non-zero sales" criteria to the previous task.
+Our boss explains that our Product catalog could use some culling, but for now
+"has sales?" is an acceptable way to filter out obsolete Products.
 
-Let's test that our filter is working:
+TODO we need to determine how to know whether a Product has been sold.
+
+Anyway, we eventually land on this:
 @(repl-query
   (show-table
-   (from x (task2/revision3)
-         (limit 5))))
+   (from prd Product
+         (limit 5)
+         (select (ProductName prd))
+         (select (ProductNumber prd))
+         (select (SubcategoryName prd))
+         (select (CategoryName prd))
+         (where (exists (from dtl SalesOrderDetail
+                              (where (.= (ProductID dtl)
+                                         (ProductID prd)))))))))
+
+This query looks good!
+It's time to refactor.
+@tech{Perform} refactoring recipe TODO to make @(racket (HasSales? Product))
+return the @(racket (exists ....)) expression.
+The following query should now work:
+@(load-checkpoint! "4.rkt")
 @(repl-query
   (show-table
-   (from x (task2/revision3 #:include-zero-sales? #t)
-         (limit 5))))
+   (from prd Product
+         (limit 5)
+         (select (ProductName prd))
+         (select (ProductNumber prd))
+         (select (SubcategoryName prd))
+         (select (CategoryName prd))
+         (where (HasSales? prd)))))
 
-Notice the encapsulation that @(racket (HasSales? product)) provides.
+And now we are done!
+
+@subsubsub*section{Refactoring Recap}
+While refactoring our query, we made the following enhancements to our schema.
+@(racketblock
+  (HasSales? Product))
+
+Notice the encapsulation that @(racket (HasSales? Product)) provides.
 Today it is implemented using @(racket exists), but in the future we might
 decide to denormalize and add a HasSales column to the Product table.
 The important point is that we can choose a different implementation
@@ -437,157 +404,171 @@ without breaking any calling code - the calling code will always remain
 This is not true in SQL - switching from an "exists" implementation to a
 simple column access would require updating all the call sites.
 
-@section{Task 3 - Sales by Product}
-@(define task3-quote
+@section{Task 4: Sales by Product}
+@(define task4-quote
    @bossquote{Show me a list of the best-selling Products of all time.
  Sort by total revenue. Include total quantity sold and subcategory.})
-@task3-quote
+@task4-quote
 
 TODO write prose from here to the end.
-
-@(racketblock
-  (define (task3/revision1)
-    (from prd Product
-          (select (ProductNumber prd))
-          (select (SubcategoryName prd) #:as 'Subcategory)
-          (join detailsG SalesOrderDetail
-                (group-by (ProductID detailsG))
-                (join-on (.= (ProductID detailsG)
-                             (ProductID prd))))
-          (select (round (sum (LineTotal detailsG)) 2) #:as 'SalesAmount)
-          (select (sum (OrderQty detailsG)) #:as 'SalesQty)
-          (order-by 'desc (sum (LineTotal detailsG))))))
-@(load-checkpoint! "8.rkt")
+Initial query:
 @(repl-query
-  (show-table (from x (task3/revision1)
-                    (limit 5))))
+  (show-table
+   (from prd Product
+         (limit 5)
+         (select (ProductNumber prd))
+         (select (SubcategoryName prd))
+         (join detailsG SalesOrderDetail
+               (group-by (ProductID detailsG))
+               (join-on (.= (ProductID detailsG)
+                            (ProductID prd))))
+         (select (round (sum (LineTotal detailsG)) 2))
+         (select (sum (OrderQty detailsG)))
+         (order-by 'desc (sum (LineTotal detailsG))))))
 
-@subsection{Making the Grouped Join Reusable}
-@(racketblock
-  (define-schema adventure-works-schema
-    #,truncated
-    (table Product
-           #,truncated
-           (code:hilite #:has-group)
-           (code:hilite [DetailsG
-                         (join detailsG SalesOrderDetail
-                               (group-by (ProductID detailsG))
-                               (join-on (.= (ProductID detailsG)
-                                            (ProductID this))))]))
-    #,truncated))
-
-@(racketblock
-  (define (task3/revision2)
-    (from prd Product
-          (select (ProductNumber prd))
-          (select (SubcategoryName prd) #:as 'Subcategory)
-          (join detailsG (DetailsG prd))
-          (select (round (sum (LineTotal detailsG)) 2) #:as 'SalesAmount)
-          (select (sum (OrderQty detailsG)) #:as 'SalesQty)
-          (order-by 'desc (sum (LineTotal detailsG))))))
-@(load-checkpoint! "9.rkt")
+@tech{Perform} refactoring recipe TODO such that @(racket (DetailsG Product))
+returns our @(racket (join detailsG ....)) expression.
+The following query should now work:
+@(load-checkpoint! "5.rkt")
 @(repl-query
-  (show-table (from x (task3/revision1)
-                    (limit 5))))
+  (show-table
+   (from prd Product
+         (limit 5)
+         (select (ProductNumber prd))
+         (select (SubcategoryName prd))
+         (join detailsG (DetailsG prd))
+         (select (>> (round (sum (LineTotal detailsG)) 2) #:as 'TotalSales))
+         (select (>> (sum (OrderQty detailsG)) #:as 'TotalQty))
+         (order-by 'desc (sum (LineTotal detailsG))))))
 
-@section{Task 4 - Sales by Subcategory}
-@(define task4-quote
+You might want to go further with the refactoring and define properties like
+@(racket (TotalSales Product)) and @(racket (TotalQty Product)).
+This might be a good idea, and you are welcome to do so.
+But I am going to stop here for now.
+
+@subsubsub*section{Refactoring Recap}
+While refactoring our query, we made the following enhancements to our schema.
+@(racketblock
+  (DetailsG Product))
+
+@section{Task 5: Sales by Subcategory}
+@(define task5-quote
    @bossquote{Show me a list of the best-selling Subcategories of all time.
  Sort by total revenue. Include total quantity sold and category name.})
-@task4-quote
+@task5-quote
 
-For this task, we will skip the more basic revisions and make reusable joins and properties right away.
-
-This task is similar to the previous task, except we need to group the SalesOrderDetail
-records by their Subcategory rather than their Product.
-Specifically, we would like to group by @(racket ProductSubcategoryID) which is the primary
-key of the Subcategory table.
-The following change will help us with that. It defines "Product given SalesOrderDetail"
-and "ProductSubcategoryID given SalesOrderDetail".
-@(racketblock
-  (define-schema adventure-works-schema
-    #,truncated
-    (table SalesOrderDetail
-           #,truncated
-           (code:hilite #:has-one)
-           (code:hilite [Product
-                         (join prd Product
-                               (join-on (.= (ProductID prd)
-                                            (ProductID this))))])
-           (code:hilite #:property)
-           (code:hilite [ProductSubcategoryID
-                         (ProductSubcategoryID (Product this))]))
-    #,truncated))
-
-Now that ProductSubcategoryID is defined for SalesOrderDetail, we can use it
-to help us define "DetailsG ProductSubcategory" (read "Details Grouped by ProductSubcategory").
-@(racketblock
-  (define-schema adventure-works-schema
-    #,truncated
-    (table ProductSubcategory
-           #,truncated
-           (code:hilite #:has-group)
-           (code:hilite [DetailsG
-                         (join detailsG SalesOrderDetail
-                               (group-by (ProductSubcategoryID detailsG))
-                               (join-on (.= (ProductSubcategoryID detailsG)
-                                            (ProductSubcategoryID this))))]))
-    #,truncated))
-
-Now we are ready to complete this task using a pattern similar to the previous task:
-@(racketblock
-  (define (task4/revision1)
-    (from subcat ProductSubcategory
-          (select (Name subcat) #:as 'Subcategory)
-          (select (CategoryName subcat) #:as 'Category)
-          (join detailsG (DetailsG subcat))
-          (select (round (sum (LineTotal detailsG)) 2) #:as 'SalesAmount)
-          (select (sum (OrderQty detailsG)) #:as 'SalesQty)
-          (order-by 'desc (sum (LineTotal detailsG))))))
-@(load-checkpoint! "10.rkt")
+Initial revision
 @(repl-query
-  (show-table (from x (task4/revision1)
-                    (limit 5))))
+  (show-table
+   (from subcat ProductSubcategory
+         (limit 5)
+         (select (SubcategoryName subcat))
+         (select (CategoryName subcat))
+         (join detailsG SalesOrderDetail
+               (join prd Product
+                     (join-on (.= (ProductID prd)
+                                  (ProductID detailsG))))
+               (group-by (ProductSubcategoryID prd))
+               (join-on (.= (ProductSubcategoryID prd)
+                            (ProductSubcategoryID subcat))))
+         (select (round (sum (LineTotal detailsG)) 2))
+         (select (sum (OrderQty detailsG)))
+         (order-by 'desc (sum (LineTotal detailsG))))))
 
-@section{Task 5 - Sales by Anything}
+@tech{Perform} refactoring recipe TODO so that this query works:
+@(racketblock
+  (from subcat ProductSubcategory
+        (limit 5)
+        (select (SubcategoryName subcat))
+        (select (CategoryName subcat))
+        (join detailsG SalesOrderDetail
+              (code:hilite (join prd (Product detailsG)))
+              (group-by (ProductSubcategoryID prd))
+              (join-on (.= (ProductSubcategoryID prd)
+                           (ProductSubcategoryID subcat))))
+        (select (round (sum (LineTotal detailsG)) 2))
+        (select (sum (OrderQty detailsG)))
+        (order-by 'desc (sum (LineTotal detailsG)))))
+
+@tech{Perform} refactoring recipe TODO so that this query works:
+@(racketblock
+  (from subcat ProductSubcategory
+        (limit 5)
+        (select (SubcategoryName subcat))
+        (select (CategoryName subcat))
+        (join detailsG SalesOrderDetail
+              (group-by (code:hilite (ProductSubcategoryID detailsG)))
+              (join-on (.= (code:hilite (ProductSubcategoryID detailsG))
+                           (ProductSubcategoryID subcat))))
+        (select (round (sum (LineTotal detailsG)) 2))
+        (select (sum (OrderQty detailsG)))
+        (order-by 'desc (sum (LineTotal detailsG)))))
+
+@tech{Perform} refactoring recipe TODO so that this query works:
+@(load-checkpoint! "6.rkt")
+@(repl-query
+  (show-table
+   (from subcat ProductSubcategory
+         (limit 5)
+         (select (SubcategoryName subcat))
+         (select (CategoryName subcat))
+         (join detailsG (DetailsG subcat))
+         (select (>> (round (sum (LineTotal detailsG)) 2) #:as 'TotalSales))
+         (select (>> (sum (OrderQty detailsG)) #:as 'TotalQty))
+         (order-by 'desc (sum (LineTotal detailsG))))))
+
+Again, You might want to go further with the refactoring and define properties like
+@(racket (TotalSales Product)) and @(racket (TotalQty Product)).
+This might be a good idea, and you are welcome to do so. But I am going to stop here for now.
+
+@subsubsub*section{Refactoring Recap}
+While refactoring our query, we made the following enhancements to our schema.
+@(racketblock
+  (Product SalesOrderDetail)
+  (ProductSubcategoryID SalesOrderDetail)
+  (DetailsG ProductSubcategory))
+
+@section{Task 6: Sales by Anything}
 Let's look at the previous two tasks.
-@task3-quote
 @task4-quote
+@task5-quote
 
 We can generalize this to
 @italic{Show me a list of the best-selling THINGS of all time.
  Sort by total revenue. Include total quantity sold and SOME_OTHER_STUFF.}
 
-TODO: Show the two completed queries.
-Make a generalized sales report.
+Let's look at where we left the previous two tasks:
+@(racketblock
+  (code:comment "Sales by Product:")
+  (from prd Product
+        (limit 5)
+        (select (ProductNumber prd))
+        (select (SubcategoryName prd))
+        (join detailsG (DetailsG prd))
+        (select (>> (round (sum (LineTotal detailsG)) 2) #:as 'TotalSales))
+        (select (>> (sum (OrderQty detailsG)) #:as 'TotalQty))
+        (order-by 'desc (sum (LineTotal detailsG))))
+  (code:comment "Sales by Subcategory:")
+  (from subcat ProductSubcategory
+        (limit 5)
+        (select (SubcategoryName subcat))
+        (select (CategoryName subcat))
+        (join detailsG (DetailsG subcat))
+        (select (>> (round (sum (LineTotal detailsG)) 2) #:as 'TotalSales))
+        (select (>> (sum (OrderQty detailsG)) #:as 'TotalQty))
+        (order-by 'desc (sum (LineTotal detailsG)))))
+
+TODO Make a generalized sales report.
 Plug in Product and Subcategory, show that they are equivalent to the final revisions of previous tasks.
 Add an optional start-date and end-date filter to the generalized sales report.
 Explain the contract of the generalized sales report - it takes any query for which DetailsG is defined
 and returns the same query with some clauses appended to it.
+@(void '(SalesReport table
+                     [start-date #f]
+                     [end-date #f]))
 
 Extra Credit: Extend the definition of DetailsG so that it is defined for Category, SalesPerson, and Territory.
 Try plugging those tables into the generalized sales report.
 
 Extra Credit: Instead of using appendable queries, implement the generalized sales report
 as a procedure that returns a list of the relevant clauses.
-Are they equivalent? No, because the join has become detached.
-But will they generate the same SQL anyway? Yes, because the detached join didn't get passed into a subquery.
-
-@void{
- Task 3 (aggregates)
- 1) show list of Products with Sales[Qty, Price]
- 2) make the joins and properties reusable
- Task 4 (more aggregates)
- 1) show list of Subcategories with Sales[Qty, Price]
- 2) make the joins and properties reusable
- Task 5 (generalized Sales Report)
- 1) the skeleton
- 2) by Product
- 3) by Subcategory
- 4) by Category
- 5) by SalesPerson
- 6) by Territory
-}
-@(void '(SalesReport table
-                     [start-date #f]
-                     [end-date #f]))

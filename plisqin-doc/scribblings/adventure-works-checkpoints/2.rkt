@@ -232,7 +232,10 @@
          ProductCategoryID
          Name
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:property
+         [CategoryName
+          (Name this)])
   (table ProductCostHistory
          #:column
          ProductID
@@ -316,7 +319,17 @@
          ProductCategoryID
          Name
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:has-one
+         [ProductCategory
+          (join cat ProductCategory
+                (join-on (.= (ProductCategoryID cat)
+                             (ProductCategoryID this))))]
+         #:property
+         [CategoryName
+          (CategoryName (ProductCategory this))]
+         [SubcategoryName
+          (Name this)])
   (table ScrapReason
          #:column
          ScrapReasonID
@@ -609,11 +622,3 @@
          Demographics
          rowguid
          ModifiedDate))
-
-(define (task1/revision1)
-  (from subcat ProductSubcategory
-        (join cat ProductCategory
-              (join-on (.= (ProductCategoryID cat)
-                           (ProductCategoryID subcat))))
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name cat) #:as 'CategoryName)))

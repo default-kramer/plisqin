@@ -7,7 +7,7 @@
 
 (current-connection (connect-adventure-works))
 
-(define-schema adventure-works-schema
+(define-schema $$
   (table Department
          #:column
          DepartmentID
@@ -203,7 +203,7 @@
   (table Product
          #:column
          ProductID
-         Name
+         [ProductName #:dbname "Name"]
          ProductNumber
          MakeFlag
          FinishedGoodsFlag
@@ -230,7 +230,7 @@
          #:has-one
          [ProductSubcategory
           (join subcat ProductSubcategory
-                'left-join
+                (join-type 'left)
                 (join-on (.= (ProductSubcategoryID subcat)
                              (ProductSubcategoryID this))))]
          [ProductCategory
@@ -249,7 +249,9 @@
          [HasSales?
           (exists (from sod SalesOrderDetail
                         (where (.= (ProductID sod)
-                                   (ProductID this)))))])
+                                   (ProductID this)))))]
+         [TotalSales
+          (round (sum (LineTotal (DetailsG this))) 2)])
   (table ProductCategory
          #:column
          ProductCategoryID
@@ -345,6 +347,12 @@
           (join cat ProductCategory
                 (join-on (.= (ProductCategoryID cat)
                              (ProductCategoryID this))))]
+         #:has-group
+         [DetailsG
+          (join detailsG SalesOrderDetail
+                (group-by (ProductSubcategoryID detailsG))
+                (join-on (.= (ProductSubcategoryID detailsG)
+                             (ProductSubcategoryID this))))]
          #:property
          [CategoryName
           (Name (ProductCategory this))])
@@ -518,7 +526,15 @@
          UnitPriceDiscount
          LineTotal
          rowguid
-         ModifiedDate)
+         ModifiedDate
+         #:has-one
+         [Product
+          (join prd Product
+                (join-on (.= (ProductID prd)
+                             (ProductID this))))]
+         #:property
+         [ProductSubcategoryID
+          (ProductSubcategoryID (Product this))])
   (table SalesOrderHeader
          #:column
          SalesOrderID
@@ -641,73 +657,23 @@
          rowguid
          ModifiedDate))
 
-(define (task1/revision1)
-  (from subcat ProductSubcategory
-        (join cat ProductCategory
-              (join-on (.= (ProductCategoryID cat)
-                           (ProductCategoryID subcat))))
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name cat) #:as 'CategoryName)))
+(module+ test
+  (require rackunit)
 
-(define (task1/revision2)
-  (from subcat ProductSubcategory
-        (join cat (ProductCategory subcat))
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name cat) #:as 'CategoryName)))
-
-(define (task1/revision3)
-  (from subcat ProductSubcategory
-        ; The join is no longer here!
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (Name (ProductCategory subcat)) #:as 'CategoryName)))
-
-(define (task1/revision4)
-  (from subcat ProductSubcategory
-        (select (Name subcat) #:as 'SubcategoryName)
-        (select (CategoryName subcat) #:as 'CategoryName)))
-
-(define (task2/revision1)
-  (from prd Product
-        (join subcat (ProductSubcategory prd))
-        (select (Name prd) #:as 'ProductName)
-        (select (ProductNumber prd))
-        (select (Name subcat) #:as 'Subcategory)
-        (select (CategoryName subcat) #:as 'Category)))
-
-(define (task2/revision2)
-  (from prd Product
-        (select (Name prd) #:as 'ProductName)
-        (select (ProductNumber prd))
-        (select (SubcategoryName prd) #:as 'Subcategory)
-        (select (CategoryName prd) #:as 'Category)))
-
-(define (task2/revision3 #:include-zero-sales? [include-zero-sales? #f])
-  (from prd Product
-        (select (Name prd) #:as 'ProductName)
-        (select (ProductNumber prd))
-        (select (SubcategoryName prd) #:as 'Subcategory)
-        (select (CategoryName prd) #:as 'Category)
-        (if include-zero-sales?
-            (list)
-            (where (HasSales? prd)))))
-
-(define (task3/revision1)
-  (from prd Product
-        (select (ProductNumber prd))
-        (select (SubcategoryName prd) #:as 'Subcategory)
-        (join detailsG SalesOrderDetail
-              (group-by (ProductID detailsG))
-              (join-on (.= (ProductID detailsG)
-                           (ProductID prd))))
-        (select (round (sum (LineTotal detailsG)) 2) #:as 'SalesAmount)
-        (select (sum (OrderQty detailsG)) #:as 'SalesQty)
-        (order-by 'desc (sum (LineTotal detailsG)))))
-
-(define (task3/revision2)
-  (from prd Product
-        (select (ProductNumber prd))
-        (select (SubcategoryName prd) #:as 'Subcategory)
-        (join detailsG (DetailsG prd))
-        (select (round (sum (LineTotal detailsG)) 2) #:as 'SalesAmount)
-        (select (sum (OrderQty detailsG)) #:as 'SalesQty)
-        (order-by 'desc (sum (LineTotal detailsG)))))
+  (check-equal?
+   (to-sql (from p Product
+                 (select (ProductName p))
+                 (select (TotalSales p))))
+   #<<HEREDOC
+select p.Name as ProductName
+  , round(detailsG.__INJECT1, 2) as TotalSales
+from Product p
+inner join (
+  select detailsG.ProductID as __INJECT0
+    , sum(detailsG.LineTotal) as __INJECT1
+  from SalesOrderDetail detailsG
+  group by detailsG.ProductID
+) detailsG
+   on (detailsG.__INJECT0 = p.ProductID)
+HEREDOC
+   ))
