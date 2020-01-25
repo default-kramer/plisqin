@@ -25,13 +25,13 @@
     (define ctx-id #'here)
     (provide ctx-id)))
 
-(def-ctx unsafe-ctx ab1 plisqin-lib/unsafe/main plisqin-lib/unsafe/operators)
+(def-ctx unsafe-ctx ab1 plisqin-lib/unsafe plisqin-lib/unsafe/operators)
 (require (for-syntax 'ab1))
 
-(def-ctx loose-ctx ab2 plisqin-lib/loose/main plisqin-lib/loose/operators)
+(def-ctx loose-ctx ab2 plisqin-lib/loose plisqin-lib/loose/operators)
 (require (for-syntax 'ab2))
 
-(def-ctx strict-ctx ab3 plisqin-lib/strict/main plisqin-lib/strict/operators)
+(def-ctx strict-ctx ab3 plisqin-lib/strict plisqin-lib/strict/operators)
 (require (for-syntax 'ab3))
 
 ; Defines a function that takes an identifier? and returns a scribble

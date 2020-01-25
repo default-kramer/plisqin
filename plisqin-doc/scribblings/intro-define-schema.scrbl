@@ -18,8 +18,7 @@
    (reset-eval!)
    (my-eval `(begin
                (require plisqin-examples/adventure-works
-                        plisqin-lib/unsafe/main
-                        (only-in morsel-lib/sql/dialect current-dialect sqlite))
+                        plisqin)
                (require ,cp-path)
                (current-connection (connect-adventure-works))
                (current-dialect (sqlite)))))

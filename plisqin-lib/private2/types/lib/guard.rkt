@@ -110,7 +110,9 @@
                (or (func-name) 'func)
                (format "An argument list satisfying one of the following:\n~a"
                        (format-specs '(spec ...)))
-               arglist)]))))]))
+               #;arglist
+               '(TODO we trap this as an infinite loop if we try to print...)
+               )]))))]))
 
 (module+ test
   (define (blah . args) args)

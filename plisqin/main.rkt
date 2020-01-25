@@ -1,13 +1,30 @@
 #lang racket
 
-; TODO need to determine what `(require plisqin)` does wrt strictness.
-; For now, let's just go with the unsafe stuff for compatibility.
+; TODO this is still up for debate
+(require plisqin-lib/types
+         plisqin-lib/dialect
+         plisqin-lib/strict
+         (prefix-in |.| plisqin-lib/strict/operators)
+         (prefix-in % plisqin-lib/loose)
+         (prefix-in % plisqin-lib/loose/operators)
+         (prefix-in %% plisqin-lib/unsafe)
+         (prefix-in %% plisqin-lib/unsafe/operators))
 
+(provide (all-from-out plisqin-lib/types
+                       plisqin-lib/dialect
+                       plisqin-lib/strict
+                       plisqin-lib/strict/operators
+                       plisqin-lib/loose
+                       plisqin-lib/loose/operators
+                       plisqin-lib/unsafe
+                       plisqin-lib/unsafe/operators))
+
+; TODO this need attention
 (require plisqin-lib)
 (provide (all-from-out plisqin-lib))
 
-(require (prefix-in |.| plisqin-lib/unsafe/operators))
-(provide (all-from-out plisqin-lib/unsafe/operators))
+; TODO these definitely need to get moved into plisqin-lib
+(provide from join to-sql limit join-type round)
 
 
 ; TODO let's just see how these work
@@ -39,6 +56,4 @@
        (m:join a b #,@(map tweak (syntax->list #'(clause ...)))))]))
 
 (define (round a b)
-  (scalar "round("a", "b")"))
-
-(provide from join to-sql limit join-type round)
+  (%%scalar "round("a", "b")"))

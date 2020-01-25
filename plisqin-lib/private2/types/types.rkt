@@ -1,6 +1,7 @@
 #lang racket
 
 (require "./lib/core.rkt")
+(require (only-in morsel-lib query? join?))
 
 (provide
  ; base types
@@ -12,8 +13,11 @@
  ; scalar values
  Datetime Number String
  ; other expressions
- Query Join Subquery
- )
+ Subquery
+ ; For now, make Query and Join predicates.
+ ; Maybe there will be a reason to make them types later.
+ (rename-out [query? Query]
+             [join? Join]))
 
 ; On booleans
 ; ===
@@ -53,6 +57,4 @@
   [String Scalar]
 
   ; other expressions
-  [Query Token]
-  [Join Token]
   [Subquery Token])

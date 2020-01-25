@@ -15,7 +15,7 @@
         get-content      ; a function created by def-content-provider
         my-ctx           ; a syntax object from a scope with the desired `for-label`
         the-type-table   ; the lookup function to get type signatures
-        mod-id           ; plisqin-lib/{variant}/main
+        mod-id           ; plisqin-lib/{variant}
         operators-mod-id ; plisqin-lib/{variant}/operators
         )
      (with-syntax ([ooo (quote-syntax ...)])
@@ -91,15 +91,15 @@
 
 (define-docgen docgen/unsafe
   example-get-content unsafe-ctx unsafe-table
-  plisqin-lib/unsafe/main plisqin-lib/unsafe/operators)
+  plisqin-lib/unsafe plisqin-lib/unsafe/operators)
 
 (define-docgen docgen/loose
   default-content loose-ctx loose-table
-  plisqin-lib/loose/main plisqin-lib/loose/operators)
+  plisqin-lib/loose plisqin-lib/loose/operators)
 
 (define-docgen docgen/strict
   default-content strict-ctx strict-table
-  plisqin-lib/strict/main plisqin-lib/strict/operators)
+  plisqin-lib/strict plisqin-lib/strict/operators)
 
 (def-content-provider (default-content id)
   [else

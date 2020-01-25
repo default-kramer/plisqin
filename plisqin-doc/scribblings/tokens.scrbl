@@ -1,10 +1,10 @@
 #lang scribble/manual
 
-@(require (for-label (prefix-in unsafe: plisqin-lib/unsafe/main))
-          (for-label (prefix-in loose: plisqin-lib/loose/main))
-          (for-label (prefix-in strict: plisqin-lib/strict/main))
-          (for-label (prefix-in %% plisqin-lib/unsafe/main))
-          (for-label (prefix-in % plisqin-lib/loose/main))
+@(require (for-label (prefix-in unsafe: plisqin-lib/unsafe))
+          (for-label (prefix-in loose: plisqin-lib/loose))
+          (for-label (prefix-in strict: plisqin-lib/strict))
+          (for-label (prefix-in %% plisqin-lib/unsafe))
+          (for-label (prefix-in % plisqin-lib/loose))
           "tokens-skeleton.rkt")
 
 @title[#:style '(toc)]{Token Constructors}

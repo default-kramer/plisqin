@@ -24,9 +24,6 @@
 ;; See the current version of the racket style guide here:
 ;; http://docs.racket-lang.org/style/index.html
 
-(require (submod plisqin-lib/private2/sql unsafe))
-(provide (all-from-out (submod plisqin-lib/private2/sql unsafe)))
-
 (require "./private2/sql/fragment.rkt")
 (provide >>)
 

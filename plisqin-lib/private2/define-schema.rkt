@@ -4,7 +4,7 @@
 
 (require (only-in morsel-lib gen:queryable get-queryable)
          (only-in "sql/fragment.rkt" fragment? >>)
-         (prefix-in %% (only-in plisqin-lib/unsafe/main scalar)))
+         (prefix-in %% (only-in (submod "./sql/frags.rkt" unsafe) scalar)))
 
 (require racket/stxparam
          (for-syntax racket/list))
@@ -21,12 +21,17 @@
   [(define (write-proc me port mode)
      (write-string (table-name me) port))])
 
+(define-for-syntax (rewrite-option stx)
+  (syntax-case stx ()
+    [#:type #'#:cast]
+    [x #'x]))
+
 (define-syntax (handle-column stx)
   (syntax-case stx ()
     [(_ [id options ... #:dbname dbname])
      (string? (syntax-e #'dbname))
      #`(>> (%%scalar this #,(format ".~a" (syntax-e #'dbname)))
-           options ...)]
+           #,@(map rewrite-option (syntax->list #'(options ...))))]
     [(_ [id options ...])
      #`(handle-column [id options ... #:dbname #,(format "~a" (syntax-e #'id))])]))
 
@@ -273,7 +278,7 @@
   (require rackunit
            (only-in morsel-lib from)
            (only-in morsel-lib/sql to-sql)
-           plisqin-lib/unsafe/main)
+           plisqin-lib/unsafe)
 
   (define-schema $$
     (table A
