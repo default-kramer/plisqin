@@ -11,41 +11,44 @@
          "fragment.rkt"
          (for-syntax "../_types.rkt"))
 
-
-
 ; == Clauses ==
-(define-syntax-rule (def-clauses id ...)
-  (begin
-    (def id #:kind 'id #:reduce tokens)
-    ...))
-
-(def-clauses
-  ; `select` should do bool->scalar conversion, but when?
-  ; Either during construction or during reduction (to sql)... not sure which is better.
-  ; Also, maybe `group-by` and `order-by` should do the same?
-  group-by
-  where join-on having)
-
 (def select #:kind 'select
   #:reduce (let ([as-name (match tokens
                             [(list a)
                              #:when (fragment? a)
                              (fragment-as-name a)]
-                            [else #f])])
+                            [else #f])]
+                 [tokens (->Bit tokens)])
              (if as-name
                  (list tokens " as " (~a as-name))
                  tokens)))
+
+(def group-by #:kind 'group-by
+  #:reduce (->Bit tokens))
 
 (def order-by #:kind 'order-by
   #:reduce (match tokens
              [(list dir rest ...)
               #:when (member dir '(asc desc))
-              (list rest (format " ~a" dir))]
-             [else tokens]))
+              (list (->Bit rest) (format " ~a" dir))]
+             [else (->Bit tokens)]))
+
+(define-syntax-rule (def-where-style id ...)
+  (begin
+    (def id #:kind 'id
+      #:reduce (->Bool tokens))
+    ...))
+(def-where-style where join-on having)
 
 ; == Fragments ==
-; we can reuse def-clauses for now
-(def-clauses scalar aggregate bool subquery sql)
+(define-syntax-rule (def-scalar-style id ...)
+  (begin
+    (def id #:kind 'id #:reduce tokens)
+    ...))
+
+(def-scalar-style scalar aggregate subquery sql)
+
+(def bit #:kind 'scalar #:reduce tokens)
 
 
 
@@ -120,7 +123,7 @@
   (module+ mod-id
     (export keyword
             select where group-by having order-by join-on
-            scalar bool aggregate subquery sql
+            scalar bit aggregate subquery sql
             count avg min max sum exists)
     (module+ operators
       (export keyword
@@ -151,7 +154,7 @@
       ...))
 
   (check-frags select where group-by having order-by join-on
-               scalar bool aggregate subquery sql
+               scalar bit aggregate subquery sql
                count avg min max sum exists)
   (check-frags and or not
                = <> < <= > >=

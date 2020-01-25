@@ -1,9 +1,10 @@
 #lang racket
 
-(provide def tokens parens insert-ands interpose export)
+(provide def tokens parens insert-ands interpose export ->Bit ->Bool)
 
 (require "fragment.rkt"
          "../_types.rkt"
+         "../_dialect.rkt"
          racket/stxparam)
 
 (module+ test
@@ -101,3 +102,23 @@
 
 (define-syntax-rule (export keyword id ...)
   (begin (export-single keyword id) ...))
+
+
+; To be used during reduction.
+; Converts a Bool to a Bit (only needed for MSSQL)
+(define (->Bit tokens)
+  (match tokens
+    [(list a)
+     #:when (and (Bool a)
+                 (mssql? (current-dialect)))
+     (list "cast(case when "a" then 1 else 0 end as bit)")]
+    [else tokens]))
+
+; To be used during reduction.
+; Converts a Bit to a Bool (needed by all dialects)
+(define (->Bool tokens)
+  (match tokens
+    [(list a)
+     #:when (Bit a)
+     (list a" = 1")]
+    [else tokens]))

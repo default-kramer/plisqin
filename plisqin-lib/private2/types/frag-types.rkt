@@ -20,12 +20,14 @@
            + - * /)
    (token-constructor
     [any/c ...+ -> Scalar])]
-  [(bool exists
-         and or not
-         = <> < <= > >=
-         like not-like
-         is is-not
-         in not-in)
+  [(bit)
+   (token-constructor
+    [any/c ...+ -> Bit])]
+  [(exists and or not
+           = <> < <= > >=
+           like not-like
+           is is-not
+           in not-in)
    (token-constructor
     [any/c ...+ -> Bool])]
   [(subquery)
@@ -45,12 +47,14 @@
            + - * /)
    (token-constructor
     [content? ...+ -> Scalar])]
-  [(bool exists
-         and or not
-         = <> < <= > >=
-         like not-like
-         is is-not
-         in not-in)
+  [(bit)
+   (token-constructor
+    [content? ...+ -> Bit])]
+  [(exists and or not
+           = <> < <= > >=
+           like not-like
+           is is-not
+           in not-in)
    (token-constructor
     [content? ...+ -> Bool])]
   [(subquery)
@@ -63,21 +67,20 @@
 (def-type-table strict-table :strict-table
   [(select group-by)
    (token-constructor
-    [Scalar -> Token]
-    [Bool -> Token])]
+    [Scalar -> Token])]
   [(order-by)
    (token-constructor
-    [(or/c 'asc 'desc) (or/c Scalar Bool) -> Token]
-    [(or/c Scalar Bool) -> Token])]
+    [(or/c 'asc 'desc) Scalar -> Token]
+    [Scalar -> Token])]
   [(where join-on having)
    (token-constructor
-    [Bool -> Token])]
+    [Boolish -> Token])]
   [(scalar aggregate)
    (token-constructor
     [content? ...+ -> Scalar])]
-  [(bool)
+  [(bit)
    (token-constructor
-    [content? ...+ -> Bool])]
+    [content? ...+ -> Bit])]
   [(sql)
    (token-constructor
     [content? ...+ -> Token])]
@@ -100,10 +103,10 @@
     [(or/c Query Subquery) -> Bool])]
   [(and or)
    (token-constructor
-    [Bool ...+ -> Bool])]
+    [Boolish ...+ -> Bool])]
   [(not)
    (token-constructor
-    [Bool -> Bool])]
+    [Boolish -> Bool])]
   [(= <> < <= > >=
       like not-like) ; confirmed that like works on numbers and datetimes in SQL Server
    (token-constructor
@@ -112,7 +115,7 @@
     [Datetime Datetime -> Bool])]
   [(is is-not in not-in)
    (token-constructor
-    [content? ...+ -> Token])] ; TODO figure out the real type
+    [content? ...+ -> Bool])] ; TODO figure out the real type
   [(+ - * /)
    (token-constructor
     [Number ...+ -> Number])])
