@@ -1,7 +1,6 @@
 #lang scribble/manual
 @(require (for-label plisqin-lib
-                     "racket.rkt"
-                     plisqin-lib/examples/video-rental-schema))
+                     "racket.rkt"))
 @(require scribble/eval
           plisqin
           rackunit
@@ -20,9 +19,5 @@ Code is available @hyperlink["https://github.com/default-kramer/plisqin"]{on Git
 
 @(local-table-of-contents)
 
-@(include-section "intro.scrbl")
-@(include-section "getting-started.scrbl")
-@(include-section "walkthrough.scrbl")
-@(include-section "reference.scrbl")
-@(include-section "rental-doc.scrbl")
-@(include-section "for-developers.scrbl")
+@(include-section "intro-define-schema.scrbl")
+@(include-section "tokens.scrbl")

@@ -45,5 +45,3 @@ might find something useful anyway.
  @item{Can Plisqin provide a uniform API for different databases?}]
 
 @(include-section "design-notes.scrbl")
-
-@(include-section "tests.scrbl")

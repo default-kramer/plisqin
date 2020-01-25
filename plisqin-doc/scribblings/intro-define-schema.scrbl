@@ -3,6 +3,7 @@
           "helpers.rkt"
           plisqin-examples/adventure-works
           racket/exn
+          racket/string
           (prefix-in db: db)
           (for-syntax racket/base)
           (for-label plisqin
@@ -14,12 +15,13 @@
                   (list @nested{-- your boss}))))
 
 @(define (load-checkpoint! checkpoint)
-   (define cp-path (string-append "./adventure-works-checkpoints/" checkpoint))
+   (set! checkpoint (string-replace checkpoint ".rkt" ""))
+   (define cp-path (string-append "plisqin-doc/scribblings/adventure-works-checkpoints/" checkpoint))
    (reset-eval!)
    (my-eval `(begin
                (require plisqin-examples/adventure-works
                         plisqin)
-               (require ,cp-path)
+               (require ,(string->symbol cp-path))
                (current-connection (connect-adventure-works))
                (current-dialect (sqlite)))))
 
