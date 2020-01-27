@@ -154,8 +154,11 @@ TODO explain how each task is going to work.
 2) Create the query
 3) Refactor to make stuff reusable
 
+@section{The Tasks}
+@(define task subsection)
+
 @(load-checkpoint! "1.rkt")
-@section{Task 1: Subcategories & Categories}
+@task{Task 1: Subcategories & Categories}
 @bossquote{I want to see a list of Subcategories with the Category that they belong to.}
 
 We need to write a query.
@@ -244,7 +247,7 @@ While refactoring our query, we made the following enhancements to our schema.
   (ProductCategory ProductSubcategory)
   (CategoryName ProductSubcategory))
 
-@section{Task 2: Products & Subcategories & Categories}
+@task{Task 2: Products & Subcategories & Categories}
 @bossquote{Show me a list of Products with Subcategory and Category names.}
 
 The first task, as always, is to determine which table we need to query.
@@ -351,7 +354,7 @@ While refactoring our query, we made the following enhancements to our schema.
   (CategoryName Product)
   (ProductName Product))
 
-@section{Task 3: Products with Non-Zero Sales}
+@task{Task 3: Products with Non-Zero Sales}
 @bossquote{Show me a list of Products that have non-zero sales,
  with Subcategory and Category names.}
 This just adds the "non-zero sales" criteria to the previous task.
@@ -405,7 +408,7 @@ without breaking any calling code - the calling code will always remain
 This is not true in SQL - switching from an "exists" implementation to a
 simple column access would require updating all the call sites.
 
-@section{Task 4: Sales by Product}
+@task{Task 4: Sales by Product}
 @(define task4-quote
    @bossquote{Show me a list of the best-selling Products of all time.
  Sort by total revenue. Include total quantity sold and subcategory.})
@@ -438,8 +441,10 @@ The following query should now work:
          (select (ProductNumber prd))
          (select (SubcategoryName prd))
          (join detailsG (DetailsG prd))
-         (select (>> (round (sum (LineTotal detailsG)) 2) #:as 'TotalSales))
-         (select (>> (sum (OrderQty detailsG)) #:as 'TotalQty))
+         (select (>> (round (sum (LineTotal detailsG)) 2)
+                     #:as 'TotalSales))
+         (select (>> (sum (OrderQty detailsG))
+                     #:as 'TotalQty))
          (order-by 'desc (sum (LineTotal detailsG))))))
 
 You might want to go further with the refactoring and define properties like
@@ -452,7 +457,7 @@ While refactoring our query, we made the following enhancements to our schema.
 @(racketblock
   (DetailsG Product))
 
-@section{Task 5: Sales by Subcategory}
+@task{Task 5: Sales by Subcategory}
 @(define task5-quote
    @bossquote{Show me a list of the best-selling Subcategories of all time.
  Sort by total revenue. Include total quantity sold and category name.})
@@ -514,8 +519,10 @@ Initial revision
          (select (SubcategoryName subcat))
          (select (CategoryName subcat))
          (join detailsG (DetailsG subcat))
-         (select (>> (round (sum (LineTotal detailsG)) 2) #:as 'TotalSales))
-         (select (>> (sum (OrderQty detailsG)) #:as 'TotalQty))
+         (select (>> (round (sum (LineTotal detailsG)) 2)
+                     #:as 'TotalSales))
+         (select (>> (sum (OrderQty detailsG))
+                     #:as 'TotalQty))
          (order-by 'desc (sum (LineTotal detailsG))))))
 
 Again, You might want to go further with the refactoring and define properties like
@@ -529,7 +536,7 @@ While refactoring our query, we made the following enhancements to our schema.
   (ProductSubcategoryID SalesOrderDetail)
   (DetailsG ProductSubcategory))
 
-@section{Task 6: Sales by Anything}
+@task{Task 6: Sales by Anything}
 Let's look at the previous two tasks.
 @task4-quote
 @task5-quote
@@ -546,8 +553,10 @@ Let's look at where we left the previous two tasks:
         (select (ProductNumber prd))
         (select (SubcategoryName prd))
         (join detailsG (DetailsG prd))
-        (select (>> (round (sum (LineTotal detailsG)) 2) #:as 'TotalSales))
-        (select (>> (sum (OrderQty detailsG)) #:as 'TotalQty))
+        (select (>> (round (sum (LineTotal detailsG)) 2)
+                    #:as 'TotalSales))
+        (select (>> (sum (OrderQty detailsG))
+                    #:as 'TotalQty))
         (order-by 'desc (sum (LineTotal detailsG))))
   (code:comment "Sales by Subcategory:")
   (from subcat ProductSubcategory
@@ -555,21 +564,119 @@ Let's look at where we left the previous two tasks:
         (select (SubcategoryName subcat))
         (select (CategoryName subcat))
         (join detailsG (DetailsG subcat))
-        (select (>> (round (sum (LineTotal detailsG)) 2) #:as 'TotalSales))
-        (select (>> (sum (OrderQty detailsG)) #:as 'TotalQty))
+        (select (>> (round (sum (LineTotal detailsG)) 2)
+                    #:as 'TotalSales))
+        (select (>> (sum (OrderQty detailsG))
+                    #:as 'TotalQty))
         (order-by 'desc (sum (LineTotal detailsG)))))
 
-TODO Make a generalized sales report.
-Plug in Product and Subcategory, show that they are equivalent to the final revisions of previous tasks.
-Add an optional start-date and end-date filter to the generalized sales report.
-Explain the contract of the generalized sales report - it takes any query for which DetailsG is defined
-and returns the same query with some clauses appended to it.
-@(void '(SalesReport table
-                     [start-date #f]
-                     [end-date #f]))
+Notice that the last few clauses of both queries are identical.
+We could easily remove this duplication using a macro, but we can also use a regular
+procedure if we recognize that queries are appendable [TODO link here?].
+We will make a procedure @(racket sales-report) which accepts a query and appends some
+more clauses to the end of it:
+@(examples
+  #:eval my-eval
+  #:no-result
+  (define (sales-report some-query)
+    (from x some-query
+          (limit 5)
+          (join detailsG (DetailsG x))
+          (select (>> (round (sum (LineTotal detailsG)) 2)
+                      #:as 'TotalSales))
+          (select (>> (sum (OrderQty detailsG))
+                      #:as 'TotalQty))
+          (order-by 'desc (sum (LineTotal detailsG))))))
 
+Now we can use this procedure to reimplement the Sales by Product report:
+@(repl-query
+  (show-table
+   (sales-report (from prd Product
+                       (select (ProductNumber prd))
+                       (select (SubcategoryName prd))))))
+
+We can do the same thing for the Sales by Subcategory report:
+@(repl-query
+  (show-table
+   (sales-report (from subcat ProductSubcategory
+                       (select (SubcategoryName subcat))
+                       (select (CategoryName subcat))))))
+
+Interesting! The @(racket sales-report) procedure accepts a query of any table
+for which @(racket DetailsG) is defined!
+It appends some more clauses and returns the result.
+
+@subsubsection[#:tag "ec1"]{Extra Credit}
 Extra Credit: Extend the definition of DetailsG so that it is defined for Category, SalesPerson, and Territory.
 Try plugging those tables into the generalized sales report.
 
+@subsubsection[#:tag "ec2"]{Extra Credit}
 Extra Credit: Instead of using appendable queries, implement the generalized sales report
 as a procedure that returns a list of the relevant clauses.
+
+@task{Task 7: Sales by Anything with Date Range}
+What else could we do with the @(racket sales-report)?
+Right now it is showing all-time sales.
+We could modify it to accept a time window of sales to consider as follows:
+@(examples
+  #:eval my-eval
+  #:no-result
+  (define (sales-report some-query
+                        #:start-date [start-date #f]
+                        #:end-date [end-date #f])
+    (from x some-query
+          (limit 5)
+          (join detailsG (DetailsG x)
+                (join soh SalesOrderHeader
+                      (join-on (.= (SalesOrderID soh)
+                                   (SalesOrderID detailsG))))
+                (when start-date
+                  (where (.>= (OrderDate soh)
+                              start-date)))
+                (when end-date
+                  (where (.< (OrderDate soh)
+                             end-date))))
+          (select (>> (round (sum (LineTotal detailsG)) 2)
+                      #:as 'TotalSales))
+          (select (>> (sum (OrderQty detailsG))
+                      #:as 'TotalQty))
+          (order-by 'desc (sum (LineTotal detailsG))))))
+
+@(repl-query
+  ; TODO should have a %%datetime proc available here
+  (show-table
+   (sales-report
+    #:start-date (>> (%%sql "'2012-01-01'") #:cast Datetime)
+    #:end-date (>> (%%sql "'2013-01-01'") #:cast Datetime)
+    (from subcat ProductSubcategory
+          (select (SubcategoryName subcat))
+          (select (CategoryName subcat))))))
+
+@subsubsection[#:tag "ec3"]{Extra Credit}
+Apply the appropriate refactoring recipies so that @(racket sales-report)
+can be rewritten as follows:
+@(racketblock
+  (define (sales-report some-query
+                        #:start-date [start-date #f]
+                        #:end-date [end-date #f])
+    (from x some-query
+          (limit 5)
+          (join detailsG (DetailsG x)
+                (when start-date
+                  (where (.>= (OrderDate detailsG)
+                              start-date)))
+                (when end-date
+                  (where (.< (OrderDate detailsG)
+                             end-date))))
+          (select (>> (round (sum (LineTotal detailsG)) 2)
+                      #:as 'TotalSales))
+          (select (>> (sum (OrderQty detailsG))
+                      #:as 'TotalQty))
+          (order-by 'desc (sum (LineTotal detailsG))))))
+
+Hint: First use recipe TODO to define
+@(racketblock
+  (SalesOrderHeader SalesOrderDetail))
+Then use recipe TODO to define
+@(racketblock
+  (OrderDate SalesOrderDetail))

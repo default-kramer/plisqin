@@ -40,7 +40,7 @@
 ;(require plisqin-lib/private/schema/schema)
 ;(provide define-schema this)
 
-(require plisqin-lib/private/show-table)
+(require plisqin-lib/private2/show-table)
 (provide show-table current-connection)
 
 (module+ test
