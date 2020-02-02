@@ -1,15 +1,4 @@
 #lang scribble/manual
-@(require (for-label plisqin-lib
-                     "racket.rkt"))
-@(require scribble/eval
-          plisqin
-          rackunit
-          "helpers.rkt"
-          "racket.rkt")
-@(define-syntax-rule (interact forms ...)
-   (interaction
-    #:eval my-eval
-    forms ...))
 
 @title{Plisqin}
 
