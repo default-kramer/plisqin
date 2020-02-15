@@ -13,7 +13,8 @@
 ; syntax-parameterize the `return-handler` to handle this.
 
 (require (for-syntax syntax/parse)
-         racket/stxparam)
+         racket/stxparam
+         (only-in "core.rkt" get-type))
 
 (begin-for-syntax
   (define-syntax-rule (matches-any? a b ...)
@@ -96,6 +97,10 @@
               ; just assume that it satisfies the contract
               #'retval])))
 
+(define (display-types arglist)
+  (map (λ (x) (or (get-type x) 'Untyped))
+       arglist))
+
 (define-syntax (guard stx)
   (syntax-parse stx
     [(_ func:id spec ...+)
@@ -110,9 +115,13 @@
                (or (func-name) 'func)
                (format "An argument list satisfying one of the following:\n~a"
                        (format-specs '(spec ...)))
-               #;arglist
-               '(TODO we trap this as an infinite loop if we try to print...)
-               )]))))]))
+               ; It might be possible to print the actual values in addition
+               ; to the types, but be careful. A naive strategy will trigger the
+               ; infinite cycle detector. You would have to add a parameter or
+               ; something that says "don't raise an error on infinite cycles,
+               ; just print #whatever instead."
+               ; But for now, let's just display the types.
+               (display-types arglist))]))))]))
 
 (module+ test
   (define (blah . args) args)
