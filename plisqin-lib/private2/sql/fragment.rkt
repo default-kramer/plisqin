@@ -7,8 +7,11 @@
          racket/struct
          "../_types.rkt")
 
+(define never-quote<%>
+  (interface* () ([prop:custom-print-quotable 'never])))
+
 (define fragment%
-  (class* object% (sql-token<%> equal<%> printable<%> typed<%>)
+  (class* object% (sql-token<%> equal<%> printable<%> typed<%> never-quote<%>)
     (init-field kind
                 id
                 content
