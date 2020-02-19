@@ -6,7 +6,7 @@
          (for-syntax unsafe-ctx loose-ctx strict-ctx)
          (for-syntax relabel2))
 
-(require (only-in plisqin-lib/private2/_types
+(require (only-in plisqin-lib/private2/sql/frag-types
                   unsafe-table loose-table strict-table)
          scribble/manual)
 

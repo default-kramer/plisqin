@@ -1,6 +1,7 @@
 #lang racket
 
-(provide def tokens parens insert-ands interpose export ->Bit ->Bool)
+(provide make tokens parens insert-ands interpose ->Bit ->Bool
+         (for-syntax TODO matchup))
 
 (require "fragment.rkt"
          "../_types.rkt"
@@ -34,22 +35,28 @@
 
 (define-syntax-parameter tokens #f)
 
-(define-syntax (def stx)
+; `make` is used to construct fragments
+(define-syntax (make stx)
   (syntax-case stx ()
-    [(_ :id #:kind :kind #:reduce :reduction)
+    [(_ id kind content)
      (syntax/loc stx
-       (define (:id . content)
-         (new fragment%
-              [id ':id]
-              [kind :kind]
-              [content content]
-              [type #f]
-              [as-name #f]
-              [reducer
-               (λ (content)
-                 (syntax-parameterize ([tokens (TODO #'content)])
-                   :reduction))])))]))
-
+       (make id kind content #:reduce-proc identity))]
+    [(_ id kind content #:reduce reduce-body)
+     (syntax/loc stx
+       (make id kind content
+             #:reduce-proc
+             (λ (tokes)
+               (syntax-parameterize ([tokens (TODO #'tokes)])
+                 reduce-body))))]
+    [(_ :id :kind :content #:reduce-proc :reducer)
+     (syntax/loc stx
+       (new fragment%
+            [id :id]
+            [kind :kind]
+            [content :content]
+            [type #f]
+            [as-name #f]
+            [reducer :reducer]))]))
 
 ;;; insert-ands
 ; If the list of tokens is more than 3, insert " and " to join them.
@@ -83,27 +90,6 @@
    '(1 + 2 + 3 + 4)))
 
 
-(define-for-syntax (unintern-id id)
-  (datum->syntax id
-                 (string->uninterned-symbol (format "~a" (syntax-e id)))))
-
-(define-syntax (export-single stx)
-  (syntax-case stx ()
-    [(_ keyword raw-id)
-     (let ([table (syntax-case #'keyword ()
-                    [#:unsafe :unsafe-table]
-                    [#:loose :loose-table]
-                    [#:strict :strict-table])])
-       (with-syntax ([id (unintern-id #'raw-id)])
-         (quasisyntax/loc stx
-           (begin
-             (provide (rename-out [id raw-id]))
-             (define id #,(table #'raw-id))))))]))
-
-(define-syntax-rule (export keyword id ...)
-  (begin (export-single keyword id) ...))
-
-
 ; To be used during reduction.
 ; Converts a Bool to a Bit (only needed for MSSQL)
 (define (->Bit tokens)
@@ -122,3 +108,24 @@
      #:when (Bit a)
      (list a" = 1")]
     [else tokens]))
+
+
+; helper that flattens
+#;([(a b) foo]
+   [(c d) bar])
+; into a list like [a foo] [b foo] [c bar] [d bar]
+(define-for-syntax (matchup stx)
+  (syntax-case stx ()
+    [([(id rest ...) body]
+      more ...)
+     (cons
+      (syntax/loc #'id
+        [id body])
+      (matchup #'([(rest ...) body]
+                  more ...)))]
+    [([() body]
+      more ...)
+     (matchup #'(more ...))]
+    [()
+     (list)]
+    [else (error "assert fail t42j90b")]))

@@ -1,18 +1,55 @@
 #lang racket
 
-; Capture type signatures in two tables.
-; The first (eg `unsafe-table`) is for use by Scribble.
-; The second (eg `:unsafe-table`) is used to create the wrapper functions.
-(provide unsafe-table (for-syntax :unsafe-table)
-         loose-table  (for-syntax :loose-table)
-         strict-table (for-syntax :strict-table))
+; Capture type signatures twice.
+; The dispatchers are used to weave type checking into the fragment constructors.
+; The tables are used by Scribble to generate documentation
+(provide type-dispatcher/unsafe type-dispatcher/loose type-dispatcher/strict
+         unsafe-table loose-table strict-table)
 
-(require "./lib/type-table.rkt"
-         "types.rkt"
-         (for-label (except-in racket/contract ->)
-                    "types.rkt"))
+(require "weave.rkt"
+         "../_types.rkt"
+         "frags.helpers.rkt"
+         (for-label "../_types.rkt"))
 
-(def-type-table unsafe-table :unsafe-table
+(define-syntax (~def-typetable stx)
+  (syntax-case stx ()
+    [(_ dispatcher-id
+        [proc-id (token-constructor
+                  type-spec
+                  ...)]
+        ...)
+     (with-syntax ([ooo (quote-syntax ...)])
+       (quasisyntax/loc stx
+         (begin
+           (def-dispatcher dispatcher-id
+             [(proc-id arg ooo)
+              (build-typechecker (list arg ooo) type-spec ...)]
+             ...
+             [(proc-id . arglist)
+              (build-typechecker arglist type-spec ...)]
+             ...))))]
+    [else (error "assert fail brq9j053")]))
+
+(define-syntax (def-typetable stx)
+  (syntax-case stx ()
+    [(_ dispatcher-id scribble-id
+        [(id ...) body]
+        ...)
+     (quasisyntax/loc stx
+       (begin
+         (~def-typetable dispatcher-id #,@(matchup #'([(id ...) body]
+                                                      ...)))
+         ; Stash the syntax objects to be used by Scribble:
+         (define (scribble-id sym)
+           (case sym
+             [(id ...) #'body]
+             ...
+             [else #f]))))]
+    [else (error "TODO bvfqjkl2")]))
+
+(define content? any/c) ; TODO
+
+(def-typetable type-dispatcher/unsafe unsafe-table
   [(select where group-by having order-by join-on sql)
    (token-constructor
     [any/c ...+ -> Token])]
@@ -37,9 +74,7 @@
    (token-constructor
     [any/c ...+ -> Number])])
 
-(define content? any/c) ; TODO
-
-(def-type-table loose-table :loose-table
+(def-typetable type-dispatcher/loose loose-table
   [(select where group-by having order-by join-on sql)
    (token-constructor
     [content? ...+ -> Token])]
@@ -64,7 +99,7 @@
    (token-constructor
     [content? ...+ -> Number])])
 
-(def-type-table strict-table :strict-table
+(def-typetable type-dispatcher/strict strict-table
   [(select group-by)
    (token-constructor
     [Scalar -> Token])]
