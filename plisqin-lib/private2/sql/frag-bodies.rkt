@@ -14,6 +14,7 @@
 (require "weave.rkt"
          "./fragment.rkt"
          "./frags.helpers.rkt"
+         (only-in morsel-lib join? tuple?)
          racket/stxparam)
 
 ; In the body of `(select . x)` we will bind self to (quote select).
@@ -98,7 +99,10 @@
    (make2 'scalar)]
 
   ; == SQL Functions ==
-  [(count avg max min sum)
+  [(count)
+   (make2 'aggregate
+          #:reduce-proc reduce-count)]
+  [(avg max min sum)
    (make2 'aggregate
           #:reduce (list (~a self) (parens tokens)))]
   [(exists)
@@ -133,6 +137,18 @@
      #:when (member dir '(asc desc))
      (list (->Bit rest) (format " ~a" dir))]
     [else (->Bit tokens)]))
+
+(define (reduce-count tokens)
+  (match tokens
+    [(list a)
+     #:when
+     (or (join? a)
+         (tuple? a))
+     "count(*)"]
+    [(list 'distinct stuff ...)
+     (list "count" (parens (list "distinct " stuff)))]
+    [else
+     (list "count" (parens tokens))]))
 
 (define (translate-op sym)
   (case sym

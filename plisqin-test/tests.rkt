@@ -186,17 +186,16 @@ inner join (
 HEREDOC
             ))
 
-(fail "TODO fix this test - `(count y)` should mean count(*)")
-#;(test
-   ; Auto-inject scalars in join-on clauses:
-   (define my-query
-     (from x "X"
-           (join y "Y"
-                 (group-by y".XID")
-                 (join-on (scalar y".XID")" = "(scalar x".XID")))
-           (select x".*")
-           (select (count y)" as NumYs")))
-   (check-sql my-query #<<HEREDOC
+(test
+ ; Auto-inject scalars in join-on clauses:
+ (define my-query
+   (from x "X"
+         (join y "Y"
+               (group-by y".XID")
+               (join-on (scalar y".XID")" = "(scalar x".XID")))
+         (select x".*")
+         (select (count y)" as NumYs")))
+ (check-sql my-query #<<HEREDOC
 select x.*
   , y.__INJECT1 as NumYs
 from X x
@@ -208,7 +207,7 @@ inner join (
 ) y
    on y.__INJECT0 = x.XID
 HEREDOC
-              ))
+            ))
 
 
 ; Tests of `exists`
@@ -251,98 +250,108 @@ where exists (
 HEREDOC
              )
 
+(check-sql (from x "X"
+                 (select (count x)))
+           #<<HEREDOC
+select count(*)
+from X x
+HEREDOC
+           )
 
-(fail "TODO bring these `count` tests back")
-(void
- #<<OLD_SCRIBBLE_CODE
+(check-sql (from x "X"
+                 (select (count x".foo")))
+           #<<HEREDOC
+select count(x.foo)
+from X x
+HEREDOC
+           )
 
-@(test)
-Tests of @(racket count).
-@(define-syntax (test-query stx)
-   (syntax-case stx ()
-     [(test-query query str)
-      #`(begin
-          (interaction
-           #:eval my-eval
-           (define (q)
-             #,(move #'here #'query -10))
-           (display (to-sql (q))))
-          (check-sql
-           my-eval (q)
-           str))]))
-@(test-query
-  (RS from x "X"
-      (select (count x)))
-  "select count(*) from X x")
-@(test-query
-  (RS from x "X"
-      (select (count x".foo")))
-  "select count(x.foo) from X x")
-@(test-query
-  (RS from x "X"
-      (select (count x".foo" #:distinct? #t)))
-  "select count(distinct x.foo) from X x")
-@(test-query
-  (RS from x "X"
-      (join y "Y")
-      (select (count y)))
-  "select count(*) from X x inner join Y y on 1=1")
-@(test-query
-  (RS from x "X"
-      (join y "Y")
-      (select (count y".foo")))
-  "select count(y.foo) from X x inner join Y y on 1=1")
-@(test-query
-  (RS from x "X"
-      (join y "Y")
-      (select (count y".foo" #:distinct? #t)))
-  "select count(distinct y.foo) from X x inner join Y y on 1=1")
-@(test-query
-  (RS from x "X"
-      (join y "Y"
-            (group-by y".foo"))
-      (select  (count y)))
-  #<<HEREDOC
-select y.__INJECT1
+
+(check-sql (from x "X"
+                 (select (count 'distinct x".foo")))
+           #<<HEREDOC
+select count(distinct x.foo)
+from X x
+HEREDOC
+           )
+
+(check-sql (from x "X"
+                 (join y "Y")
+                 (select (count y)))
+           #<<HEREDOC
+select count(*)
+from X x
+inner join Y y
+   on 1=1
+HEREDOC
+           )
+
+(check-sql (from x "X"
+                 (join y "Y")
+                 (select (count y".foo")))
+           #<<HEREDOC
+select count(y.foo)
+from X x
+inner join Y y
+   on 1=1
+HEREDOC
+           )
+
+(check-sql (from x "X"
+                 (join y "Y")
+                 (select (count 'distinct y".foo")))
+           #<<HEREDOC
+select count(distinct y.foo)
+from X x
+inner join Y y
+   on 1=1
+HEREDOC
+           )
+
+(check-sql (from x "X"
+                 (join y "Y"
+                       (group-by y".foo"))
+                 (select (count y)))
+           #<<HEREDOC
+select y.__INJECT0
 from X x
 inner join (
-  select count(*) as __INJECT1
+  select count(*) as __INJECT0
   from Y y
-  group by y.foo) y
-on 1=1
+  group by y.foo
+) y
+   on 1=1
 HEREDOC
-  )
-@(test-query
-  (RS from x "X"
-      (join y "Y"
-            (group-by y".foo"))
-      (select (count y".bar")))
-  #<<HEREDOC
-select y.__INJECT1
+           )
+
+(check-sql (from x "X"
+                 (join y "Y"
+                       (group-by y".foo"))
+                 (select (count y".bar")))
+           #<<HEREDOC
+select y.__INJECT0
 from X x
 inner join (
-  select count(y.bar) as __INJECT1
+  select count(y.bar) as __INJECT0
   from Y y
-  group by y.foo) y
-on 1=1
+  group by y.foo
+) y
+   on 1=1
 HEREDOC
-  )
-@(test-query
-  (RS from x "X"
-      (join y "Y"
-            (group-by y".foo"))
-      (select (count y".bar" #:distinct? #t)))
-  #<<HEREDOC
-select y.__INJECT1
+           )
+
+(check-sql (from x "X"
+                 (join y "Y"
+                       (group-by y".foo"))
+                 (select (count 'distinct y".bar")))
+           #<<HEREDOC
+select y.__INJECT0
 from X x
 inner join (
-  select count(distinct y.bar) as __INJECT1
+  select count(distinct y.bar) as __INJECT0
   from Y y
-  group by y.foo) y
-on 1=1
+  group by y.foo
+) y
+   on 1=1
 HEREDOC
-  )
-
-
-OLD_SCRIBBLE_CODE
- )
+           )
