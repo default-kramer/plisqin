@@ -355,3 +355,42 @@ inner join (
    on 1=1
 HEREDOC
            )
+
+(test
+ ; Tests nested injections. Main query is Employee.
+ ; Each Employee has a group of Checkouts.
+ ; Each Checkout has a group of Rentals.
+ ; This is the (sum (sum (grouping (grouping ...)))) pattern, in which the
+ ; aggregates and grouped joins remind me of opening and closing parens.
+ (define (Rentals/g checkout)
+   (join r "Rental" #:to checkout
+         (group-by r".CheckoutId")
+         (join-on (scalar r".CheckoutId")" = "checkout".CheckoutId")))
+ (define (Checkouts/g employee)
+   (join c "Checkout" #:to employee
+         (group-by c".EmployeeId")
+         (join-on (scalar c".EmployeeId")" = "employee".EmployeeId")))
+ (define q
+   (from e "Employee"
+         (define rentals/g
+           (Rentals/g (Checkouts/g e)))
+         (select (sum (sum (scalar rentals/g".Cost")))" as TotalCost")))
+ (check-sql q #<<HEREDOC
+select c.__INJECT1 as TotalCost
+from Employee e
+inner join (
+  select c.EmployeeId as __INJECT0
+    , sum(r.__INJECT1) as __INJECT1
+  from Checkout c
+  inner join (
+    select r.CheckoutId as __INJECT0
+      , sum(r.Cost) as __INJECT1
+    from Rental r
+    group by r.CheckoutId
+  ) r
+     on r.__INJECT0 = c.CheckoutId
+  group by c.EmployeeId
+) c
+   on c.__INJECT0 = e.EmployeeId
+HEREDOC
+            ))
