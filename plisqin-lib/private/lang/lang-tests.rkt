@@ -33,36 +33,6 @@
  ; SQLite - we can't have the '+' here because it won't work if the dynamic part is negative:
  #:lite "datetime(datetime('now'), foo || ' month', (-bar) || ' day')")
 
-
-; Test combinations of limit, offset, and distinct.
-; SQL Server with no offset uses "top" instead of "limit"
-(check
- (from x "X"
-       (limit 5))
- #:all "select x.* from X x limit 5"
- #:ms "select top 5 x.* from X x")
-; If offset and limit are both set, then SQL Server can't use "top"
-(check
- (from x "X"
-       (limit 5)
-       (offset 9))
- #:all "select x.* from X x limit 5 offset 9"
- #:ms "select x.* from X x offset 9 rows fetch next 5 rows only")
-; Repeat the tests with distinct added
-(check
- (from x "X"
-       (distinct #t)
-       (limit 5))
- #:all "select distinct x.* from X x limit 5"
- #:ms "select distinct top 5 x.* from X x")
-(check
- (from x "X"
-       (distinct #t)
-       (limit 5)
-       (offset 9))
- #:all "select distinct x.* from X x limit 5 offset 9"
- #:ms "select distinct x.* from X x offset 9 rows fetch next 5 rows only")
-
 ; String concatenation
 (check
  {{val: "a"} || {val: "b"}}

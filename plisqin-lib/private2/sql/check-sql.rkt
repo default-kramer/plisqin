@@ -18,11 +18,12 @@
   (syntax-case stx ()
     [(_ frag kw expected)
      #`(if expected
-           (let ([dialect (get-dialect kw)])
+           (let* ([dialect (get-dialect kw)]
+                  [actual (parameterize ([current-dialect dialect])
+                            (to-sql frag))])
              #,(syntax/loc stx
-                 (check-equal? (parameterize ([current-dialect dialect])
-                                 (to-sql frag))
-                               expected
+                 (check-equal? (string-normalize-spaces actual)
+                               (string-normalize-spaces expected)
                                (format "with dialect ~a" dialect))))
            (void))]))
 

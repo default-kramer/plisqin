@@ -24,13 +24,13 @@
 (provide (all-from-out plisqin-lib))
 
 ; TODO these definitely need to get moved into plisqin-lib
-(provide from join to-sql limit join-type round)
+(provide from join to-sql limit offset distinct join-type round)
 
 
 ; TODO let's just see how these work
 (require (prefix-in m: morsel-lib))
 (require (only-in morsel-lib/sql
-                  to-sql limit join-type))
+                  to-sql limit offset distinct join-type))
 
 (define-for-syntax (tweak stx)
   (syntax-case stx (join)
