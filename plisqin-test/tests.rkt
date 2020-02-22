@@ -250,6 +250,7 @@ where exists (
 HEREDOC
              )
 
+; tests of count
 (check-sql (from x "X"
                  (select (count x)))
            #<<HEREDOC

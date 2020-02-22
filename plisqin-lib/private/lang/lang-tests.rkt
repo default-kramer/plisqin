@@ -34,44 +34,6 @@
  #:lite "datetime(datetime('now'), foo || ' month', (-bar) || ' day')")
 
 
-; These operators are binary with regard to SQL:
-(check
- {{RS scalar "foo"} + {RS scalar "bar"}}
- #:all "(foo + bar)")
-(check
- {{RS scalar "foo"} - {RS scalar "bar"}}
- #:all "(foo - bar)")
-(check
- {{RS scalar "foo"} * {RS scalar "bar"}}
- #:all "(foo * bar)")
-(check
- {{RS scalar "foo"} / {RS scalar "bar"}}
- #:all "(foo / bar)")
-(check
- {{RS scalar "foo"} = {val: "bar"}}
- #:all "(foo = 'bar')")
-(check
- {{val: "foo"} <> {RS scalar "bar"}}
- #:all "('foo' <> bar)")
-(check
- {{RS scalar "foo"} like {val: "bar"}}
- #:all "(foo like 'bar')")
-(check
- {{val: "foo"} not-like {RS scalar "bar"}}
- #:all "('foo' not like bar)")
-(check
- {{RS scalar "foo"} < {val: "bar"}}
- #:all "(foo < 'bar')")
-(check
- {{val: "foo"} <= {RS scalar "bar"}}
- #:all "('foo' <= bar)")
-(check
- {{RS scalar "foo"} > {val: "bar"}}
- #:all "(foo > 'bar')")
-(check
- {{val: "foo"} >= {RS scalar "bar"}}
- #:all "('foo' >= bar)")
-
 ; Test combinations of limit, offset, and distinct.
 ; SQL Server with no offset uses "top" instead of "limit"
 (check
@@ -100,30 +62,6 @@
        (offset 9))
  #:all "select distinct x.* from X x limit 5 offset 9"
  #:ms "select distinct x.* from X x offset 9 rows fetch next 5 rows only")
-
-
-; Order-by
-(check
- {RS order-by 'desc "foo" ".bar"}
- #:all "foo.bar desc")
-(check
- {RS order-by desc "foo" ".bar"}
- #:all "foo.bar desc")
-(check
- {RS order-by 'asc "foo" ".bar"}
- #:all "foo.bar asc")
-(check
- {RS order-by asc "foo" ".bar"}
- #:all "foo.bar asc")
-(check
- {RS order-by "a" "b" "c"}
- #:all "abc")
-
-
-; Make sure group-by doesn't somehow revert to racket's version
-(check
- {RS group-by "foo"}
- #:all "foo")
 
 ; String concatenation
 (check
@@ -178,29 +116,9 @@
            {select x".foo" #:as "FOO"}}
        #:all "select x.foo as FOO from X x")
 
-; and, or, not
-(check {RS where not "foo"}
-       #:all "not foo")
-(check {RS where "1=1" and not "2=2" or not "3=3"}
-       #:all "((1=1 and not 2=2) or not 3=3)")
-(check {RS where "1=1" and {not "2=2"} or {not "3=3"}}
-       #:all "((1=1 and not 2=2) or not 3=3)")
-(check {RS where {and "1=1" {not "2=2"}} or {not "3=3"}}
-       #:all "((1=1 and not 2=2) or not 3=3)")
-(check {RS where {or {and "1=1" {not "2=2"}} {not "3=3"}}}
-       #:all "((1=1 and not 2=2) or not 3=3)")
-(check {RS where not "a=a" and "b=b"}
-       #:all "(not a=a and b=b)")
-
 ; String literal escaping:
 (check {val: "Tasita D'mour"}
        #:all "'Tasita D''mour'")
-
-; {select bool-expr} conversion:
-(check {select {RS bool "1 = null"}}
-       ; Note that null is preserved:
-       #:ms "cast(case when 1 = null then 1 when not 1 = null then 0 end as bit)"
-       #:all "1 = null")
 
 ; coalesce
 (check {RS scalar "foo" + "bar" ?? "baz"}
