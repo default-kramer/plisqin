@@ -25,7 +25,17 @@
                (current-connection (connect-adventure-works))
                (current-dialect (sqlite)))))
 
-@(define (show-results query-datum)
+@(define-syntax (show-results stx)
+   (syntax-case stx ()
+     [(_ query-datum)
+      (quasisyntax/loc stx
+        (show-results2 query-datum
+                       (λ (ex)
+                         #,(quasisyntax/loc stx
+                             (error 'show-results "eval failed\n~a\n~a"
+                                    query-datum (exn->string ex))))))]))
+
+@(define (show-results2 query-datum error-proc)
    ; Use `my-eval` to get the sql from the query-datum.
    ; But we need to get the db:rows-result in our own evaluation context.
    ; This is OK, we can trust that (db:query adventure-works-conn sql)
@@ -33,10 +43,8 @@
    (define sql
      (with-handlers ([exn? (λ(ex)
                              (begin
-                               ; TODO not sure why `error` isn't enough in some cases?
-                               (println ex)
-                               (error 'show-results "eval failed\n~a\n~a"
-                                      query-datum (exn->string ex))))])
+                               (displayln ex)
+                               (error-proc ex)))])
        (my-eval `(to-sql ,query-datum))))
    (define result
      (let* ([conn (connect-adventure-works)]
@@ -59,7 +67,8 @@
              [query-datum (syntax->datum query)])
         #`(begin
             (racketinput show-table-form)
-            (show-results '#,query-datum)))]))
+            #,(quasisyntax/loc stx
+                (show-results '#,query-datum))))]))
 
 
 @title{Using define-schema}
