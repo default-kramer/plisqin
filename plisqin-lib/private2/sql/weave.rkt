@@ -1,8 +1,9 @@
 #lang racket
 
 (provide def-dispatcher define/weave)
+(provide (for-syntax dispatcher))
 
-(require "../_types.rkt")
+(require "fragment.rkt")
 
 ; A "head" is a syntax object with a shape like (= a b).
 ; If used like (define <head> body) it would define a procedure.
@@ -57,16 +58,10 @@
         head)
      (let* ([expand-body (syntax-local-value #'retval-dispatcher)]
             [check-types (syntax-local-value #'typecheck-dispatcher)]
-            [check-null? (syntax-local-value #'nullcheck-dispatcher)])
+            [check-null (syntax-local-value #'nullcheck-dispatcher)])
        #`(define head
            (let* ([return-type #,(check-types #'head)]
-                  [is-null? #,(check-null? #'head)]
-                  [result #,(expand-body #'head)]
-                  [result (if return-type
-                              (assign-type result return-type)
-                              result)]
-                  [result (if (void? is-null?)
-                              result
-                              (error "TODO assign nullability"))])
-             result)))]
+                  [nullability #,(check-null #'head)]
+                  [result #,(expand-body #'head)])
+             (>> result #:cast return-type #:null nullability))))]
     [else (error "TODO bfajkl352")]))

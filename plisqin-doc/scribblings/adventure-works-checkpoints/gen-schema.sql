@@ -9,6 +9,8 @@ select '(table '
 				when c.DATA_TYPE like '%char' then ' #:type String'
 				when c.DATA_TYPE in ('datetime', 'date') then ' #:type Datetime'
 				else '' end
+			+ case when c.IS_NULLABLE = 'NO' then ' #:null no'
+				else ' #:null yes' end
 			+ '] '
 			as 'data()'
 		from INFORMATION_SCHEMA.COLUMNS c

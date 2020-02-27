@@ -17,10 +17,10 @@
              ; only MS requires Bool->Bit conversion
              #:ms "cast(case when (22 = 33) then 1 else 0 end as bit)"
              #:all "(22 = 33)")
-  (check-sql (where (%%bit "bar"))
+  (check-sql (%%where (%%bit "bar"))
              ; all dialects require Bit->Bool conversion
              #:all "bar = 1")
-  (check-sql (where (%%= 42 42))
+  (check-sql (%%where (%%= 42 42))
              ; no conversion
              #:all "(42 = 42)")
 

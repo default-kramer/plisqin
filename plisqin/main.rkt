@@ -24,7 +24,7 @@
 (provide (all-from-out plisqin-lib))
 
 ; TODO these definitely need to get moved into plisqin-lib
-(provide from join to-sql limit offset distinct join-type round)
+(provide from join to-sql limit offset distinct join-type round ??)
 
 
 ; TODO let's just see how these work
@@ -57,3 +57,6 @@
 
 (define (round a b)
   (%%scalar "round("a", "b")"))
+
+(define (?? token fallback)
+  (>> token #:fallback fallback))

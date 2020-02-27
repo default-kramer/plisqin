@@ -10,321 +10,321 @@
 (define-schema adventure-works-schema
   (table Department
          #:column
-         [DepartmentID #:type Number]
-         [GroupName #:type String]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String])
+         [DepartmentID #:type Number #:null no]
+         [GroupName #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no])
   (table Employee
          #:column
-         [BirthDate #:type Datetime]
-         [BusinessEntityID #:type Number]
-         [CurrentFlag]
-         [Gender #:type String]
-         [HireDate #:type Datetime]
-         [JobTitle #:type String]
-         [LoginID #:type String]
-         [MaritalStatus #:type String]
-         [ModifiedDate #:type Datetime]
-         [NationalIDNumber #:type String]
-         [OrganizationLevel #:type Number]
-         [OrganizationNode]
-         [rowguid]
-         [SalariedFlag]
-         [SickLeaveHours #:type Number]
-         [VacationHours #:type Number])
+         [BirthDate #:type Datetime #:null no]
+         [BusinessEntityID #:type Number #:null no]
+         [CurrentFlag #:null no]
+         [Gender #:type String #:null no]
+         [HireDate #:type Datetime #:null no]
+         [JobTitle #:type String #:null no]
+         [LoginID #:type String #:null no]
+         [MaritalStatus #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [NationalIDNumber #:type String #:null no]
+         [OrganizationLevel #:type Number #:null yes]
+         [OrganizationNode #:null yes]
+         [rowguid #:null no]
+         [SalariedFlag #:null no]
+         [SickLeaveHours #:type Number #:null no]
+         [VacationHours #:type Number #:null no])
   (table EmployeeDepartmentHistory
          #:column
-         [BusinessEntityID #:type Number]
-         [DepartmentID #:type Number]
-         [EndDate #:type Datetime]
-         [ModifiedDate #:type Datetime]
-         [ShiftID #:type Number]
-         [StartDate #:type Datetime])
+         [BusinessEntityID #:type Number #:null no]
+         [DepartmentID #:type Number #:null no]
+         [EndDate #:type Datetime #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [ShiftID #:type Number #:null no]
+         [StartDate #:type Datetime #:null no])
   (table EmployeePayHistory
          #:column
-         [BusinessEntityID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [PayFrequency #:type Number]
-         [Rate #:type Number]
-         [RateChangeDate #:type Datetime])
+         [BusinessEntityID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [PayFrequency #:type Number #:null no]
+         [Rate #:type Number #:null no]
+         [RateChangeDate #:type Datetime #:null no])
   (table JobCandidate
          #:column
-         [BusinessEntityID #:type Number]
-         [JobCandidateID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [Resume])
+         [BusinessEntityID #:type Number #:null yes]
+         [JobCandidateID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Resume #:null yes])
   (table Shift
          #:column
-         [EndTime]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [ShiftID #:type Number]
-         [StartTime])
+         [EndTime #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [ShiftID #:type Number #:null no]
+         [StartTime #:null no])
   (table Address
          #:column
-         [AddressID #:type Number]
-         [AddressLine1 #:type String]
-         [AddressLine2 #:type String]
-         [City #:type String]
-         [ModifiedDate #:type Datetime]
-         [PostalCode #:type String]
-         [rowguid]
-         [SpatialLocation]
-         [StateProvinceID #:type Number])
+         [AddressID #:type Number #:null no]
+         [AddressLine1 #:type String #:null no]
+         [AddressLine2 #:type String #:null yes]
+         [City #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [PostalCode #:type String #:null no]
+         [rowguid #:null no]
+         [SpatialLocation #:null yes]
+         [StateProvinceID #:type Number #:null no])
   (table AddressType
          #:column
-         [AddressTypeID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [rowguid])
+         [AddressTypeID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [rowguid #:null no])
   (table BusinessEntity
          #:column
-         [BusinessEntityID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [rowguid])
+         [BusinessEntityID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [rowguid #:null no])
   (table BusinessEntityAddress
          #:column
-         [AddressID #:type Number]
-         [AddressTypeID #:type Number]
-         [BusinessEntityID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [rowguid])
+         [AddressID #:type Number #:null no]
+         [AddressTypeID #:type Number #:null no]
+         [BusinessEntityID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [rowguid #:null no])
   (table BusinessEntityContact
          #:column
-         [BusinessEntityID #:type Number]
-         [ContactTypeID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [PersonID #:type Number]
-         [rowguid])
+         [BusinessEntityID #:type Number #:null no]
+         [ContactTypeID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [PersonID #:type Number #:null no]
+         [rowguid #:null no])
   (table ContactType
          #:column
-         [ContactTypeID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String])
+         [ContactTypeID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no])
   (table CountryRegion
          #:column
-         [CountryRegionCode #:type String]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String])
+         [CountryRegionCode #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no])
   (table EmailAddress
          #:column
-         [BusinessEntityID #:type Number]
-         [EmailAddress #:type String]
-         [EmailAddressID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [rowguid])
+         [BusinessEntityID #:type Number #:null no]
+         [EmailAddress #:type String #:null yes]
+         [EmailAddressID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [rowguid #:null no])
   (table Password
          #:column
-         [BusinessEntityID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [PasswordHash #:type String]
-         [PasswordSalt #:type String]
-         [rowguid])
+         [BusinessEntityID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [PasswordHash #:type String #:null no]
+         [PasswordSalt #:type String #:null no]
+         [rowguid #:null no])
   (table Person
          #:column
-         [AdditionalContactInfo]
-         [BusinessEntityID #:type Number]
-         [Demographics]
-         [EmailPromotion #:type Number]
-         [FirstName #:type String]
-         [LastName #:type String]
-         [MiddleName #:type String]
-         [ModifiedDate #:type Datetime]
-         [NameStyle]
-         [PersonType #:type String]
-         [rowguid]
-         [Suffix #:type String]
-         [Title #:type String])
+         [AdditionalContactInfo #:null yes]
+         [BusinessEntityID #:type Number #:null no]
+         [Demographics #:null yes]
+         [EmailPromotion #:type Number #:null no]
+         [FirstName #:type String #:null no]
+         [LastName #:type String #:null no]
+         [MiddleName #:type String #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [NameStyle #:null no]
+         [PersonType #:type String #:null no]
+         [rowguid #:null no]
+         [Suffix #:type String #:null yes]
+         [Title #:type String #:null yes])
   (table PersonPhone
          #:column
-         [BusinessEntityID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [PhoneNumber #:type String]
-         [PhoneNumberTypeID #:type Number])
+         [BusinessEntityID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [PhoneNumber #:type String #:null no]
+         [PhoneNumberTypeID #:type Number #:null no])
   (table PhoneNumberType
          #:column
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [PhoneNumberTypeID #:type Number])
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [PhoneNumberTypeID #:type Number #:null no])
   (table StateProvince
          #:column
-         [CountryRegionCode #:type String]
-         [IsOnlyStateProvinceFlag]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [rowguid]
-         [StateProvinceCode #:type String]
-         [StateProvinceID #:type Number]
-         [TerritoryID #:type Number])
+         [CountryRegionCode #:type String #:null no]
+         [IsOnlyStateProvinceFlag #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [rowguid #:null no]
+         [StateProvinceCode #:type String #:null no]
+         [StateProvinceID #:type Number #:null no]
+         [TerritoryID #:type Number #:null no])
   (table BillOfMaterials
          #:column
-         [BillOfMaterialsID #:type Number]
-         [BOMLevel #:type Number]
-         [ComponentID #:type Number]
-         [EndDate #:type Datetime]
-         [ModifiedDate #:type Datetime]
-         [PerAssemblyQty #:type Number]
-         [ProductAssemblyID #:type Number]
-         [StartDate #:type Datetime]
-         [UnitMeasureCode #:type String])
+         [BillOfMaterialsID #:type Number #:null no]
+         [BOMLevel #:type Number #:null no]
+         [ComponentID #:type Number #:null no]
+         [EndDate #:type Datetime #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [PerAssemblyQty #:type Number #:null no]
+         [ProductAssemblyID #:type Number #:null yes]
+         [StartDate #:type Datetime #:null no]
+         [UnitMeasureCode #:type String #:null no])
   (table Culture
          #:column
-         [CultureID #:type String]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String])
+         [CultureID #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no])
   (table Document
          #:column
-         [ChangeNumber #:type Number]
-         [Document]
-         [DocumentLevel #:type Number]
-         [DocumentNode]
-         [DocumentSummary #:type String]
-         [FileExtension #:type String]
-         [FileName #:type String]
-         [FolderFlag]
-         [ModifiedDate #:type Datetime]
-         [Owner #:type Number]
-         [Revision #:type String]
-         [rowguid]
-         [Status #:type Number]
-         [Title #:type String])
+         [ChangeNumber #:type Number #:null no]
+         [Document #:null yes]
+         [DocumentLevel #:type Number #:null yes]
+         [DocumentNode #:null no]
+         [DocumentSummary #:type String #:null yes]
+         [FileExtension #:type String #:null no]
+         [FileName #:type String #:null no]
+         [FolderFlag #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Owner #:type Number #:null no]
+         [Revision #:type String #:null no]
+         [rowguid #:null no]
+         [Status #:type Number #:null no]
+         [Title #:type String #:null no])
   (table Illustration
          #:column
-         [Diagram]
-         [IllustrationID #:type Number]
-         [ModifiedDate #:type Datetime])
+         [Diagram #:null yes]
+         [IllustrationID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no])
   (table Location
          #:column
-         [Availability #:type Number]
-         [CostRate #:type Number]
-         [LocationID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String])
+         [Availability #:type Number #:null no]
+         [CostRate #:type Number #:null no]
+         [LocationID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no])
   (table Product
          #:column
-         [Class #:type String]
-         [Color #:type String]
-         [DaysToManufacture #:type Number]
-         [DiscontinuedDate #:type Datetime]
-         [FinishedGoodsFlag]
-         [ListPrice #:type Number]
-         [MakeFlag]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [ProductID #:type Number]
-         [ProductLine #:type String]
-         [ProductModelID #:type Number]
-         [ProductNumber #:type String]
-         [ProductSubcategoryID #:type Number]
-         [ReorderPoint #:type Number]
-         [rowguid]
-         [SafetyStockLevel #:type Number]
-         [SellEndDate #:type Datetime]
-         [SellStartDate #:type Datetime]
-         [Size #:type String]
-         [SizeUnitMeasureCode #:type String]
-         [StandardCost #:type Number]
-         [Style #:type String]
-         [Weight #:type Number]
-         [WeightUnitMeasureCode #:type String])
+         [Class #:type String #:null yes]
+         [Color #:type String #:null yes]
+         [DaysToManufacture #:type Number #:null no]
+         [DiscontinuedDate #:type Datetime #:null yes]
+         [FinishedGoodsFlag #:null no]
+         [ListPrice #:type Number #:null no]
+         [MakeFlag #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [ProductID #:type Number #:null no]
+         [ProductLine #:type String #:null yes]
+         [ProductModelID #:type Number #:null yes]
+         [ProductNumber #:type String #:null no]
+         [ProductSubcategoryID #:type Number #:null yes]
+         [ReorderPoint #:type Number #:null no]
+         [rowguid #:null no]
+         [SafetyStockLevel #:type Number #:null no]
+         [SellEndDate #:type Datetime #:null yes]
+         [SellStartDate #:type Datetime #:null no]
+         [Size #:type String #:null yes]
+         [SizeUnitMeasureCode #:type String #:null yes]
+         [StandardCost #:type Number #:null no]
+         [Style #:type String #:null yes]
+         [Weight #:type Number #:null yes]
+         [WeightUnitMeasureCode #:type String #:null yes])
   (table ProductCategory
          #:column
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [ProductCategoryID #:type Number]
-         [rowguid]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [ProductCategoryID #:type Number #:null no]
+         [rowguid #:null no]
          #:property
          [CategoryName
           (Name this)])
   (table ProductCostHistory
          #:column
-         [EndDate #:type Datetime]
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number]
-         [StandardCost #:type Number]
-         [StartDate #:type Datetime])
+         [EndDate #:type Datetime #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no]
+         [StandardCost #:type Number #:null no]
+         [StartDate #:type Datetime #:null no])
   (table ProductDescription
          #:column
-         [Description #:type String]
-         [ModifiedDate #:type Datetime]
-         [ProductDescriptionID #:type Number]
-         [rowguid])
+         [Description #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductDescriptionID #:type Number #:null no]
+         [rowguid #:null no])
   (table ProductDocument
          #:column
-         [DocumentNode]
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number])
+         [DocumentNode #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no])
   (table ProductInventory
          #:column
-         [Bin #:type Number]
-         [LocationID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number]
-         [Quantity #:type Number]
-         [rowguid]
-         [Shelf #:type String])
+         [Bin #:type Number #:null no]
+         [LocationID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no]
+         [Quantity #:type Number #:null no]
+         [rowguid #:null no]
+         [Shelf #:type String #:null no])
   (table ProductListPriceHistory
          #:column
-         [EndDate #:type Datetime]
-         [ListPrice #:type Number]
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number]
-         [StartDate #:type Datetime])
+         [EndDate #:type Datetime #:null yes]
+         [ListPrice #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no]
+         [StartDate #:type Datetime #:null no])
   (table ProductModel
          #:column
-         [CatalogDescription]
-         [Instructions]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [ProductModelID #:type Number]
-         [rowguid])
+         [CatalogDescription #:null yes]
+         [Instructions #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [ProductModelID #:type Number #:null no]
+         [rowguid #:null no])
   (table ProductModelIllustration
          #:column
-         [IllustrationID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [ProductModelID #:type Number])
+         [IllustrationID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductModelID #:type Number #:null no])
   (table ProductModelProductDescriptionCulture
          #:column
-         [CultureID #:type String]
-         [ModifiedDate #:type Datetime]
-         [ProductDescriptionID #:type Number]
-         [ProductModelID #:type Number])
+         [CultureID #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductDescriptionID #:type Number #:null no]
+         [ProductModelID #:type Number #:null no])
   (table ProductPhoto
          #:column
-         [LargePhoto]
-         [LargePhotoFileName #:type String]
-         [ModifiedDate #:type Datetime]
-         [ProductPhotoID #:type Number]
-         [ThumbNailPhoto]
-         [ThumbnailPhotoFileName #:type String])
+         [LargePhoto #:null yes]
+         [LargePhotoFileName #:type String #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductPhotoID #:type Number #:null no]
+         [ThumbNailPhoto #:null yes]
+         [ThumbnailPhotoFileName #:type String #:null yes])
   (table ProductProductPhoto
          #:column
-         [ModifiedDate #:type Datetime]
-         [Primary]
-         [ProductID #:type Number]
-         [ProductPhotoID #:type Number])
+         [ModifiedDate #:type Datetime #:null no]
+         [Primary #:null no]
+         [ProductID #:type Number #:null no]
+         [ProductPhotoID #:type Number #:null no])
   (table ProductReview
          #:column
-         [Comments #:type String]
-         [EmailAddress #:type String]
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number]
-         [ProductReviewID #:type Number]
-         [Rating #:type Number]
-         [ReviewDate #:type Datetime]
-         [ReviewerName #:type String])
+         [Comments #:type String #:null yes]
+         [EmailAddress #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no]
+         [ProductReviewID #:type Number #:null no]
+         [Rating #:type Number #:null no]
+         [ReviewDate #:type Datetime #:null no]
+         [ReviewerName #:type String #:null no])
   (table ProductSubcategory
          #:column
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [ProductCategoryID #:type Number]
-         [ProductSubcategoryID #:type Number]
-         [rowguid]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [ProductCategoryID #:type Number #:null no]
+         [ProductSubcategoryID #:type Number #:null no]
+         [rowguid #:null no]
          #:has-one
          [ProductCategory
           (join cat ProductCategory
                 (join-on (.= (ProductCategoryID cat)
-                             (ProductCategoryID this))))]
+                             (?? (ProductCategoryID this) /void))))]
          #:property
          [CategoryName
           (CategoryName (ProductCategory this))]
@@ -332,293 +332,293 @@
           (Name this)])
   (table ScrapReason
          #:column
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [ScrapReasonID #:type Number])
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [ScrapReasonID #:type Number #:null no])
   (table TransactionHistory
          #:column
-         [ActualCost #:type Number]
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number]
-         [Quantity #:type Number]
-         [ReferenceOrderID #:type Number]
-         [ReferenceOrderLineID #:type Number]
-         [TransactionDate #:type Datetime]
-         [TransactionID #:type Number]
-         [TransactionType #:type String])
+         [ActualCost #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no]
+         [Quantity #:type Number #:null no]
+         [ReferenceOrderID #:type Number #:null no]
+         [ReferenceOrderLineID #:type Number #:null no]
+         [TransactionDate #:type Datetime #:null no]
+         [TransactionID #:type Number #:null no]
+         [TransactionType #:type String #:null no])
   (table TransactionHistoryArchive
          #:column
-         [ActualCost #:type Number]
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number]
-         [Quantity #:type Number]
-         [ReferenceOrderID #:type Number]
-         [ReferenceOrderLineID #:type Number]
-         [TransactionDate #:type Datetime]
-         [TransactionID #:type Number]
-         [TransactionType #:type String])
+         [ActualCost #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no]
+         [Quantity #:type Number #:null no]
+         [ReferenceOrderID #:type Number #:null no]
+         [ReferenceOrderLineID #:type Number #:null no]
+         [TransactionDate #:type Datetime #:null no]
+         [TransactionID #:type Number #:null no]
+         [TransactionType #:type String #:null no])
   (table UnitMeasure
          #:column
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [UnitMeasureCode #:type String])
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [UnitMeasureCode #:type String #:null no])
   (table WorkOrder
          #:column
-         [DueDate #:type Datetime]
-         [EndDate #:type Datetime]
-         [ModifiedDate #:type Datetime]
-         [OrderQty #:type Number]
-         [ProductID #:type Number]
-         [ScrappedQty #:type Number]
-         [ScrapReasonID #:type Number]
-         [StartDate #:type Datetime]
-         [StockedQty #:type Number]
-         [WorkOrderID #:type Number])
+         [DueDate #:type Datetime #:null no]
+         [EndDate #:type Datetime #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [OrderQty #:type Number #:null no]
+         [ProductID #:type Number #:null no]
+         [ScrappedQty #:type Number #:null no]
+         [ScrapReasonID #:type Number #:null yes]
+         [StartDate #:type Datetime #:null no]
+         [StockedQty #:type Number #:null no]
+         [WorkOrderID #:type Number #:null no])
   (table WorkOrderRouting
          #:column
-         [ActualCost #:type Number]
-         [ActualEndDate #:type Datetime]
-         [ActualResourceHrs #:type Number]
-         [ActualStartDate #:type Datetime]
-         [LocationID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [OperationSequence #:type Number]
-         [PlannedCost #:type Number]
-         [ProductID #:type Number]
-         [ScheduledEndDate #:type Datetime]
-         [ScheduledStartDate #:type Datetime]
-         [WorkOrderID #:type Number])
+         [ActualCost #:type Number #:null yes]
+         [ActualEndDate #:type Datetime #:null yes]
+         [ActualResourceHrs #:type Number #:null yes]
+         [ActualStartDate #:type Datetime #:null yes]
+         [LocationID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [OperationSequence #:type Number #:null no]
+         [PlannedCost #:type Number #:null no]
+         [ProductID #:type Number #:null no]
+         [ScheduledEndDate #:type Datetime #:null no]
+         [ScheduledStartDate #:type Datetime #:null no]
+         [WorkOrderID #:type Number #:null no])
   (table ProductVendor
          #:column
-         [AverageLeadTime #:type Number]
-         [BusinessEntityID #:type Number]
-         [LastReceiptCost #:type Number]
-         [LastReceiptDate #:type Datetime]
-         [MaxOrderQty #:type Number]
-         [MinOrderQty #:type Number]
-         [ModifiedDate #:type Datetime]
-         [OnOrderQty #:type Number]
-         [ProductID #:type Number]
-         [StandardPrice #:type Number]
-         [UnitMeasureCode #:type String])
+         [AverageLeadTime #:type Number #:null no]
+         [BusinessEntityID #:type Number #:null no]
+         [LastReceiptCost #:type Number #:null yes]
+         [LastReceiptDate #:type Datetime #:null yes]
+         [MaxOrderQty #:type Number #:null no]
+         [MinOrderQty #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [OnOrderQty #:type Number #:null yes]
+         [ProductID #:type Number #:null no]
+         [StandardPrice #:type Number #:null no]
+         [UnitMeasureCode #:type String #:null no])
   (table PurchaseOrderDetail
          #:column
-         [DueDate #:type Datetime]
-         [LineTotal #:type Number]
-         [ModifiedDate #:type Datetime]
-         [OrderQty #:type Number]
-         [ProductID #:type Number]
-         [PurchaseOrderDetailID #:type Number]
-         [PurchaseOrderID #:type Number]
-         [ReceivedQty #:type Number]
-         [RejectedQty #:type Number]
-         [StockedQty #:type Number]
-         [UnitPrice #:type Number])
+         [DueDate #:type Datetime #:null no]
+         [LineTotal #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [OrderQty #:type Number #:null no]
+         [ProductID #:type Number #:null no]
+         [PurchaseOrderDetailID #:type Number #:null no]
+         [PurchaseOrderID #:type Number #:null no]
+         [ReceivedQty #:type Number #:null no]
+         [RejectedQty #:type Number #:null no]
+         [StockedQty #:type Number #:null no]
+         [UnitPrice #:type Number #:null no])
   (table PurchaseOrderHeader
          #:column
-         [EmployeeID #:type Number]
-         [Freight #:type Number]
-         [ModifiedDate #:type Datetime]
-         [OrderDate #:type Datetime]
-         [PurchaseOrderID #:type Number]
-         [RevisionNumber #:type Number]
-         [ShipDate #:type Datetime]
-         [ShipMethodID #:type Number]
-         [Status #:type Number]
-         [SubTotal #:type Number]
-         [TaxAmt #:type Number]
-         [TotalDue #:type Number]
-         [VendorID #:type Number])
+         [EmployeeID #:type Number #:null no]
+         [Freight #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [OrderDate #:type Datetime #:null no]
+         [PurchaseOrderID #:type Number #:null no]
+         [RevisionNumber #:type Number #:null no]
+         [ShipDate #:type Datetime #:null yes]
+         [ShipMethodID #:type Number #:null no]
+         [Status #:type Number #:null no]
+         [SubTotal #:type Number #:null no]
+         [TaxAmt #:type Number #:null no]
+         [TotalDue #:type Number #:null no]
+         [VendorID #:type Number #:null no])
   (table ShipMethod
          #:column
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [rowguid]
-         [ShipBase #:type Number]
-         [ShipMethodID #:type Number]
-         [ShipRate #:type Number])
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [rowguid #:null no]
+         [ShipBase #:type Number #:null no]
+         [ShipMethodID #:type Number #:null no]
+         [ShipRate #:type Number #:null no])
   (table Vendor
          #:column
-         [AccountNumber #:type String]
-         [ActiveFlag]
-         [BusinessEntityID #:type Number]
-         [CreditRating #:type Number]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [PreferredVendorStatus]
-         [PurchasingWebServiceURL #:type String])
+         [AccountNumber #:type String #:null no]
+         [ActiveFlag #:null no]
+         [BusinessEntityID #:type Number #:null no]
+         [CreditRating #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [PreferredVendorStatus #:null no]
+         [PurchasingWebServiceURL #:type String #:null yes])
   (table CountryRegionCurrency
          #:column
-         [CountryRegionCode #:type String]
-         [CurrencyCode #:type String]
-         [ModifiedDate #:type Datetime])
+         [CountryRegionCode #:type String #:null no]
+         [CurrencyCode #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no])
   (table CreditCard
          #:column
-         [CardNumber #:type String]
-         [CardType #:type String]
-         [CreditCardID #:type Number]
-         [ExpMonth #:type Number]
-         [ExpYear #:type Number]
-         [ModifiedDate #:type Datetime])
+         [CardNumber #:type String #:null no]
+         [CardType #:type String #:null no]
+         [CreditCardID #:type Number #:null no]
+         [ExpMonth #:type Number #:null no]
+         [ExpYear #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no])
   (table Currency
          #:column
-         [CurrencyCode #:type String]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String])
+         [CurrencyCode #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no])
   (table CurrencyRate
          #:column
-         [AverageRate #:type Number]
-         [CurrencyRateDate #:type Datetime]
-         [CurrencyRateID #:type Number]
-         [EndOfDayRate #:type Number]
-         [FromCurrencyCode #:type String]
-         [ModifiedDate #:type Datetime]
-         [ToCurrencyCode #:type String])
+         [AverageRate #:type Number #:null no]
+         [CurrencyRateDate #:type Datetime #:null no]
+         [CurrencyRateID #:type Number #:null no]
+         [EndOfDayRate #:type Number #:null no]
+         [FromCurrencyCode #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ToCurrencyCode #:type String #:null no])
   (table Customer
          #:column
-         [AccountNumber #:type String]
-         [CustomerID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [PersonID #:type Number]
-         [rowguid]
-         [StoreID #:type Number]
-         [TerritoryID #:type Number])
+         [AccountNumber #:type String #:null no]
+         [CustomerID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [PersonID #:type Number #:null yes]
+         [rowguid #:null no]
+         [StoreID #:type Number #:null yes]
+         [TerritoryID #:type Number #:null yes])
   (table PersonCreditCard
          #:column
-         [BusinessEntityID #:type Number]
-         [CreditCardID #:type Number]
-         [ModifiedDate #:type Datetime])
+         [BusinessEntityID #:type Number #:null no]
+         [CreditCardID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no])
   (table SalesOrderDetail
          #:column
-         [CarrierTrackingNumber #:type String]
-         [LineTotal #:type Number]
-         [ModifiedDate #:type Datetime]
-         [OrderQty #:type Number]
-         [ProductID #:type Number]
-         [rowguid]
-         [SalesOrderDetailID #:type Number]
-         [SalesOrderID #:type Number]
-         [SpecialOfferID #:type Number]
-         [UnitPrice #:type Number]
-         [UnitPriceDiscount #:type Number])
+         [CarrierTrackingNumber #:type String #:null yes]
+         [LineTotal #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [OrderQty #:type Number #:null no]
+         [ProductID #:type Number #:null no]
+         [rowguid #:null no]
+         [SalesOrderDetailID #:type Number #:null no]
+         [SalesOrderID #:type Number #:null no]
+         [SpecialOfferID #:type Number #:null no]
+         [UnitPrice #:type Number #:null no]
+         [UnitPriceDiscount #:type Number #:null no])
   (table SalesOrderHeader
          #:column
-         [AccountNumber #:type String]
-         [BillToAddressID #:type Number]
-         [Comment #:type String]
-         [CreditCardApprovalCode #:type String]
-         [CreditCardID #:type Number]
-         [CurrencyRateID #:type Number]
-         [CustomerID #:type Number]
-         [DueDate #:type Datetime]
-         [Freight #:type Number]
-         [ModifiedDate #:type Datetime]
-         [OnlineOrderFlag]
-         [OrderDate #:type Datetime]
-         [PurchaseOrderNumber #:type String]
-         [RevisionNumber #:type Number]
-         [rowguid]
-         [SalesOrderID #:type Number]
-         [SalesOrderNumber #:type String]
-         [SalesPersonID #:type Number]
-         [ShipDate #:type Datetime]
-         [ShipMethodID #:type Number]
-         [ShipToAddressID #:type Number]
-         [Status #:type Number]
-         [SubTotal #:type Number]
-         [TaxAmt #:type Number]
-         [TerritoryID #:type Number]
-         [TotalDue #:type Number])
+         [AccountNumber #:type String #:null yes]
+         [BillToAddressID #:type Number #:null no]
+         [Comment #:type String #:null yes]
+         [CreditCardApprovalCode #:type String #:null yes]
+         [CreditCardID #:type Number #:null yes]
+         [CurrencyRateID #:type Number #:null yes]
+         [CustomerID #:type Number #:null no]
+         [DueDate #:type Datetime #:null no]
+         [Freight #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [OnlineOrderFlag #:null no]
+         [OrderDate #:type Datetime #:null no]
+         [PurchaseOrderNumber #:type String #:null yes]
+         [RevisionNumber #:type Number #:null no]
+         [rowguid #:null no]
+         [SalesOrderID #:type Number #:null no]
+         [SalesOrderNumber #:type String #:null no]
+         [SalesPersonID #:type Number #:null yes]
+         [ShipDate #:type Datetime #:null yes]
+         [ShipMethodID #:type Number #:null no]
+         [ShipToAddressID #:type Number #:null no]
+         [Status #:type Number #:null no]
+         [SubTotal #:type Number #:null no]
+         [TaxAmt #:type Number #:null no]
+         [TerritoryID #:type Number #:null yes]
+         [TotalDue #:type Number #:null no])
   (table SalesOrderHeaderSalesReason
          #:column
-         [ModifiedDate #:type Datetime]
-         [SalesOrderID #:type Number]
-         [SalesReasonID #:type Number])
+         [ModifiedDate #:type Datetime #:null no]
+         [SalesOrderID #:type Number #:null no]
+         [SalesReasonID #:type Number #:null no])
   (table SalesPerson
          #:column
-         [Bonus #:type Number]
-         [BusinessEntityID #:type Number]
-         [CommissionPct #:type Number]
-         [ModifiedDate #:type Datetime]
-         [rowguid]
-         [SalesLastYear #:type Number]
-         [SalesQuota #:type Number]
-         [SalesYTD #:type Number]
-         [TerritoryID #:type Number])
+         [Bonus #:type Number #:null no]
+         [BusinessEntityID #:type Number #:null no]
+         [CommissionPct #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [rowguid #:null no]
+         [SalesLastYear #:type Number #:null no]
+         [SalesQuota #:type Number #:null yes]
+         [SalesYTD #:type Number #:null no]
+         [TerritoryID #:type Number #:null yes])
   (table SalesPersonQuotaHistory
          #:column
-         [BusinessEntityID #:type Number]
-         [ModifiedDate #:type Datetime]
-         [QuotaDate #:type Datetime]
-         [rowguid]
-         [SalesQuota #:type Number])
+         [BusinessEntityID #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [QuotaDate #:type Datetime #:null no]
+         [rowguid #:null no]
+         [SalesQuota #:type Number #:null no])
   (table SalesReason
          #:column
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [ReasonType #:type String]
-         [SalesReasonID #:type Number])
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [ReasonType #:type String #:null no]
+         [SalesReasonID #:type Number #:null no])
   (table SalesTaxRate
          #:column
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [rowguid]
-         [SalesTaxRateID #:type Number]
-         [StateProvinceID #:type Number]
-         [TaxRate #:type Number]
-         [TaxType #:type Number])
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [rowguid #:null no]
+         [SalesTaxRateID #:type Number #:null no]
+         [StateProvinceID #:type Number #:null no]
+         [TaxRate #:type Number #:null no]
+         [TaxType #:type Number #:null no])
   (table SalesTerritory
          #:column
-         [CostLastYear #:type Number]
-         [CostYTD #:type Number]
-         [CountryRegionCode #:type String]
-         [Group #:type String]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [rowguid]
-         [SalesLastYear #:type Number]
-         [SalesYTD #:type Number]
-         [TerritoryID #:type Number])
+         [CostLastYear #:type Number #:null no]
+         [CostYTD #:type Number #:null no]
+         [CountryRegionCode #:type String #:null no]
+         [Group #:type String #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [rowguid #:null no]
+         [SalesLastYear #:type Number #:null no]
+         [SalesYTD #:type Number #:null no]
+         [TerritoryID #:type Number #:null no])
   (table SalesTerritoryHistory
          #:column
-         [BusinessEntityID #:type Number]
-         [EndDate #:type Datetime]
-         [ModifiedDate #:type Datetime]
-         [rowguid]
-         [StartDate #:type Datetime]
-         [TerritoryID #:type Number])
+         [BusinessEntityID #:type Number #:null no]
+         [EndDate #:type Datetime #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [rowguid #:null no]
+         [StartDate #:type Datetime #:null no]
+         [TerritoryID #:type Number #:null no])
   (table ShoppingCartItem
          #:column
-         [DateCreated #:type Datetime]
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number]
-         [Quantity #:type Number]
-         [ShoppingCartID #:type String]
-         [ShoppingCartItemID #:type Number])
+         [DateCreated #:type Datetime #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no]
+         [Quantity #:type Number #:null no]
+         [ShoppingCartID #:type String #:null no]
+         [ShoppingCartItemID #:type Number #:null no])
   (table SpecialOffer
          #:column
-         [Category #:type String]
-         [Description #:type String]
-         [DiscountPct #:type Number]
-         [EndDate #:type Datetime]
-         [MaxQty #:type Number]
-         [MinQty #:type Number]
-         [ModifiedDate #:type Datetime]
-         [rowguid]
-         [SpecialOfferID #:type Number]
-         [StartDate #:type Datetime]
-         [Type #:type String])
+         [Category #:type String #:null no]
+         [Description #:type String #:null no]
+         [DiscountPct #:type Number #:null no]
+         [EndDate #:type Datetime #:null no]
+         [MaxQty #:type Number #:null yes]
+         [MinQty #:type Number #:null no]
+         [ModifiedDate #:type Datetime #:null no]
+         [rowguid #:null no]
+         [SpecialOfferID #:type Number #:null no]
+         [StartDate #:type Datetime #:null no]
+         [Type #:type String #:null no])
   (table SpecialOfferProduct
          #:column
-         [ModifiedDate #:type Datetime]
-         [ProductID #:type Number]
-         [rowguid]
-         [SpecialOfferID #:type Number])
+         [ModifiedDate #:type Datetime #:null no]
+         [ProductID #:type Number #:null no]
+         [rowguid #:null no]
+         [SpecialOfferID #:type Number #:null no])
   (table Store
          #:column
-         [BusinessEntityID #:type Number]
-         [Demographics]
-         [ModifiedDate #:type Datetime]
-         [Name #:type String]
-         [rowguid]
-         [SalesPersonID #:type Number]))
+         [BusinessEntityID #:type Number #:null no]
+         [Demographics #:null yes]
+         [ModifiedDate #:type Datetime #:null no]
+         [Name #:type String #:null no]
+         [rowguid #:null no]
+         [SalesPersonID #:type Number #:null yes]))

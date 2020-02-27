@@ -5,11 +5,10 @@
 
 (require "frag-bodies.rkt"
          "frag-types.rkt"
+         "frag-nullchecks.rkt"
          "weave.rkt")
 
-(def-dispatcher null-dispatcher #:constant (void))
-
-(define-syntax-rule (export-all type-dispatcher id ...)
+(define-syntax-rule (export-all type-dispatcher null-dispatcher id ...)
   (begin
     (define/weave retval-dispatcher type-dispatcher null-dispatcher
       (id . tokens))
@@ -17,14 +16,14 @@
     (provide id ...)))
 
 ; Export with types via submodules
-(define-syntax-rule (do-export mod-id type-dispatcher)
+(define-syntax-rule (do-export mod-id type-dispatcher null-dispatcher)
   (module+ mod-id
-    (export-all type-dispatcher
+    (export-all type-dispatcher null-dispatcher
                 select where group-by having order-by join-on
                 scalar bit aggregate subquery sql
                 count avg min max sum exists)
     (module+ operators
-      (export-all type-dispatcher
+      (export-all type-dispatcher null-dispatcher
                   and or not
                   = <> < <= > >=
                   like not-like
@@ -32,13 +31,15 @@
                   in not-in
                   + - * /))))
 
-(do-export unsafe type-dispatcher/unsafe)
-(do-export loose type-dispatcher/loose)
-(do-export strict type-dispatcher/strict)
+(do-export unsafe type-dispatcher/unsafe null-dispatcher/unsafe)
+(do-export loose  type-dispatcher/loose  null-dispatcher/loose)
+(do-export strict type-dispatcher/strict null-dispatcher/strict)
 
 (module+ test
   (require rackunit
+           (prefix-in r: racket)
            "fragment.rkt"
+           "../_null.rkt"
            (submod ".." unsafe)
            (submod ".." unsafe operators))
 
@@ -51,7 +52,20 @@
              [actual (format "~v" result)])
         (check-pred fragment? result)
         (check-equal? expected actual))
-      ...))
+      ...
+
+      ; Test that (frag-id "foo") is `maybe` nullable.
+      ; Also test annotation and inference.
+      ; Skip `exists` because it has special handling
+      (when (r:not (member 'frag-id '(exists)))
+        (let* ([default (frag-id "foo")]
+               [annotated (>> default #:null no)]
+               [inferred (frag-id annotated)])
+          (check-equal? maybe (nullability default))
+          (check-equal? no (nullability annotated))
+          (check-equal? no (nullability inferred))))
+      ...
+      ))
 
   (check-frags select where group-by having order-by join-on
                scalar bit aggregate subquery sql

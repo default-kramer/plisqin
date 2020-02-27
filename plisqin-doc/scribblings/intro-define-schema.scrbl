@@ -279,6 +279,7 @@ So this should be a left join to avoid eliminating Products from the result set:
                            (ProductSubcategoryID prd))))))
 
 And now let's add some select clauses:
+@margin-note{TODO this is the first introduction to nullchecking and fallbacks, right?}
 @(repl-query
   (show-table
    (from prd Product
@@ -286,7 +287,7 @@ And now let's add some select clauses:
          (join subcat ProductSubcategory
                (join-type 'left)
                (join-on (.= (ProductSubcategoryID subcat)
-                            (ProductSubcategoryID prd))))
+                            (?? (ProductSubcategoryID prd) /void))))
          (select (Name prd))
          (select (ProductNumber prd))
          (select (SubcategoryName subcat)))))
@@ -314,7 +315,7 @@ That investment pays off now, because our current query has an instance of
          (join subcat ProductSubcategory
                (join-type 'left)
                (join-on (.= (ProductSubcategoryID subcat)
-                            (ProductSubcategoryID prd))))
+                            (?? (ProductSubcategoryID prd) /void))))
          (select (Name prd))
          (select (ProductNumber prd))
          (select (SubcategoryName subcat))
@@ -484,7 +485,8 @@ Initial revision
                      (join-on (.= (ProductID prd)
                                   (ProductID detailsG))))
                (group-by (ProductSubcategoryID prd))
-               (join-on (.= (ProductSubcategoryID prd)
+               ; TODO all grouped joins should be left joins.
+               (join-on (.= (?? (ProductSubcategoryID prd) /void)
                             (ProductSubcategoryID subcat))))
          (select (round (sum (LineTotal detailsG)) 2))
          (select (sum (OrderQty detailsG)))
@@ -655,8 +657,8 @@ We could modify it to accept a time window of sales to consider as follows:
   ; TODO should have a %%datetime proc available here
   (show-table
    (sales-report
-    #:start-date (>> (%%sql "'2012-01-01'") #:cast Datetime)
-    #:end-date (>> (%%sql "'2013-01-01'") #:cast Datetime)
+    #:start-date (>> (%%sql "'2012-01-01'") #:cast Datetime #:null no)
+    #:end-date (>> (%%sql "'2013-01-01'") #:cast Datetime #:null no)
     (from subcat ProductSubcategory
           (select (SubcategoryName subcat))
           (select (CategoryName subcat))))))

@@ -4,7 +4,10 @@
 
 (require (only-in morsel-lib gen:queryable get-queryable)
          (only-in "sql/fragment.rkt" fragment? >>)
-         (prefix-in %% (only-in (submod "./sql/frags.rkt" unsafe) scalar)))
+         (for-syntax syntax/parse)
+         "_null.rkt"
+         (prefix-in %% (only-in (submod "./sql/frags.rkt" unsafe)
+                                scalar sql)))
 
 (require racket/stxparam
          (for-syntax racket/list))
@@ -21,26 +24,25 @@
   [(define (write-proc me port mode)
      (write-string (table-name me) port))])
 
-(define-for-syntax (rewrite-option stx)
-  (syntax-case stx ()
-    [#:type #'#:cast]
-    [x #'x]))
-
 (define-syntax (handle-column stx)
-  (syntax-case stx ()
-    [(_ [id options ... #:dbname dbname])
-     (string? (syntax-e #'dbname))
-     #`(>> (%%scalar this #,(format ".~a" (syntax-e #'dbname)))
-           #,@(map rewrite-option (syntax->list #'(options ...))))]
-    [(_ [id options ...])
-     #`(handle-column [id options ... #:dbname #,(format "~a" (syntax-e #'id))])]))
-
-; The return value of any function might tack on an #:as name
-; TODO should check that it doesn't already have one
-(define (wrap-retval x as-name)
-  (if (fragment? x)
-      (>> x #:as as-name)
-      x))
+  (syntax-parse stx
+    [(_ [id:id (~optional (~seq #:as asname))
+               (~optional (~seq #:type Type))
+               (~optional (~seq #:null nullability))
+               (~optional (~seq #:dbname dbname))])
+     (quasisyntax/loc stx
+       (>> (%%scalar this
+                     ; The nullability of the entire expression will be inferred from
+                     ; whatever `this` is plus this fragment:
+                     (>> (%%sql (~? (~@ "." dbname)
+                                    ; TODO can leave 'id as a symbol once Morsel can handle it
+                                    (~@ "." (~a 'id))))
+                         (~? (~@ #:null nullability)
+                             (~@))))
+           (~? (~@ #:cast Type)
+               (~@))
+           (~? (~@ #:as asname)
+               (~@ #:as 'id))))]))
 
 ; Given that `(CategoryName Category)` and `(CategoryName Product)` are both defined
 ; via define-schema, this builds the procedure `(CategoryName x)` which uses cond
@@ -107,7 +109,7 @@
   ; body    : syntax?
   (define (add dict func-id cond-id body)
     (let* ([orig-body body]
-           [body #`(wrap-retval #,body (quote #,func-id))]
+           [body body]
            [key (syntax-e func-id)]
            [func (dict-ref dict key #f)]
            [found? func]
@@ -289,7 +291,7 @@
            #:column
            Bar
            Baz
-           [Carrot #:as 'Carat #:dbname "car_rot"]))
+           [Carrot #:as "Carat" #:dbname "car_rot"]))
 
   (check-equal? ($$ 'tables)
                 '(A B))
