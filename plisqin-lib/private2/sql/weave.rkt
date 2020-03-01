@@ -1,7 +1,6 @@
 #lang racket
 
 (provide def-dispatcher define/weave)
-(provide (for-syntax dispatcher))
 
 (require "fragment.rkt")
 
