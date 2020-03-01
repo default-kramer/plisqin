@@ -14,7 +14,7 @@
 (require "weave.rkt"
          "./fragment.rkt"
          "./frags.helpers.rkt"
-         (only-in morsel-lib join? tuple?)
+         (only-in "../_core.rkt" join? tuple?)
          racket/stxparam)
 
 ; In the body of `(select . x)` we will bind self to (quote select).

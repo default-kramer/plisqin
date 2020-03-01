@@ -4,9 +4,7 @@
          nullability nullability? yes no maybe
          fallback fallback? /void /minval /maxval /any)
 
-; TODO clean this up:
-(require (only-in morsel-lib tuple? join?)
-         (only-in morsel-lib/private/sql/clauses get-join-type))
+(require (only-in "_core.rkt" tuple? join? get-join-type))
 
 (struct opaque-val (str)
   #:property prop:custom-print-quotable 'never

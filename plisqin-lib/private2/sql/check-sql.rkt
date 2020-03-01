@@ -6,7 +6,7 @@
 (require "../_types.rkt"
          "../_dialect.rkt"
          rackunit
-         (only-in morsel-lib/sql to-sql))
+         (only-in "../_core.rkt" to-sql))
 
 (define-syntax (get-dialect stx)
   (syntax-case stx ()

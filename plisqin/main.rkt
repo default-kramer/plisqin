@@ -26,34 +26,10 @@
 ; TODO these definitely need to get moved into plisqin-lib
 (provide from join to-sql limit offset distinct join-type round ??)
 
-
 ; TODO let's just see how these work
-(require (prefix-in m: morsel-lib))
-(require (only-in morsel-lib/sql
+(require plisqin-lib/private2/from)
+(require (only-in plisqin-lib/private2/_core
                   to-sql limit offset distinct join-type))
-
-(define-for-syntax (tweak stx)
-  (syntax-case stx (join)
-    [(join a b clause ...)
-     (quasisyntax/loc stx
-       (m:attach a b #,@(map tweak (syntax->list #'(clause ...)))))]
-    [_ stx]))
-
-(define-syntax (from stx)
-  (syntax-case stx ()
-    [(_ a b clause ...)
-     (quasisyntax/loc stx
-       (m:from a b #,@(map tweak (syntax->list #'(clause ...)))))]))
-
-(define-syntax (join stx)
-  (syntax-case stx ()
-    [(_ a b #:to c clause ...)
-     (quasisyntax/loc stx
-       (m:join a b #:to c #,@(map tweak (syntax->list #'(clause ...)))))]
-    ; TODO we want #:to to be required, but leave it optional for now
-    [(_ a b clause ...)
-     (quasisyntax/loc stx
-       (m:join a b #,@(map tweak (syntax->list #'(clause ...)))))]))
 
 (define (round a b)
   (%%scalar "round("a", "b")"))

@@ -2,7 +2,7 @@
 
 (provide define-schema this)
 
-(require (only-in morsel-lib gen:queryable get-queryable)
+(require (only-in "_core.rkt" gen:queryable get-queryable)
          (only-in "sql/fragment.rkt" fragment? >>)
          (for-syntax syntax/parse)
          "_null.rkt"
@@ -278,8 +278,8 @@
 
 (module+ test
   (require rackunit
-           (only-in morsel-lib from)
-           (only-in morsel-lib/sql to-sql)
+           (only-in "from.rkt" from)
+           (only-in "_core.rkt" to-sql)
            plisqin-lib/unsafe)
 
   (define-schema $$

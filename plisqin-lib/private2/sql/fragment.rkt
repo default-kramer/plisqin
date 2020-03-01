@@ -3,8 +3,8 @@
 (provide fragment% fragment? >>
          fragment-as-name fragment-nullability fragment-fallback)
 
-(require morsel-lib
-         morsel-lib/sql
+(require (only-in (submod "../_core.rkt" fragment-helper)
+                  sql-token<%> define-token-aspect-stuff)
          racket/struct
          "../_null.rkt"
          "../_types.rkt")

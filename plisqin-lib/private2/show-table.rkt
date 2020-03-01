@@ -3,8 +3,7 @@
 
 (require (prefix-in db: db)
          "rows-result-to-string.rkt"
-         (only-in morsel-lib query?)
-         (only-in morsel-lib/sql to-sql))
+         (only-in "_core.rkt" query? to-sql))
 
 (define/contract (guard-current-connection x)
   (-> (or/c #f db:connection?)

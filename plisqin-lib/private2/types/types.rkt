@@ -1,7 +1,7 @@
 #lang racket
 
 (require "./lib/core.rkt")
-(require (only-in morsel-lib query? join?))
+(require (only-in "../_core.rkt" query? join?))
 
 (provide
  ; base types
