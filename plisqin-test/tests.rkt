@@ -51,31 +51,29 @@ inner join Y y
 HEREDOC
             ))
 
-(fail "TODO make from/join accept lists of clauses")
-#;(test
-   ; The query-building macros accept a single clause or a list for greater composability:
-   (define my-query
-     (from x "X"
-           (if #t
-               (select x".First")
-               (list))
-           (if #t
-               (list
-                (select x".Second")
-                (select x".Third"))
-               (list))
-           (if #f
-               (select x".Fourth")
-               (list))))
-   (check-sql my-query
-              #<<HEREDOC
-select
-  x.First
+(test
+ ; The query-building macros accept a single clause or a list for greater composability:
+ (define my-query
+   (from x "X"
+         (if #t
+             (select x".First")
+             (list))
+         (if #t
+             (list
+              (select x".Second")
+              (select x".Third"))
+             (list))
+         (if #f
+             (select x".Fourth")
+             (list))))
+ (check-sql my-query
+            #<<HEREDOC
+select x.First
   , x.Second
   , x.Third
 from X x
 HEREDOC
-              ))
+            ))
 
 (test
  ; Aggregate functions don't need to be injected if they refer only to the main query and "simple" joins:

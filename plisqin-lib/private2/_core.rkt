@@ -14,7 +14,8 @@
 ; and then the rest of Plisqin should depend on that code instead.
 
 (module+ from-helper
-  (provide from join attach))
+  (provide from join attach flatten-lists?)
+  (require (submod morsel-lib/private/essence/from TODO-PRIVATE)))
 
 (module+ fragment-helper
   (provide sql-token<%> define-token-aspect-stuff))
