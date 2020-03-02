@@ -1,7 +1,7 @@
 #lang racket
 
-(provide my-eval reset-eval! reset-uid make-eval
-         show-sql check-sql check-sql2 rb
+(provide my-eval reset-eval! make-eval
+         show-sql check-sql check-sql2
          to-table)
 
 (require scribble/manual
@@ -9,8 +9,7 @@
          plisqin-lib
          rackunit
          "to-table.rkt")
-(require (for-syntax syntax/strip-context
-                     plisqin-lib/private/util))
+(require (for-syntax syntax/strip-context))
 
 (define (make-eval)
   (let ([eval (make-base-eval)])
@@ -25,9 +24,6 @@
 (define (reset-eval!)
   (set! my-eval (make-eval)))
 (reset-eval!)
-
-(define (reset-uid)
-  (my-eval '(reset-uid-for-testing!)))
 
 (define (show-sql str)
   (verbatim str))
@@ -45,9 +41,3 @@
   (check-equal?
    (string-normalize-spaces actual)
    (string-normalize-spaces expected)))
-
-; Renders a (racketblock ...) for the given key
-(define-syntax (rb stx)
-  (syntax-case stx ()
-    [(rb ITEM)
-     #`(racketblock #,(replace-context stx (get-captured-syntax #'ITEM)))]))
