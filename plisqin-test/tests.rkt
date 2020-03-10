@@ -1,6 +1,6 @@
 #lang racket
 
-(require (only-in plisqin from join to-sql)
+(require (only-in plisqin from join to-sql join-type)
          plisqin-lib/unsafe
          rackunit)
 
@@ -32,6 +32,30 @@ where not exists (
   from Sub x1
   where x1.Something = x.Something
 )
+HEREDOC
+            ))
+
+(test
+ ; Simple test of subquery
+ (check-sql (from x (subquery "select 1 as ONE")
+                  (select x".ONE"))
+            #<<HEREDOC
+select x.ONE
+from (select 1 as ONE) x
+HEREDOC
+            ))
+
+(test
+ ; Using subquery prevents appending
+ (check-sql (from x (subquery (from y "Y"
+                                    (select y".ONE")))
+                  (select x".ONE"))
+            #<<HEREDOC
+select x.ONE
+from (
+  select y.ONE
+  from Y y
+) x
 HEREDOC
             ))
 
@@ -393,3 +417,24 @@ inner join (
    on c.__INJECT0 = e.EmployeeId
 HEREDOC
             ))
+
+(test
+ ; Check the join type inference works
+ (check-sql
+  (from x "X"
+        (join y "Y"
+              (join-type 'left)
+              (join-on y".foo = "x".foo"))
+        ; z is inferred to be a left join because it depends on y (which is left)
+        (join z "Z"
+              (join-on z".bar = "y".bar"))
+        (select z".baz"))
+  #<<HEREDOC
+select z.baz
+from X x
+left join Y y
+   on y.foo = x.foo
+left join Z z
+   on z.bar = y.bar
+HEREDOC
+  ))

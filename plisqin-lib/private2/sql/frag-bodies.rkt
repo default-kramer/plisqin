@@ -93,8 +93,10 @@
           #:reduce (->Bool tokens))]
 
   ; == Fragments ==
-  [(scalar aggregate subquery sql)
+  [(scalar aggregate sql)
    (make2 self)]
+  [(subquery)
+   (make2 self #:reduce (parens tokens))]
   [(bit)
    (make2 'scalar)]
 

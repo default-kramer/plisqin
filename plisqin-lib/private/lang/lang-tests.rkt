@@ -6,6 +6,40 @@
 (define-syntax-rule (check stuff ...)
   (void))
 
+#;(module+ test
+    ; Additional date math tests
+    (require (prefix-in op: "operators.rkt"))
+
+    (define-syntax-rule (with-MS forms ...)
+      (parameterize ([current-dialect (mssql)])
+        forms ...))
+    (define-syntax-rule (with-PG forms ...)
+      (parameterize ([current-dialect (postgres)])
+        forms ...))
+
+    (define frag (op:+ (RS sql "getdate()")
+                       (interval 3 :hours)
+                       (interval 1 :day)))
+    (with-MS
+        (check-equal?
+         (to-sql frag)
+         "dateadd(day, 1, dateadd(hour, 3, getdate()))"))
+    (with-PG
+        (check-equal?
+         (to-sql frag)
+         "(getdate() + interval '3 hour' + interval '1 day')"))
+    (set! frag (op:- (RS sql "getdate()")
+                     (interval 3 :hours)
+                     (interval 1 :day)))
+    (with-MS
+        (check-equal?
+         (to-sql frag)
+         "dateadd(day, -1, dateadd(hour, -3, getdate()))"))
+    (with-PG
+        (check-equal?
+         (to-sql frag)
+         "(getdate() + interval '-3 hour' + interval '-1 day')")))
+
 (check
  {db-now + 3.hours - 1.day}
  #:pg "(current_timestamp + interval '3 hour' + interval '-1 day')"
