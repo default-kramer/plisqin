@@ -256,22 +256,6 @@ where exists (
 HEREDOC
            )
 
-; Do we still want to support this?
-(fail "TODO fix this test (needs join->query conversion)")
-#;(check-sql (from x "X"
-                   (where (exists (join y "Y" #:to x
-                                        (join-on y".Foo = "x".Bar")))))
-             #<<HEREDOC
-select x.*
-from X x
-where exists (
-  select y.*
-  from Y y
-  where y.Foo = x.Bar
-)
-HEREDOC
-             )
-
 ; tests of count
 (check-sql (from x "X"
                  (select (count x)))
