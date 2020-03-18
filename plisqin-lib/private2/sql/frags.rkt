@@ -21,7 +21,7 @@
     (export-all type-dispatcher null-dispatcher
                 select where group-by having order-by join-on
                 scalar bit aggregate subquery sql
-                count avg min max sum exists)
+                count avg min max sum exists coalesce)
     (module+ operators
       (export-all type-dispatcher null-dispatcher
                   and or not

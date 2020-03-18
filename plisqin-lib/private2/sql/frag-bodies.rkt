@@ -113,7 +113,9 @@
   [(round)
    (make2 'scalar
           #:reduce (error "TODO need dialect here"))]
-  ; TODO add coalesce
+  [(coalesce)
+   (make2 'scalar
+          #:reduce (list "coalesce" (parens (interpose ", " tokens))))]
   ; TODO still need `case-when` and `case` but they are probably macros, not procs
 
   ; == "Operators" ==

@@ -2,6 +2,9 @@
 
 (module+ test
   (require "./check-sql.rkt"
+           rackunit
+           (only-in "../_null.rkt" nullability yes no maybe)
+           (only-in "fragment.rkt" >>)
            (submod "frags.rkt" strict)
            (prefix-in |.| (submod "frags.rkt" strict operators))
            (prefix-in % (submod "frags.rkt" loose))
@@ -31,4 +34,32 @@
              #:all "foo.bar asc")
   (check-sql (%%order-by "a" "b" "c")
              #:all "abc")
+
+  ; coalesce
+  (check-sql (%%coalesce "foo" "bar")
+             #:all "coalesce(foo, bar)")
+  (check-sql (%%coalesce "foo" "bar" "baz")
+             #:all "coalesce(foo, bar, baz)")
+  ; Nullability 1:
+  ; If any arg is `no` then the result is `no`
+  (check-equal? (nullability (%%coalesce (>> (%%sql "foo") #:null yes)
+                                         (>> (%%sql "bar") #:null no)))
+                no)
+  (check-equal? (nullability (%%coalesce (>> (%%sql "foo") #:null no)
+                                         (>> (%%sql "bar") #:null yes)))
+                no)
+  ; Nullability 2:
+  ; Else If any arg is `maybe` then the result is `maybe`
+  (check-equal? (nullability (%%coalesce (>> (%%sql "foo") #:null yes)
+                                         (>> (%%sql "bar") #:null maybe)))
+                maybe)
+  (check-equal? (nullability (%%coalesce (>> (%%sql "foo") #:null yes)
+                                         ; implicitly maybe:
+                                         "bar"))
+                maybe)
+  ; Nullability 3:
+  ; Else (all args are `yes`) then the result is `yes`
+  (check-equal? (nullability (%%coalesce (>> (%%sql "foo") #:null yes)
+                                         (>> (%%sql "bar") #:null yes)))
+                yes)
   )

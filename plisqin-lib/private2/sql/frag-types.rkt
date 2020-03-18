@@ -60,6 +60,9 @@
   [(bit)
    (token-constructor
     [any/c ...+ -> Bit])]
+  [(coalesce)
+   (token-constructor
+    [any/c any/c ...+ -> Scalar])]
   [(exists and or not
            = <> < <= > >=
            like not-like
@@ -85,6 +88,9 @@
   [(bit)
    (token-constructor
     [content? ...+ -> Bit])]
+  [(coalesce)
+   (token-constructor
+    [content? content? ...+ -> Scalar])]
   [(exists and or not
            = <> < <= > >=
            like not-like
@@ -125,6 +131,11 @@
   [(count)
    (token-constructor
     [Scalar -> Number])]
+  [(coalesce)
+   (token-constructor
+    [String String ...+ -> String]
+    [Datetime Datetime ...+ -> Datetime]
+    [Number Number ...+ -> Number])]
   [(avg sum)
    (token-constructor
     [Number -> Number])]

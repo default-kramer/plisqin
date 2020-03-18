@@ -51,6 +51,8 @@
    (nullchecker #:permit-null)]
   [(exists)
    never-null]
+  [(coalesce)
+   coalesce-nullchecker]
   [(= <> < <= > >=
       like not-like
       is is-not
@@ -84,6 +86,8 @@
     #:permit-null)]
   [(exists)
    never-null]
+  [(coalesce)
+   coalesce-nullchecker]
   [(where having join-on
           and or not)
    ; All arguments are Boolish. In this strict variant, we enforce that
@@ -115,3 +119,19 @@
 
 ; A nullchecker ignores the input and always returns "not null"
 (define (never-null . ignored-args) no)
+
+(define (coalesce-nullchecker arglist . more-stuff)
+  (define (check lst accum)
+    (match lst
+      [(list a rest ...)
+       (let ([n (or (nullability a)
+                    maybe)])
+         (cond
+           [(equal? n no)
+            no]
+           [(equal? n maybe)
+            (check rest maybe)]
+           [else
+            (check rest accum)]))]
+      [(list) accum]))
+  (check arglist yes))

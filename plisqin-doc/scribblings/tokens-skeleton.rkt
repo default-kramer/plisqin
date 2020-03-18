@@ -28,11 +28,11 @@
                    ;clauses
                    [select where group-by having order-by join-on]
                    ; primitives
-                   [scalar bool aggregate subquery sql]
+                   [scalar bool bit aggregate subquery sql]
                    ; aggregates
                    [count avg min max sum]
                    ; misc
-                   [exists]
+                   [exists coalesce]
                    ; operators
                    [and or not
                     = <> < <= > >=
