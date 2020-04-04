@@ -4,7 +4,12 @@
          nullability nullability? yes no maybe
          fallback fallback? /void /minval /maxval /any)
 
-(require (only-in "_core.rkt" tuple? join? get-join-type))
+(module+ more
+  ; try to use nulltrack<%> instead
+  (provide gen:custom-nullability))
+
+(require (only-in "_core.rkt" tuple? join? get-join-type)
+         racket/generic)
 
 (struct opaque-val (str)
   #:property prop:custom-print-quotable 'never
@@ -24,6 +29,10 @@
 (def-opaque nullability? yes no maybe)
 (def-opaque fallback? /void /minval /maxval /any)
 
+; This is a quick workaround, prefer to use nulltrack<%>
+(define-generics custom-nullability
+  (get-custom-nullability custom-nullability))
+
 (define nulltrack<%>
   (interface ()
     get-nullability #;(-> this nullability?)
@@ -33,8 +42,10 @@
 (define nulltrack? (is-a?/c nulltrack<%>))
 
 (define (nullability x)
-  (and (nulltrack? x)
-       (send x get-nullability)))
+  (or (and (nulltrack? x)
+           (send x get-nullability))
+      (and (custom-nullability? x)
+           (get-custom-nullability x))))
 (define (fallback x)
   (and (nulltrack? x)
        (send x get-fallback)))
@@ -64,6 +75,8 @@
   (for ([arg arglist])
     (define nullability
       (cond
+        [(custom-nullability? arg)
+         (get-custom-nullability arg)]
         [(nulltrack? arg)
          (let ([nullability (send arg get-nullability)])
            (if (eq? nullability no)

@@ -6,6 +6,7 @@
          (only-in "sql/fragment.rkt" fragment? >>)
          (for-syntax syntax/parse)
          "_null.rkt"
+         (submod "_null.rkt" more)
          (prefix-in %% (only-in (submod "./sql/frags.rkt" unsafe)
                                 scalar sql)))
 
@@ -20,6 +21,9 @@
   #:methods gen:queryable
   [(define (unwrap-queryable me)
      (table-name me))]
+  #:methods gen:custom-nullability
+  [(define (get-custom-nullability me)
+     no)]
   #:methods gen:custom-write
   [(define (write-proc me port mode)
      (write-string (table-name me) port))])
@@ -285,8 +289,8 @@
   (define-schema $$
     (table A
            #:column
-           Foo
-           Bar)
+           [Foo #:null no]
+           [Bar #:null yes])
     (table B
            #:column
            Bar
@@ -310,4 +314,14 @@
 select b.car_rot as Carat
 from B b
 HEREDOC
-                  )))
+                  ))
+
+  ; some tests of #:null
+  (check-equal? (nullability A)
+                no)
+  (check-equal? (nullability (Foo A))
+                no)
+  (check-equal? (nullability (Bar A))
+                yes)
+  (check-equal? (nullability (Bar B))
+                maybe))
