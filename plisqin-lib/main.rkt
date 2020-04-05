@@ -28,7 +28,8 @@
 (provide >>)
 
 (require "./private2/_null.rkt")
-(provide yes no maybe /void /minval /maxval /any)
+(provide nullability nullability? yes no maybe
+         /void /minval /maxval /any)
 
 (require plisqin-lib/private2/define-schema)
 (provide define-schema this)

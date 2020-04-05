@@ -1,11 +1,10 @@
 #lang scribble/manual
 
-@(require (for-label (prefix-in unsafe: plisqin-lib/unsafe))
-          (for-label (prefix-in loose: plisqin-lib/loose))
-          (for-label (prefix-in strict: plisqin-lib/strict))
-          (for-label (prefix-in %% plisqin-lib/unsafe))
-          (for-label (prefix-in % plisqin-lib/loose))
-          "tokens-skeleton.rkt")
+@(require (for-label plisqin)
+          "tokens-skeleton.rkt"
+          (except-in "tokens-custom-unsafe.rkt" doc)
+          (except-in "tokens-custom-loose.rkt" doc)
+          (except-in "tokens-custom-strict.rkt" doc))
 
 @title[#:style '(toc)]{Token Constructors}
 
@@ -15,19 +14,19 @@ TODO come up with a prefix convention and explain it.
 I think I like @(racket %%exists) for unsafe and @(racket %exists) for loose.
 But wait, if we have an SQL modulo operator what would it be?
 
-TODO testing the hyperlinks... remove this eventually
-@(racketblock
-  unsafe:exists
-  loose:exists
-  strict:exists)
-
 @(table-of-contents)
 
 @section{Unsafe}
+@(defmodule plisqin-lib/unsafe)
+@(custom-unsafe-docs)
 @(docgen/unsafe)
 
 @section{Loose}
+@(defmodule plisqin-lib/loose)
+@(custom-loose-docs)
 @(docgen/loose)
 
 @section{Strict}
+@(defmodule plisqin-lib/strict)
+@(custom-strict-docs)
 @(docgen/strict)

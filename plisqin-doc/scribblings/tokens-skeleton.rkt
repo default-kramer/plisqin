@@ -61,11 +61,12 @@
                ; This is used by `def-token` to extract the type signature.
                ; I worried about Scribble being lazy, but this seems to work.
                (type-lookup the-type-table)
-               (defmodule mod-id)
+               ; This `defmodule` has been moved to the parent doc:
+               ;(defmodule mod-id)
                (:section "Clauses" clause-id ooo)
                (:section "Primitives" primitive-id ooo)
                (:section "Aggregates" aggregate-id ooo)
-               (:section "Misc" misc-id ooo)    
+               (:section "Misc" misc-id ooo)
                (:section "Operators")
                (defmodule operators-mod-id)
                (def operator-id)
