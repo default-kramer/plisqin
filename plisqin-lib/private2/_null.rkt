@@ -137,13 +137,13 @@
 ~a: contract violation
   expected: a token that is non-nullable
   given: a token with nullability: ~a
+  likely argument position: ~a
   possible solutions:
     If the token's true nullability is not `~a`, you may need to use `>>` to
     override the inferred nullability wherever the token is created.
-  likely argument position: ~a
   argument value: ~e
 HEREDOC
-                     proc-name nullability nullability (add1 bad-index)
+                     proc-name nullability (add1 bad-index) nullability
                      "TODO-show-bad-value" #;bad-value)])
     (raise (exn:fail:contract msg continuation-marks))))
 
@@ -152,18 +152,18 @@ HEREDOC
          fallbacks nullability bad-index bad-value)
   (let ([msg (format #<<HEREDOC
 ~a: contract violation
-  expected: a token that is non-nullable or has one of these fallbacks:
-                ~a
+  expected: a token that is non-nullable or has an acceptable fallback
   given: a token with nullability: ~a
+  likely argument position: ~a
+  acceptable fallbacks: ~a
   possible solutions:
     If the token's true nullability is `~a`, you should use `??` to attach an
     acceptable fallback immediately before passing it into this function.
     If the token's true nullability is not `~a`, you may need to use `>>` to
     override the inferred nullability wherever the token is created.
-  likely argument position: ~a
   argument value: ~e
 HEREDOC
-                     proc-name fallbacks nullability nullability nullability (add1 bad-index)
+                     proc-name nullability (add1 bad-index) fallbacks nullability nullability
                      "TODO-show-bad-value" #;bad-value)])
     (raise (exn:fail:contract msg continuation-marks))))
 
