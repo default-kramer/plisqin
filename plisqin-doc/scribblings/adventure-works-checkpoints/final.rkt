@@ -233,9 +233,12 @@
                 (join-type 'left)
                 (join-on (.= (ProductSubcategoryID subcat)
                              (?? (ProductSubcategoryID this) /void))))]
+         [ProductCategory
+          (ProductCategory (ProductSubcategory this))]
          #:has-group
          [DetailsG
           (join detailsG SalesOrderDetail
+                (join-type 'left) ; TODO should this be done by #:has-group?
                 (group-by (ProductID detailsG))
                 (join-on (.= (ProductID detailsG)
                              (ProductID this))))]
@@ -251,7 +254,9 @@
                         (where (.= (ProductID dtl)
                                    (ProductID this)))))]
          [TotalSales
-          (round (sum (LineTotal (DetailsG this))) 2)])
+          (round (sum (LineTotal (DetailsG this))) 2)]
+         [TotalQtySold
+          (sum (OrderQty (DetailsG this)))])
   (table ProductCategory
          #:column
          [ModifiedDate #:type Datetime #:null no]
