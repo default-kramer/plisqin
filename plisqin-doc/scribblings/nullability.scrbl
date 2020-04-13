@@ -54,6 +54,7 @@ A programmer might write "x <= y" but fail to consider what should happen
 if x is null or y is null or both are null.
 
 @(load-checkpoint! "final")
+@(void "TODO deftech{strict boolean} might help here")
 The @tech{strict} version of Plisqin prevents these kinds of mistakes.
 It does this in two ways:
 @(itemlist

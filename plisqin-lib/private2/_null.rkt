@@ -2,7 +2,7 @@
 
 (provide nullchecker nulltrack<%> nulltrack?
          nullability nullability? yes no maybe
-         fallback fallback? /void /minval /maxval /any)
+         fallback fallback? /void /minval /maxval /any fallback-symbol)
 
 (module+ more
   ; try to use nulltrack<%> instead
@@ -46,9 +46,20 @@
            (send x get-nullability))
       (and (custom-nullability? x)
            (get-custom-nullability x))))
+
 (define (fallback x)
   (and (nulltrack? x)
        (send x get-fallback)))
+
+(define (fallback-symbol x)
+  (if (nulltrack? x)
+      (fallback-symbol (fallback x))
+      (cond
+        [(eq? x /void)   '/void]
+        [(eq? x /minval) '/minval]
+        [(eq? x /maxval) '/maxval]
+        [(eq? x /any)    '/any]
+        [else #f])))
 
 
 ;;; nullcheck-core

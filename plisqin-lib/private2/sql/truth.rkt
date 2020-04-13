@@ -278,81 +278,16 @@
 (module+ test
   (require rackunit)
 
+  ; Make sure the truth table matches the implementation
   (for ([item truth-table])
     (let* ([expected (car item)]
            [pattern (cadr item)]
            [actual (truth-test pattern)])
       (check-equal? actual expected (format "checking truth table: ~a" item))))
 
+  ; Check that equality is symmetrical
   (for* ([lhs fallbacks]
          [rhs (cons 42 fallbacks)])
     (check-equal? (truth-test (list '= lhs rhs))
                   (truth-test (list '= rhs lhs))))
-
-  (define-syntax-rule (do op a b)
-    (probe 'op 'a 'b))
-
-  ; Let's create some names for our probe results:
-
-  ; The result never became true:
-  (define none '(#f #f #f))
-  ; "lhs is not null and rhs is not null and <expr>"
-
-  ; The result became true when either fallback was used:
-  (define either '(#t #t #t))
-  ; "lhs is null or rhs is null or <expr>"
-
-  ; There is a missing case here: '(#t #t #f)
-  ; This represents "either, but not both" which our current logic will never return.
-  
-  ; The result became true when both fallbacks were used:
-  (define both '(#f #f #t))
-  ; "(lhs is null and rhs is null) or <expr>"
-
-  ; The result became true when the [lhs/rhs] fallback was used:
-  (define lhs-or-both '(#t #f #t))
-  (define rhs-or-both '(#f #t #t))
-  ; "lhs is null or <expr>"
-
-  ; The result became true when ONLY the [lhs/rhs] fallback was used:
-  (define lhs-only '(#t #f #f))
-  (define rhs-only '(#f #t #f))
-  ; "(lhs is null and rhs is not null) or <expr>"
-
-
-  (check-equal? (do = /void /void)
-                none)
-  (check-equal? (do = /minval /minval)
-                both)
-  (check-equal? (do = /minval /any)
-                rhs-or-both)
-  (check-equal? (do = /any /minval)
-                lhs-or-both)
-  (check-equal? (do < /minval /any)
-                either)
-  (check-equal? (do < /minval 42)
-                lhs-or-both)
-  (check-equal? (do < 42 /maxval)
-                rhs-or-both)
-  (check-equal? (do < /maxval 42)
-                none)
-  (check-equal? (do < /minval /void)
-                lhs-only)
-  (check-equal? (do < /minval /minval)
-                lhs-only)
-  (check-equal? (do < /minval /maxval)
-                either)
-  (check-equal? (do < /maxval /any)
-                rhs-only)
-  (check-equal? (do < /any /minval)
-                lhs-only)
-
-  ; What if there are no fallbacks?
-  (check-equal? (do = 42 42)
-                none)
-  (check-equal? (do = 'foo 'bar)
-                none)
-  (check-equal? (do <> 42 42)
-                none)
-  (check-equal? (do <> 'foo 'bar)
-                none))
+  )

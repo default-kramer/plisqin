@@ -15,6 +15,8 @@
          "./fragment.rkt"
          "./frags.helpers.rkt"
          (only-in "../_core.rkt" join? tuple?)
+         (only-in "../_null.rkt" fallback-symbol)
+         (only-in "truth.rkt" probe)
          racket/stxparam)
 
 ; In the body of `(select . x)` we will bind self to (quote select).
@@ -125,11 +127,12 @@
   [(not)
    (make2 'bool
           #:reduce (list "not " (parens tokens)))]
-  [(= <> < <= > >=
-      like not-like is is-not in not-in)
+  [(= <> < <= > >=)
    (make2 'bool
-          #:reduce (let ([sqlname (translate-op self)])
-                     (parens (insert-ands sqlname tokens))))]
+          #:reduce (reduce-comparison self tokens))]
+  [(like not-like is is-not in not-in)
+   (make2 'bool
+          #:reduce (reduce-operation self tokens))]
   [(+ - * /)
    (make2 'scalar
           #:reduce (parens (interpose (format " ~a " self) tokens)))]
@@ -160,3 +163,87 @@
     [(is-not) "is not"]
     [(not-in) "not in"]
     [else (~a sym)]))
+
+(define (reduce-operation op tokens)
+  (let ([sqlname (translate-op op)])
+    (parens (insert-ands sqlname tokens))))
+
+(define (reduce-comparison op tokens)
+  ; See truth.rkt for a more complete description of a "probe result".
+  ; Basically, there are 3 booleans representing: lhs, rhs, and lhs+rhs.
+  ; This gives us 2^3 = 8 possibilities, but 1 of them is never used by our truth table.
+  ; We need to translate the other 7 into SQL.
+  (let ([base-reduction (reduce-operation op tokens)])
+    (let*-values ([(lhs rhs /lhs /rhs probe-result)
+                   (match tokens
+                     [(list lhs rhs)
+                      (let ([/lhs (fallback-symbol lhs)]
+                            [/rhs (fallback-symbol rhs)])
+                        (values lhs rhs /lhs /rhs
+                                (probe op /lhs /rhs)))]
+                     [else (values #f #f #f #f #f)])])
+      (cond
+        [(and /lhs /rhs)
+         (reduce-probe2 probe-result lhs rhs base-reduction)]
+        [/lhs
+         (reduce-probe1 probe-result lhs base-reduction)]
+        [/rhs
+         (match probe-result
+           ; Swap the first two elements, because reduce-probe1 assumes that the
+           ; lhs was the one with the fallback
+           [(list a b c)
+            (reduce-probe1 (list b a c)
+                           rhs base-reduction)])]
+        [else
+         base-reduction]))))
+
+(define (reduce-probe2 probe-result lhs rhs base-reduction)
+  ; Reduce a probe result when both the lhs and rhs had fallbacks.
+  (case probe-result
+    ; == Truths: 3 ==
+    [((#t #t #t))
+     (parens (list lhs" is null or "rhs" is null or "base-reduction))]
+    ; == Truths: 2 ==
+    [((#t #f #t))
+     (parens (list lhs" is null or "(parens (list rhs" is not null and "base-reduction))))]
+    [((#f #t #t))
+     (parens (list rhs" is null or "(parens (list lhs" is not null and "base-reduction))))]
+    [((#t #t #f))
+     (error "This case is impossible to hit with the current truth tables")]
+    ; == Truths: 1 ==
+    [((#t #f #f))
+     (parens (list rhs" is not null and "(parens (list lhs" is null or "base-reduction))))]
+    [((#f #t #f))
+     (parens (list lhs" is not null and "(parens (list rhs" is null or "base-reduction))))]
+    [((#f #f #t))
+     ; TODO this will leak an unknown value when only one operand is null.
+     ; Note also that this is the case where (= /minval /minval) can be rendered as
+     ; "lhs is not distinct from rhs" on Postgres.
+     (parens (list (parens (list lhs" is null and "rhs" is null"))" or "base-reduction))]
+    ; == Truths: 0 ==
+    [((#f #f #f))
+     (parens (list lhs" is not null and "rhs" is not null and "base-reduction))]
+    ; ==============
+    [else
+     (error "unhandled probe result:" probe-result)]))
+
+(define (reduce-probe1 probe-result lhs base-reduction)
+  ; Reduce a probe result when only the lhs had a fallback.
+  ; (If only the rhs had a fallback, the caller can swap the first two elements
+  ;  of the probe-result and this function will be none the wiser.)
+  (case probe-result
+    [((#f #f #t)
+      (#f #t #t)
+      (#f #t #f)
+      (#t #f #f)
+      (#t #t #f))
+     ; These cases should all be impossible.
+     ; The rhs didn't have a fallback so it cannot change the result.
+     (error "unexpected probe result" probe-result)]
+    [((#f #f #f))
+     (parens (list lhs" is not null and "base-reduction))]
+    [((#t #t #t)
+      (#t #f #t))
+     (parens (list lhs" is null or "base-reduction))]
+    [else
+     (error "unhandled probe result" probe-result)]))
