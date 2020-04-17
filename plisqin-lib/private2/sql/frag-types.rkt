@@ -9,7 +9,7 @@
 (require "weave.rkt"
          "../_types.rkt"
          "frags.helpers.rkt"
-         (for-label "../_types.rkt"))
+         (for-label plisqin-lib/types))
 
 (define-syntax (~def-typetable stx)
   (syntax-case stx ()

@@ -1,6 +1,7 @@
 #lang scribble/manual
 
 @(require (for-label plisqin "racket.rkt")
+          (for-syntax "racket.rkt")
           "helpers.rkt")
 
 @title{plisqin-lib}
@@ -84,3 +85,89 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
    (eval:check (nullability "not a token")
                #f))
 }
+
+@section{Token Types}
+@(defmodule plisqin-lib/types)
+Plisqin's types are plain Racket values.
+They start with a capital letter.
+@(repl
+  (eval:check Subquery Subquery)
+  (eval:check (type? Subquery) #t))
+
+Types can be used as predicates, therefore they can also be used as contracts.
+@(repl
+  (eval:check (Number (val 20)) #t)
+  (eval:check (Token (%%where "x.foo = 'bar'")) #t))
+
+Most types have at least one supertype.
+For example, @(racket Scalar) is a supertype of @(racket Number).
+@(repl
+  (eval:check (type-supertypes Number) (list Scalar))
+  (eval:check (Number (val 20)) #t)
+  (eval:check (Scalar (val 20)) #t))
+
+@defproc[(type? [x any/c]) any/c]{
+ Predicate that recognizes types.
+ @(repl
+   (eval:check (type? Token) #t)
+   (eval:check (type? Datetime) #t))
+}
+
+@defproc[(type-supertypes [t type?]) (listof type?)]{
+ Returns the supertypes of the given type.
+ @(repl
+   (eval:check (type-supertypes Datetime) (list Scalar)))
+}
+
+@(define-syntax (show-supertypes stx)
+   (syntax-case stx ()
+     [(_ Type)
+      ; strip srcloc to fix typesetting
+      (let ([t (datum->syntax #'Type (syntax-e #'Type) #f #'Type)])
+        #`(repl (type-supertypes #,t)))]))
+
+@(define-syntax-rule (deftype Type content ...)
+   (defthing Type type?
+     (show-supertypes Type)
+     content ...))
+@deftype[Token]{
+ The root of the type hierarchy.
+}
+
+@deftype[Scalar]{
+ In general, every data type that a database column can have should correspond
+ to @(racket Scalar) or one of its subtypes.
+ To use some PostgreSQL examples, "varchar(50)" corresponds to @(racket String),
+ and "bigint" corresponds to @(racket Number).
+ Less common data types such as "cidr" correspond to @(racket Scalar) because
+ Plisqin has no more appropriate subtype for them.
+}
+
+@deftype[Boolish]{
+ TODO
+}
+@deftype[Bit]{
+ TODO
+}
+@deftype[Bool]{
+ TODO
+}
+@deftype[Interval]{
+ TODO
+}
+@deftype[Datetime]{
+ TODO
+}
+@deftype[Number]{
+ TODO
+}
+@deftype[String]{
+ TODO
+}
+@deftype[Subquery]{
+ TODO
+}
+
+TODO: Query and Join are not truly types right now.
+They are simply predicates.
+We should probably make them types for consistency.

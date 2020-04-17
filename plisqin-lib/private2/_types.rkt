@@ -1,7 +1,7 @@
 #lang racket
 
 (require "./types/lib/core.rkt")
-(provide typed<%> typed? get-type type? assign-type)
+(provide typed<%> typed? get-type type? assign-type type-supertypes)
 
 (require "./types/lib/guard.rkt")
 (provide build-typechecker)

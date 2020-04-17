@@ -1,8 +1,9 @@
 #lang racket/base
 
-(require "./private2/types/types.rkt")
+(require "./private2/_types.rkt")
 
 (provide
+ type? type-supertypes
  ; base types
  Token Scalar
  ; booleans

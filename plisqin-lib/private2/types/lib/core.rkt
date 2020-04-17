@@ -1,7 +1,7 @@
 #lang racket
 
 (provide typed<%> typed? get-type assign-type
-         type? define-types)
+         type? define-types type-supertypes)
 
 ; Runtime representation of a type
 ; contract-proc : procedure?
@@ -9,6 +9,7 @@
 ; supertypes    : (listof type?)
 (struct type (contract-proc id supertypes flattened-supertypes)
   #:property prop:procedure 0
+  #:property prop:custom-print-quotable 'never
   #:methods gen:custom-write
   [(define (write-proc me port mode)
      (write-string (format "~a" (type-id me)) port))])
