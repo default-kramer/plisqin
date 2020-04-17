@@ -28,18 +28,22 @@ of @(racket define-schema), as in the following example:
            #:column
            [AlbumID #:type Number #:null no]
            [ReleaseYear #:type Number #:null yes]))
-  (nullability (AlbumID Album))
-  (nullability (ReleaseYear Album)))
+  (eval:check (nullability (AlbumID Album))
+              no)
+  (eval:check (nullability (ReleaseYear Album))
+              yes))
 
 When you build a larger token out of smaller ones, Plisqin usually determines the
 correct nullability, as in the following example:
 @(repl
-  (code:comment "Neither operand is nullable, so the result is also `no`")
-  (nullability (.+ (AlbumID Album)
-                   (val 1)))
-  (code:comment "(ReleaseYear Album) is nullable, so the result is `yes`")
-  (nullability (.+ (ReleaseYear Album)
-                   (val 1))))
+  (code:comment "Neither operand is nullable, so the result is not nullable")
+  (eval:check (nullability (.+ (AlbumID Album)
+                               (val 1)))
+              no)
+  (code:comment "(ReleaseYear Album) is nullable, so the result is nullable")
+  (eval:check (nullability (.+ (ReleaseYear Album)
+                               (val 1)))
+              yes))
 
 TODO document the nullcheck behavior of each token constructor.
 Teach people how to read it here.
@@ -90,7 +94,8 @@ We can confirm that the nullability of the first argument is @(racket yes):
  that to the caller. Some callers might want to know the difference between "some records
  that summed to zero" and "no records".}
 @(repl
-  (nullability (TotalQtySold Product)))
+  (eval:check (nullability (TotalQtySold Product))
+              yes))
 
 So in order to perform this comparison, we will use a @deftech{fallback}.
 A fallback is a value that can be attached to any token.
