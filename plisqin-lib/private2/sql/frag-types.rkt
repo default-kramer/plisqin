@@ -23,10 +23,10 @@
          (begin
            (def-dispatcher dispatcher-id
              [(proc-id arg ooo)
-              (build-typechecker (list arg ooo) type-spec ...)]
+              (build-typechecker 'proc-id (list arg ooo) type-spec ...)]
              ...
              [(proc-id . arglist)
-              (build-typechecker arglist type-spec ...)]
+              (build-typechecker 'proc-id arglist type-spec ...)]
              ...))))]
     [else (error "assert fail brq9j053")]))
 

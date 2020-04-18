@@ -1,6 +1,6 @@
 #lang racket
 
-(provide func-name build-typechecker)
+(provide build-typechecker)
 ; This file should probably be renamed, because `guard` no longer exists.
 
 (require (for-syntax syntax/parse)
@@ -80,14 +80,12 @@
 (define (format-specs specs)
   (string-join (map ~a specs) "\n"))
 
-(define-syntax-parameter func-name (λ (stx) #'#f))
-
 (define (display-types arglist)
   (map (λ (x) (or (get-type x) 'Untyped))
        arglist))
 
 ;;; build-typechecker
-; (build-typechecker arglist spec ...) constructs an expression that
+; (build-typechecker func-name arglist spec ...) constructs an expression that
 ; checks (at runtime) the arglist to see if it satisfies any of the specs.
 ; If so, the expression's value will be the return type.
 ; Otherwise an type error will be raised.
@@ -100,7 +98,7 @@
      (error "Expected two numbers")])
 (define-syntax (build-typechecker stx)
   (syntax-parse stx
-    [(_ arglist0 spec ...+)
+    [(_ func-name arglist0 spec ...+)
      (quasisyntax/loc stx
        (let ([arglist arglist0])
          (match arglist
@@ -108,7 +106,7 @@
                    (syntax->list #'(spec ...)))
            [else
             (raise-argument-error
-             (or (func-name) 'func)
+             func-name
              (format "An argument list satisfying one of the following:\n~a"
                      (format-specs '(spec ...)))
              ; It might be possible to print the actual values in addition
@@ -123,7 +121,7 @@
   (require rackunit)
 
   (define (f . arglist)
-    (build-typechecker arglist
+    (build-typechecker 'f arglist
                        [number? -> "One Number"]
                        [number? number? -> "Two Numbers"]
                        [number? number? ...+ -> "Many Numbers"]
