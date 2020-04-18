@@ -86,6 +86,35 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
                #f))
 }
 
+@defform[#:literals(table)
+         (define-schema schema-id table-def ...)
+         #:grammar
+         [(schema-id id
+                     #f)
+          (table-def (table table-id item-def ...))
+          (item-def (code:line #:column [id column-opt ...] ...+)
+                    (code:line #:has-one [id expr] ...+)
+                    (code:line #:has-group [id expr] ...+)
+                    (code:line #:property [id expr] ...+))
+          (column-opt (code:line #:as as-name)
+                      (code:line #:type type)
+                      (code:line #:null nullability)
+                      (code:line #:dbname dbname))]]{
+ TODO write documentation.
+ Also, do we already support raw column ids? Should we? Like:
+ @(racketblock
+   #:column
+   FirstName
+   LastName
+   [UserId #:type Number]
+   AnotherColumn)
+}
+
+@defidform[this]{
+ For use within @(racket define-schema).
+ Any other use is a syntax error.
+}
+
 @section{Token Types}
 @(defmodule plisqin-lib/types)
 Plisqin's types are plain Racket values.
