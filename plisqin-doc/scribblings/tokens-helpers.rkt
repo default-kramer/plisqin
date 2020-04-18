@@ -69,7 +69,7 @@
       [(member (syntax-e stx)
                '(select where group-by having order-by join-on
                         scalar bool aggregate subquery sql
-                        count avg min max sum exists
+                        count avg min max sum exists round coalesce
                         and or not
                         = <> < <= > >=
                         like not-like is is-not in not-in

@@ -21,7 +21,7 @@
     (export-all type-dispatcher null-dispatcher
                 select where group-by having order-by join-on
                 scalar bit aggregate subquery sql
-                count avg min max sum exists coalesce)
+                count avg min max sum exists round coalesce)
     (module+ operators
       (export-all type-dispatcher null-dispatcher
                   and or not
@@ -56,8 +56,8 @@
 
       ; Test that (frag-id "foo") is `maybe` nullable.
       ; Also test annotation and inference.
-      ; Skip `exists` because it has special handling
-      (when (r:not (member 'frag-id '(exists)))
+      ; Skip some that have special handling.
+      (when (r:not (member 'frag-id '(exists coalesce)))
         (let* ([default (frag-id "foo")]
                [annotated (>> default #:null no)]
                [inferred (frag-id annotated)])
@@ -69,7 +69,7 @@
 
   (check-frags select where group-by having order-by join-on
                scalar bit aggregate subquery sql
-               count avg min max sum exists)
+               count avg min max sum exists round coalesce)
   (check-frags and or not
                = <> < <= > >=
                like not-like

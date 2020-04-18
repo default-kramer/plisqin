@@ -40,6 +40,18 @@
   (check-sql (%%order-by "a" "b" "c")
              #:all "abc")
 
+  ; round
+  (check-sql (%%round "foo" 3)
+             #:all "round(foo, 3)")
+  (check-sql (%%round "foo")
+             ; "round(foo)" is not valid MSSQL.
+             ; So always include the zero:
+             #:all "round(foo, 0)")
+  (check-equal? (nullability (%%round (>> (%%sql "foo") #:null no)
+                                      ; Make sure this zero doesn't introduce nullability
+                                      0))
+                no)
+
   ; coalesce
   (check-sql (%%coalesce "foo" "bar")
              #:all "coalesce(foo, bar)")

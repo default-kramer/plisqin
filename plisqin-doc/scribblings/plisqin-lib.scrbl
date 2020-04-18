@@ -84,6 +84,9 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
                maybe)
    (eval:check (nullability "not a token")
                #f))
+ TODO the private @(racket nullcheck-core) has special handling, like
+ that a @(racket tuple?) or a @(racket number?) is never null.
+ Should those special cases be moved here?
 }
 
 @defform[#:literals(table)

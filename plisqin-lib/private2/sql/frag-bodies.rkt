@@ -113,8 +113,7 @@
    (make2 'bool
           #:reduce (list "exists " (parens tokens)))]
   [(round)
-   (make2 'scalar
-          #:reduce (error "TODO need dialect here"))]
+   (make2 'scalar #:reduce (reduce-round tokens))]
   [(coalesce)
    (make2 'scalar
           #:reduce (list "coalesce" (parens (interpose ", " tokens))))]
@@ -156,6 +155,13 @@
      (list "count" (parens (list "distinct " stuff)))]
     [else
      (list "count" (parens tokens))]))
+
+(define (reduce-round tokens)
+  (match tokens
+    [(list a)
+     (list "round("a", 0)")]
+    [else
+     (list "round" (parens (interpose ", " tokens)))]))
 
 (define (translate-op sym)
   (case sym

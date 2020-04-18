@@ -32,7 +32,7 @@
                    ; aggregates
                    [count avg min max sum]
                    ; misc
-                   [exists coalesce]
+                   [exists coalesce round]
                    ; operators
                    [and or not
                     = <> < <= > >=

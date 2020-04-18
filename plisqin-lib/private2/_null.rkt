@@ -86,6 +86,7 @@
   (for ([arg arglist])
     (define nullability
       (cond
+        [(number? arg) no]
         [(custom-nullability? arg)
          (get-custom-nullability arg)]
         [(nulltrack? arg)

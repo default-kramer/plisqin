@@ -70,6 +70,9 @@
            in not-in)
    (token-constructor
     [any/c ...+ -> Bool])]
+  [(round)
+   (token-constructor
+    [any/c ...+ -> Number])]
   [(subquery)
    (token-constructor
     [any/c ...+ -> Subquery])]
@@ -98,6 +101,10 @@
            in not-in)
    (token-constructor
     [content? ...+ -> Bool])]
+  [(round)
+   (token-constructor
+    [content? -> Number]
+    [content? number? -> Number])]
   [(subquery)
    (token-constructor
     [content? ...+ -> Subquery])]
@@ -147,6 +154,10 @@
   [(exists)
    (token-constructor
     [(or/c Query Subquery) -> Bool])]
+  [(round)
+   (token-constructor
+    [Number -> Number]
+    [Number number? -> Number])]
   [(and or)
    (token-constructor
     [Boolish ...+ -> Bool])]
