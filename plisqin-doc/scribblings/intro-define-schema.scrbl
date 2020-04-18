@@ -7,6 +7,7 @@
           (prefix-in db: db)
           (for-syntax racket/base)
           (for-label plisqin
+                     (prefix-in aw: plisqin-examples/adventure-works)
                      "racket.rkt"))
 
 @(define-syntax-rule (bossquote stuff ...)
@@ -30,7 +31,7 @@ including the Product Name, Category Name, and Total Sales.
 So I need to write a query.
 Thanks to my schema definition, I nail it on the first try:
 @(repl-query
-  (show-table
+  (aw:show-table
    (from p Product
          (limit 3)
          (select (ProductName p))
@@ -120,7 +121,7 @@ The first task, as always, is to determine which table we need to query.
 The @(racket ProductSubcategory) table looks promising.
 Let's see what it contains:
 @(repl-query
-  (show-table
+  (aw:show-table
    (from subcat ProductSubcategory
          (limit 5))))
 
@@ -143,7 +144,7 @@ clauses, so it just shows the primary table by default.
 (The primary table is @(racket ProductSubcategory) here.)
 Let's add some @(racket select) clauses to control which columns get displayed:
 @(repl-query
-  (show-table
+  (aw:show-table
    (from subcat ProductSubcategory
          (limit 5)
          (join cat ProductCategory
@@ -184,7 +185,7 @@ But we are still not done refactoring.
 @tech{Perform} refactoring recipe TODO so that the following query works:
 @(load-checkpoint! "2.rkt")
 @(repl-query
-  (show-table
+  (aw:show-table
    (from subcat ProductSubcategory
          (limit 5)
          (select (SubcategoryName subcat))
@@ -207,7 +208,7 @@ The first task, as always, is to determine which table we need to query.
 The @(racket Product) table looks promising.
 Let's see what it contains:
 @(repl-query
-  (show-table
+  (aw:show-table
    (from prd Product
          (limit 5))))
 
@@ -225,7 +226,7 @@ So this should be a left join to avoid eliminating Products from the result set:
 And now let's add some select clauses:
 @margin-note{TODO this is the first introduction to nullchecking and fallbacks, right?}
 @(repl-query
-  (show-table
+  (aw:show-table
    (from prd Product
          (limit 5)
          (join subcat ProductSubcategory
@@ -253,7 +254,7 @@ That investment pays off now, because our current query has an instance of
  are left joins. TODO write up how @(racket (join-type 'infer)) works and link to it?
  Or is that just a distraction at this point?}
 @(repl-query
-  (show-table
+  (aw:show-table
    (from prd Product
          (limit 5)
          (join subcat ProductSubcategory
@@ -290,7 +291,7 @@ so that the following query works:
 @tech{Perform} refactoring recipe TODO to rename @(racket (Name prd)):
 @(load-checkpoint! "3.rkt")
 @(repl-query
-  (show-table
+  (aw:show-table
    (from prd Product
          (limit 5)
          (select (ProductName prd))
@@ -319,7 +320,7 @@ TODO we need to determine how to know whether a Product has been sold.
 
 Anyway, we eventually land on this:
 @(repl-query
-  (show-table
+  (aw:show-table
    (from prd Product
          (limit 5)
          (select (ProductName prd))
@@ -337,7 +338,7 @@ return the @(racket (exists ....)) expression.
 The following query should now work:
 @(load-checkpoint! "4.rkt")
 @(repl-query
-  (show-table
+  (aw:show-table
    (from prd Product
          (limit 5)
          (select (ProductName prd))
@@ -371,7 +372,7 @@ simple column access would require updating all the call sites.
 TODO write prose from here to the end.
 Initial query:
 @(repl-query
-  (show-table
+  (aw:show-table
    (from prd Product
          (limit 5)
          (select (ProductNumber prd))
@@ -389,7 +390,7 @@ returns our @(racket (join detailsG ....)) expression.
 The following query should now work:
 @(load-checkpoint! "5.rkt")
 @(repl-query
-  (show-table
+  (aw:show-table
    (from prd Product
          (limit 5)
          (select (ProductNumber prd))
@@ -419,7 +420,7 @@ While refactoring our query, we made the following enhancements to our schema.
 
 Initial revision
 @(repl-query
-  (show-table
+  (aw:show-table
    (from subcat ProductSubcategory
          (limit 5)
          (select (SubcategoryName subcat))
@@ -468,7 +469,7 @@ Initial revision
 @tech{Perform} refactoring recipe TODO so that this query works:
 @(load-checkpoint! "6.rkt")
 @(repl-query
-  (show-table
+  (aw:show-table
    (from subcat ProductSubcategory
          (limit 5)
          (select (SubcategoryName subcat))
@@ -545,14 +546,14 @@ more clauses to the end of it:
 
 Now we can use this procedure to reimplement the Sales by Product report:
 @(repl-query
-  (show-table
+  (aw:show-table
    (sales-report (from prd Product
                        (select (ProductNumber prd))
                        (select (SubcategoryName prd))))))
 
 We can do the same thing for the Sales by Subcategory report:
 @(repl-query
-  (show-table
+  (aw:show-table
    (sales-report (from subcat ProductSubcategory
                        (select (SubcategoryName subcat))
                        (select (CategoryName subcat))))))
@@ -599,7 +600,7 @@ We could modify it to accept a time window of sales to consider as follows:
 
 @(repl-query
   ; TODO should have a %%datetime proc available here
-  (show-table
+  (aw:show-table
    (sales-report
     #:start-date (>> (%%sql "'2012-01-01'") #:cast Datetime #:null no)
     #:end-date (>> (%%sql "'2013-01-01'") #:cast Datetime #:null no)

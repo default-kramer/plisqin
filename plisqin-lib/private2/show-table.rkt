@@ -1,27 +1,22 @@
 #lang racket
-(provide show-table current-connection)
+
+(provide show-table-internal)
 
 (require (prefix-in db: db)
          "rows-result-to-string.rkt"
          (only-in "_core.rkt" query? to-sql))
 
-(define/contract (guard-current-connection x)
-  (-> (or/c #f db:connection?)
-      (or/c #f db:connection?))
-  x)
-
-(define current-connection
-  (make-parameter #f guard-current-connection))
-
-(define/contract (show-table x)
-  (-> (or/c query? string?) any/c)
-  (define conn (current-connection))
-  (when (not (db:connection? conn))
-    (error "current-connection is not set"))
-  (define sql
-    (cond
-      [(query? x) (to-sql x)]
-      [(string? x) x]
-      [else (error "TODO")]))
-  (define result (db:query conn sql))
-  (displayln (rows-result->string result)))
+(define/contract (show-table-internal x conn)
+  (-> (or/c query? string?)
+      (or/c db:connection? (-> db:connection?))
+      any/c)
+  (if (procedure? conn)
+      (let ([conn (conn)])
+        (show-table-internal x conn)
+        (db:disconnect conn))
+      (let* ([sql (cond
+                    [(query? x) (to-sql x)]
+                    [(string? x) x]
+                    [else (error "TODO")])]
+             [result (db:query conn sql)])
+        (displayln (rows-result->string result)))))

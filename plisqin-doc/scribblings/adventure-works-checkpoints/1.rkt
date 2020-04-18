@@ -5,8 +5,6 @@
 (require plisqin
          plisqin-examples/adventure-works)
 
-(current-connection (connect-adventure-works))
-
 (define-schema adventure-works-schema
   (table Department
          #:column

@@ -34,19 +34,6 @@
 (require plisqin-lib/private2/define-schema)
 (provide define-schema this)
 
-;(require plisqin-lib/private/api)
-;(provide (all-from-out plisqin-lib/private/api))
-;(require plisqin-lib/private/schema)
-;(provide (all-from-out plisqin-lib/private/schema))
-;(require plisqin-lib/private/aggregates)
-;(provide (all-from-out plisqin-lib/private/aggregates))
-
-;(require plisqin-lib/private/schema/schema)
-;(provide define-schema this)
-
-(require plisqin-lib/private2/show-table)
-(provide show-table current-connection)
-
 (module+ test
   ;; Tests to be run with raco test
   )

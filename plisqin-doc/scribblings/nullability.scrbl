@@ -3,6 +3,7 @@
 @(begin
    (require plisqin
             (for-label plisqin
+                       (prefix-in aw: plisqin-examples/adventure-works)
                        "racket.rkt")
             "helpers.rkt"
             "racket.rkt"
@@ -115,7 +116,7 @@ comparison will be true whenever @(racket (TotalQtySold p)) is dbnull.
 
 Let's peek at the result set for completeness:
 @(repl-query
-  (show-table
+  (aw:show-table
    (from p Product
          (limit 5)
          (select (ProductName p))

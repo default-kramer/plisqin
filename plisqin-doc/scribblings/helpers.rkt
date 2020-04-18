@@ -57,7 +57,6 @@
               (require plisqin-examples/adventure-works
                        plisqin)
               (require ,(string->symbol cp-path))
-              (current-connection (connect-adventure-works))
               (current-dialect (sqlite)))))
 
 (define-syntax (show-results stx)
