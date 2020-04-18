@@ -17,5 +17,7 @@
                                      (check-regexp-match message-regexp (exn-message exn))))])
            expr))]))
 
-(check-exn+message (round "not a Number")
-                   "round: contract violation")
+(check-exn+message (join-on "not a Token")
+                   "join-on: contract violation")
+(check-exn+message (coalesce "not a Token")
+                   "coalesce: contract violation")
