@@ -5,6 +5,7 @@
 
 (require (only-in (submod "../_core.rkt" fragment-helper)
                   sql-token<%> define-token-aspect-stuff)
+         (for-syntax syntax/parse)
          racket/struct
          "../_null.rkt"
          "../_types.rkt")
@@ -85,5 +86,20 @@
 (define fragment-printer
   (make-constructor-style-printer fragment-id fragment-content))
 
-(define-syntax-rule (>> frag stuff ...)
-  (send frag change stuff ...))
+(define-syntax (>> stx)
+  (syntax-parse stx
+    [(_ token
+        (~alt (~optional (~seq #:cast Type))
+              (~optional (~seq #:as as-name))
+              (~optional (~seq #:null nullability))
+              (~optional (~seq #:fallback fallback))) ...)
+     #:declare Type (expr/c #'type?)
+     #:declare as-name (expr/c #'(or/c symbol? string?))
+     #:declare nullability (expr/c #'nullability?)
+     #:declare fallback (expr/c #'fallback?)
+     (syntax/loc stx
+       (send token change
+             (~? (~@ #:cast Type.c))
+             (~? (~@ #:as as-name.c))
+             (~? (~@ #:null nullability.c))
+             (~? (~@ #:fallback fallback.c))))]))

@@ -83,8 +83,12 @@
 
   ; Test comparisons with fallbacks
   (define-syntax-rule (check-cmp cmp /lhs /rhs sql)
-    (check-sql (cmp (?? (%%sql "lhs") /lhs)
-                    (?? (%%sql "rhs") /rhs))
+    (check-sql (cmp (or (and /lhs
+                             (?? (%%sql "lhs") /lhs))
+                        (%%sql "lhs"))
+                    (or (and /rhs
+                             (?? (%%sql "rhs") /rhs))
+                        (%%sql "rhs")))
                #:all sql))
   (define-syntax-rule (check<= /lhs /rhs sql)
     (check-cmp %%<= /lhs /rhs sql))

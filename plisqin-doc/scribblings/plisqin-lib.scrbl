@@ -38,6 +38,21 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
  Any other use is a syntax error.
 }
 
+@defform[(>> token modification ...)
+         #:grammar
+         [(modification (code:line #:cast Type)
+                        (code:line #:as as-name)
+                        (code:line #:null nullability)
+                        (code:line #:fallback /fallback))]
+         #:contracts
+         ([Type type?]
+          [as-name (or/c symbol? string?)]
+          [nullability nullability?]
+          [/fallback fallback?])]{
+ Returns a copy of the given @(racket token) with the specified modifications.
+ TODO needs more detail.
+}
+
 @section[#:tag "reference:nullability"]{Nullability}
 @deftogether[(@defthing[/void fallback?]
                @defthing[/minval fallback?]
