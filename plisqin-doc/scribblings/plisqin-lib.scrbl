@@ -8,6 +8,37 @@
 TODO explain that most of the good stuff is in strict, loose, and unsafe.
 
 @(defmodule plisqin-lib)
+
+@defform[#:literals(table)
+         (define-schema schema-id table-def ...)
+         #:grammar
+         [(schema-id id
+                     #f)
+          (table-def (table table-id item-def ...))
+          (item-def (code:line #:column [id column-opt ...] ...+)
+                    (code:line #:has-one [id expr] ...+)
+                    (code:line #:has-group [id expr] ...+)
+                    (code:line #:property [id expr] ...+))
+          (column-opt (code:line #:as as-name)
+                      (code:line #:type type)
+                      (code:line #:null nullability)
+                      (code:line #:dbname dbname))]]{
+ TODO write documentation.
+ Also, do we already support raw column ids? Should we? Like:
+ @(racketblock
+   #:column
+   FirstName
+   LastName
+   [UserId #:type Number]
+   AnotherColumn)
+}
+
+@defidform[this]{
+ For use within @(racket define-schema).
+ Any other use is a syntax error.
+}
+
+@section[#:tag "reference:nullability"]{Nullability}
 @deftogether[(@defthing[/void fallback?]
                @defthing[/minval fallback?]
                @defthing[/maxval fallback?]
@@ -62,6 +93,19 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
  TODO mention that @(racket .not) doesn't know anything about fallbacks.
 }
 
+@defproc[(fallback? [x any/c]) any/c]{
+ Predicate that recognizes fallbacks.
+ @(repl (eval:check (fallback? /void) #t))
+}
+
+@defproc[(fallback [x any/c]) (or/c #f fallback?)]{
+ Returns the fallback of @(racket x) or @(racket #f) if none exists.
+ @(repl
+   (define my-token (%%sql "foo"))
+   (eval:check (fallback my-token) #f)
+   (eval:check (fallback (?? my-token /minval)) /minval))
+}
+
 @deftogether[(@defthing[yes nullability?]
                @defthing[no nullability?]
                @defthing[maybe nullability?])]{
@@ -87,35 +131,6 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
  TODO the private @(racket nullcheck-core) has special handling, like
  that a @(racket tuple?) or a @(racket number?) is never null.
  Should those special cases be moved here?
-}
-
-@defform[#:literals(table)
-         (define-schema schema-id table-def ...)
-         #:grammar
-         [(schema-id id
-                     #f)
-          (table-def (table table-id item-def ...))
-          (item-def (code:line #:column [id column-opt ...] ...+)
-                    (code:line #:has-one [id expr] ...+)
-                    (code:line #:has-group [id expr] ...+)
-                    (code:line #:property [id expr] ...+))
-          (column-opt (code:line #:as as-name)
-                      (code:line #:type type)
-                      (code:line #:null nullability)
-                      (code:line #:dbname dbname))]]{
- TODO write documentation.
- Also, do we already support raw column ids? Should we? Like:
- @(racketblock
-   #:column
-   FirstName
-   LastName
-   [UserId #:type Number]
-   AnotherColumn)
-}
-
-@defidform[this]{
- For use within @(racket define-schema).
- Any other use is a syntax error.
 }
 
 @section{Token Types}

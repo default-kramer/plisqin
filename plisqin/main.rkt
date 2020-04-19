@@ -24,12 +24,9 @@
 (provide (all-from-out plisqin-lib))
 
 ; TODO these definitely need to get moved into plisqin-lib
-(provide from join to-sql limit offset distinct join-type ??)
+(provide from join to-sql limit offset distinct join-type)
 
 ; TODO let's just see how these work
 (require plisqin-lib/private2/from)
 (require (only-in plisqin-lib/private2/_core
                   to-sql limit offset distinct join-type))
-
-(define (?? token fallback)
-  (>> token #:fallback fallback))
