@@ -3,36 +3,22 @@
 (provide fragment% fragment? >>
          fragment-as-name fragment-nullability fragment-fallback)
 
-(require (only-in (submod "../_core.rkt" fragment-helper)
-                  sql-token<%> define-token-aspect-stuff)
-         (for-syntax syntax/parse)
-         racket/struct
-         "../_null.rkt"
-         "../_types.rkt")
-
-(define never-quote<%>
-  (interface* () ([prop:custom-print-quotable 'never])))
+(require "token.rkt"
+         racket/struct)
 
 (define fragment%
-  (class* object% (sql-token<%> equal<%> printable<%> typed<%> nulltrack<%> never-quote<%>)
+  (class* token% (printable<%>)
+    (inherit-field type as-name nullability fallback)
     (init-field kind
                 id
                 content
-                reducer
-                ; type: (or/c #f type?)
-                type
-                ; as-name: perhaps (or/c #f symbol? string? Token)
-                as-name
-                ; nullability: nullability?
-                [nullability maybe]
-                ; fallback: (or/c #f fallback?)
-                [fallback #f])
+                reducer)
     (super-new)
 
-    (define/public (change #:cast [type type]
-                           #:as [as-name as-name]
-                           #:null [nullability nullability]
-                           #:fallback [fallback fallback])
+    (define/override (change #:cast [type type]
+                             #:as [as-name as-name]
+                             #:null [nullability nullability]
+                             #:fallback [fallback fallback])
       (new fragment%
            [kind kind]
            [id id]
@@ -43,30 +29,14 @@
            [nullability nullability]
            [fallback fallback]))
 
-    ; typed<%>
-    (define/public (get-type) type)
-    (define/public (assign-type t)
-      (change #:cast t))
-
-    ; nulltrack<%>
-    (define/public (get-nullability) nullability)
-    (define/public (get-fallback) fallback)
-
-    ; token<%>
-    (define/public (token-kind) kind)
-    (define/public (token-content) content)
-    (define-token-aspect-stuff)
-    (define/public (sql-token-reduce) (reducer content))
+    ; sql-token<%>
+    (define/override (token-kind) kind)
+    (define/override (token-content) content)
+    (define/override (sql-token-reduce) (reducer content))
 
     ; equal<%>
-    (define/public (equal-content)
+    (define/override (equal-content)
       (list kind content type as-name))
-    (define/public (equal-to? other recur)
-      (recur (equal-content) (send other equal-content)))
-    (define/public (equal-hash-code-of hasher)
-      (hasher (equal-content)))
-    (define/public (equal-secondary-hash-code-of hasher)
-      (hasher (equal-content)))
 
     ; printable<%>
     (define/public (custom-print port mode)
@@ -85,21 +55,3 @@
 
 (define fragment-printer
   (make-constructor-style-printer fragment-id fragment-content))
-
-(define-syntax (>> stx)
-  (syntax-parse stx
-    [(_ token
-        (~alt (~optional (~seq #:cast Type))
-              (~optional (~seq #:as as-name))
-              (~optional (~seq #:null nullability))
-              (~optional (~seq #:fallback fallback))) ...)
-     #:declare Type (expr/c #'type?)
-     #:declare as-name (expr/c #'(or/c symbol? string?))
-     #:declare nullability (expr/c #'nullability?)
-     #:declare fallback (expr/c #'fallback?)
-     (syntax/loc stx
-       (send token change
-             (~? (~@ #:cast Type.c))
-             (~? (~@ #:as as-name.c))
-             (~? (~@ #:null nullability.c))
-             (~? (~@ #:fallback fallback.c))))]))
