@@ -3,7 +3,7 @@
 (provide fragment% fragment? >>
          fragment-as-name fragment-nullability fragment-fallback)
 
-(require "token.rkt"
+(require "../token.rkt"
          racket/struct)
 
 (define fragment%

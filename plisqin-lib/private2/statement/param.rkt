@@ -7,8 +7,7 @@
 ; The decision will only be made during SQL-generation time with an unbound
 ; parameter, not by the DB with a bound parameter.
 
-; TODO illegal require here, should be "../_token.rkt" or something like that
-(require "../sql/token.rkt"
+(require "../token.rkt"
          "../_types.rkt"
          "../_dialect.rkt")
 

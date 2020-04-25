@@ -2,10 +2,10 @@
 
 (provide token% >>)
 
-(require "../_null.rkt"
-         "../_types.rkt"
+(require "_null.rkt"
+         "_types.rkt"
          (for-syntax syntax/parse)
-         (only-in (submod "../_core.rkt" fragment-helper)
+         (only-in (submod "_core.rkt" fragment-helper)
                   sql-token<%> define-token-aspect-stuff))
 
 (define never-quote<%>
