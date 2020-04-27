@@ -53,6 +53,39 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
  TODO needs more detail.
 }
 
+@defform[(define-statement (id arg ...) body ...+)
+         #:grammar
+         [(arg plain-arg
+               kw-arg)
+          (plain-arg arg-id
+                     [arg-id Type-expr]
+                     [arg-id Type-expr default-expr])
+          (kw-arg (code:line keyword plain-arg))]
+         #:contracts ([Type-expr type?])]{
+ Defines a normal procedure similar to @(racket define), but also stashes away
+ some extra metadata that @(racket compile-statements) can use.
+ Ignoring that metadata, the following two definitions are equivalent:
+ @(racketblock
+   (define-statement (foo a
+                          [b Number]
+                          [c String "c-default"]
+                          #:d d
+                          #:e [e Number]
+                          #:f [f String "f-default"])
+     (list a b c d e f))
+   (code:comment "is equivalent to")
+   (define/contract (foo a
+                         b
+                         [c (%%val "c-default")]
+                         #:d d
+                         #:e e
+                         #:f [f (%%val "f-default")])
+     (list a b c d e f)))
+
+ TODO explain what the Type-exprs are used for.
+ If @(racket Type-expr) is absent, it defaults to @(racket Scalar).
+}
+
 @section[#:tag "reference:nullability"]{Nullability}
 @deftogether[(@defthing[/void fallback?]
                @defthing[/minval fallback?]

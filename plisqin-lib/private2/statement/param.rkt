@@ -1,16 +1,11 @@
 #lang racket
 
-(provide make-param need-to-rewrite? rewrite-params)
-; Be careful about providing anything more!
-; Parameters should be completely opaque so that it is difficult (ideally
-; impossible) to make decisions based on them.
-; The decision will only be made during SQL-generation time with an unbound
-; parameter, not by the DB with a bound parameter.
+(provide need-to-rewrite? rewrite-params
+         make-param param-id param-kw param-default)
 
 (require "../token.rkt"
          "../_types.rkt"
          "../_dialect.rkt")
-
 
 ; Define an "indexed parameter" to mean a parameter whose binding position
 ; is based on a number, as opposed to where it occurs in the SQL string.
@@ -28,16 +23,30 @@
   (and (not (postgres? dialect))
        (not (sqlite? dialect))))
 
-(define (make-param index #:id [id #f] #:type [type #f])
+(define/contract (make-param index #:id [id #f] #:type [type #f]
+                             ; TODO #f is a real default, need a dedicated nothing
+                             #:kw [kw #f] #:default [default #f])
+  (->* (number?)
+       (#:id (or/c #f identifier?)
+        #:type (or/c #f type?)
+        #:kw (or/c #f syntax?)
+        #:default (not/c syntax?))
+       any)
   (new param%
        [index index]
        [id id]
-       [type (or type Scalar)]))
+       [type (or type Scalar)]
+       [kw kw]
+       [default default]))
 
 (define param%
   (class* token% ()
     (inherit-field type as-name nullability fallback)
-    (init-field index id)
+    (init-field index id kw default)
+    ; index        : the one-based index of this param
+    ; id           : identifier?
+    ; kw           : (or/c #f keyword?)
+    ; default-stx  : (or/c #f syntax?)
     (super-new)
 
     (define/override (change #:cast [type type]
@@ -47,6 +56,8 @@
       (new param%
            [index index]
            [id id]
+           [kw kw]
+           [default default]
            [type type]
            [as-name as-name]
            [nullability nullability]
@@ -67,22 +78,30 @@
          ; So while this isn't bulletproof, it's not too bad.
          (format "#<<{param:~a}>>#" index)]
         [(sqlite? cd)
-         (format "?~a /*~a*/" index id)]
+         (format "?~a /*~a*/" index (syntax-e id))]
         [(postgres? cd)
-         (format "$~a /*~a*/" index id)]
+         (format "$~a /*~a*/" index (syntax-e id))]
         [else
          (error "cannot render params in dialect:" cd)]))
 
     ; equal<%>
     (define/override (equal-content)
       ; Haven't given this too much thought:
-      (list index id))
+      (list index id kw default))
     ))
+
+(define-syntax-rule (accessors id ...)
+  (values (class-field-accessor param% id)
+          ...))
+
+(define-values (param-id param-kw param-default)
+  (accessors id kw default))
+
 
 (module+ test
   (require rackunit
            "../_types.rkt")
-  (define p (make-param 1 #:id 'foo))
+  (define p (make-param 1 #:id #'foo))
   (define p:Number (>> p #:cast Number))
   (check-equal? p p:Number)
   (check-equal? (get-type p:Number)
@@ -123,8 +142,8 @@
   (values sql rearranger))
 
 (module+ test
-  (define $foo (make-param 1 #:id 'foo))
-  (define $bar (make-param 2 #:id 'bar))
+  (define $foo (make-param 1 #:id #'foo))
+  (define $bar (make-param 2 #:id #'bar))
 
   (let-values ([(sql rearranger)
                 (rewrite-params "here we go #<<{param:2}>># #<<{param:2}>># #<<{param:1}>>#"
