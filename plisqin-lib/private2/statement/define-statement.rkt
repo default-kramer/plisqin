@@ -44,11 +44,11 @@
          (begin
            (define Type (~? a.type Scalar))
            ...
-           (define param-id (make-param param-number
+           (define param-id (make-param #:index param-number
                                         #:id (syntax a.id)
                                         #:type Type
-                                        #:kw (~? (syntax a.kw) #f)
-                                        #:default (~? a.default #f)))
+                                        (~? (~@ #:kw (syntax a.kw)))
+                                        (~? (~@ #:default a.default))))
            ...
            (define (the-proc (~@ (~? a.kw)
                                  (~? [a.id (%%val a.default)]
@@ -64,7 +64,7 @@
              body ...)
            (define result (the-proc (~@ (~? a.kw) param-id)
                                     ...))
-           (define proc-id (uncompiled-statement the-proc (list param-id ...) result))
+           (define proc-id (uncompiled-statement the-proc 'proc-id (list param-id ...) result))
            (module+ plisqin-reserved:statements-to-compile
              (provide plisqin-reserved:statement-ids)
              (add-statement-id 'proc-id)
@@ -74,7 +74,7 @@
 ; params    : a list of parameters
 ; result    : The result of `(apply proc params)`. This is usually a Token,
 ;             but it can be anything that `to-sql` will accept.
-(struct uncompiled-statement (proc params result)
+(struct uncompiled-statement (proc name params result)
   #:property prop:procedure 0)
 
 

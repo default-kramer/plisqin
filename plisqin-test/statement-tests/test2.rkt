@@ -6,7 +6,8 @@
          (prefix-in db: db)
          plisqin-lib/private2/statement/compile-statements)
 
-(compile-statements "test1.rkt" (sqlite))
+(compile-statements #:module "test1.rkt"
+                    #:dialect (sqlite))
 
 ;(displayln (statement-sql get-category))
 
@@ -63,6 +64,19 @@
               0)
 (check-equal? (rowcount (foo 1 1 1 #:d 1 #:e 1 #:f 1))
               1)
+; Make sure that we cannot omit the required args.
+(check-exn exn:fail:contract?
+           (lambda () (foo 1 1 #:d 1)))
+(check-exn exn:fail:contract?
+           (lambda () (foo 1 1 #:e 1)))
+(check-exn exn:fail:contract?
+           (lambda () (foo 1 1)))
+(check-exn exn:fail:contract:arity?
+           ; Perhaps an implementation detail within Racket that this one raises
+           ; exn:fail:contract:arity while the rest just raise exn:fail:contract
+           (lambda () (foo 1)))
+(check-exn exn:fail:contract?
+           (lambda () (foo 1 #:d 1 #:e 1)))
 
 
 (db:disconnect conn)

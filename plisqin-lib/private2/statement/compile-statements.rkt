@@ -7,30 +7,75 @@
          (prefix-in db: db)
          "define-statement.rkt"
          "param.rkt"
-         ; TODO fix name clash that makes this necessary:
-         (prefix-in p: "param.rkt")
-         (only-in "../_dialect.rkt" current-dialect)
+         (only-in "../_dialect.rkt" current-dialect dialect?)
          (only-in "../_core.rkt" to-sql)
-         (for-syntax "define-statement.rkt"
+         (for-syntax syntax/parse
+                     "define-statement.rkt"
                      racket/sequence
                      "param.rkt"
                      racket/syntax))
 
 
-; TODO this needs an overhaul - the `default` here is just a flag as to whether
-; or not the arg has a default value. If it does, then TODO points to it.
+(define (compile us dialect)
+  ; us : uncompiled-statment?
+  ; returns three values
+  ; 1) the compiled SQL
+  ; 2) the rearrange proc, see `rewrite-params`
+  ; 3) get-default-value, a proc that takes the 0-based index of an arg
+  ;    and returns its default value
+  (define param-list
+    (uncompiled-statement-params us))
+  (define token
+    (uncompiled-statement-result us))
+  (define orig-sql
+    (parameterize ([current-dialect dialect])
+      (to-sql token)))
+  (define-values (sql rearrange)
+    (if (need-to-rewrite? dialect)
+        (rewrite-params orig-sql param-list)
+        (values orig-sql identity)))
+
+  (define param-default-values
+    (list->vector (map param-default-value param-list)))
+  (define (get-default-value index0)
+    (vector-ref param-default-values index0))
+
+  (values sql rearrange get-default-value))
+
+(define (compile/raise us dialect module-name)
+  (with-handlers ([exn? (lambda (ex) (raise (make-err ex us module-name)))])
+    (compile us dialect)))
+
+(define (make-err exn us module-name)
+  (define msg-format #<<HEREDOC
+An error occurred compiling ~a from module ~a.
+The original exn is:
+~a
+HEREDOC
+    )
+  (define msg (format msg-format
+                      (uncompiled-statement-name us)
+                      module-name
+                      exn))
+  (exn:fail:sql-compilation msg
+                            (exn-continuation-marks exn)
+                            us exn))
+
 (define-for-syntax (format-arglist stx)
-  ; Flatten a syntax object like
-  #;([#:keyword [arg-id default TODO]]
+  ; It makes our syntax templates easier to write if we use a shape that works
+  ; for all arguments, and then reformat them here.
+  ; This procedure reformats a syntax object like
+  #;([#:keyword [arg-id has-default? default-value]]
      ...)
   ; into an argument list that `define` will accept.
-  ; The trick is that each #:keyword and default might be #f to indicate its absence.
+  ; Note that (syntax-e has-default?) must be #t or #f.
+  ; If #:keyword is (syntax #f) then it is a non-keyword argument.
   (define (handle-arg stx)
     (syntax-case stx ()
-      [[arg-id default TODO]
-       (if (syntax-e #'default)
-           (syntax/loc stx
-             [arg-id TODO])
+      [[arg-id has-default? default-value]
+       (if (syntax-e #'has-default?)
+           (syntax/loc #'arg-id
+             [arg-id default-value])
            #'arg-id)]))
   (syntax-case stx ()
     [()
@@ -42,84 +87,96 @@
            (cons #'keyword (cons arg* more))
            (cons arg* more)))]))
 
-(define-for-syntax (compile-one-new modpath raw-id dialect stx root-modpath)
-  (let* ([us ; us = uncompiled-statement
-          (dynamic-require modpath raw-id)]
-         [params
-          (uncompiled-statement-params us)]
-         [param-ids
-          (map param-id params)])
-    ; TODO major cleanup needed!
-    (with-syntax ([(param-id ...) param-ids]
-                  [(index-seq ...)
-                   (sequence->list (in-range 0 (length param-ids)))]
-                  [(param-kw ...)
-                   (map param-kw params)]
-                  [(param-default ...)
-                   (map param-default params)])
-      (with-syntax ([(param-default-value ...)
-                     (generate-temporaries #'(param-id ...))]
-                    [id (datum->syntax stx raw-id stx)]
-                    [param-list (generate-temporary "param-list")]
-                    [token (generate-temporary "token")]
-                    [bind-param-values (generate-temporary "bind-param-values")]
-                    [orig-sql (generate-temporary "orig-sql")]
-                    [sql (generate-temporary "sql")]
-                    [rearrange (generate-temporary "rearrange")]
-                    [dialect dialect]
-                    [root-modpath root-modpath]
-                    [us (generate-temporary "uncompiled-statement")])
-        ; We could do things like to-sql and rewrite-params right now instead of in
-        ; the code we are generating. In fact, I had it working that way but then
-        ; got tripped up with handling the default values.
-        ; Well, now that it is working it should be possible to refactor in that
-        ; direction if I want to.
-        ; But be careful -- some error conditions may be difficult to message well.
-        ; WAIT - does doing to-sql at runtime allow the user to switch dialects
-        ; based on a config setting? I think it does!
-        #`(begin
-            (require (rename-in (submod root-modpath plisqin-reserved:statements-to-compile)
-                                [#,raw-id us]))
-            (define param-list
-              (uncompiled-statement-params us))
-            (define param-default-value
-              (p:param-default (list-ref param-list index-seq)))
-            ...
-            (define token
-              (uncompiled-statement-result us))
-            (define orig-sql
-              (parameterize ([current-dialect dialect])
-                (to-sql token)))
-            (define-values (sql rearrange)
-              (if (need-to-rewrite? dialect)
-                  (rewrite-params orig-sql param-list)
-                  (values orig-sql identity)))
-            (define (bind-param-values
-                     #,@(format-arglist #'([param-kw [param-id param-default param-default-value]]
-                                           ...)))
-              (bound-statement sql (rearrange (list param-id ...))))
-            (define id
-              (unbound-statement bind-param-values 'id sql))
-            (provide id)
-            )))))
+(define-for-syntax (get-submod modpath)
+  #`(submod #,modpath plisqin-reserved:statements-to-compile))
 
-(define-syntax (compile-statements stx)
-  ; TODO before making public:
-  ; 1) use syntax-parse and probably add keywords like #:dialect
-  ; 2) check error messages when given a bad module or dialect
-  ; 3) check error messages when to-sql fails -- it should at least tell you
-  ;    which statement failed
+(define-syntax (compile-one stx)
   (syntax-case stx ()
-    [(_ :module :dialect)
-     (let* ([modpath `(submod ,(syntax-e #':module) plisqin-reserved:statements-to-compile)]
-            [statement-ids (dynamic-require modpath 'plisqin-reserved:statement-ids)])
+    [(_ #:id statement-id
+        #:dialect dialect
+        #:modpath modpath
+        #:param-id [param-id ...]
+        #:param-kw [param-kw ...]
+        #:param-has-default [param-has-default ...])
+     (with-syntax ([raw-statement-id (syntax-e #'statement-id)]
+                   [(index-seq ...)
+                    (sequence->list
+                     (in-range 0 (length (syntax->list #'(param-id ...)))))])
        (quasisyntax/loc stx
          (begin
-           #,@(for/list ([id statement-ids])
-                (compile-one-new modpath id #':dialect stx #':module)))))]))
+           (require (rename-in #,(get-submod #'modpath)
+                               ; us : uncompiled-statement
+                               [raw-statement-id us]))
+           (define-values (sql rearrange get-default-value)
+             #,(syntax/loc stx
+                 ; This syntax/loc doesn't seem to have the effect I wanted, which
+                 ; is that the error location would be `(compile-statements ...)`
+                 (compile/raise us dialect 'modpath)))
+           (define (bind-param-values
+                    #,@(format-arglist #'([param-kw [param-id
+                                                     param-has-default
+                                                     (get-default-value index-seq)]]
+                                          ...)))
+             (bound-statement sql (rearrange (list param-id ...))))
+           (define statement-id
+             (unbound-statement bind-param-values 'statement-id sql))
+           (provide statement-id)
+           )))]))
 
-; A procedure that accepts the parameter values to produce a statement
+(define-syntax (compile-statements stx)
+  ; We could do things like to-sql and rewrite-params right now instead of in
+  ; the code we are generating. In fact, I had it working that way but then
+  ; got tripped up with handling the default values.
+  ; Well, now that it is working it should be possible to refactor in that
+  ; direction if I want to.
+  ; Be careful about error messaging (not that it's perfect right now).
+  ; WAIT - doing to-sql at runtime should allow the user to switch dialects
+  ; based on a config setting. Is that desirable?
+  (syntax-parse stx
+    [(compile-statements #:module module:expr
+                         #:dialect raw-dialect)
+     #:declare raw-dialect (expr/c #'dialect?)
+     (let* ([raise-bad-module
+             (lambda ([ex #f])
+               (raise-syntax-error #f "no statements found in given module"
+                                   stx #'module))]
+            [submod-datum (syntax->datum (get-submod #'module))]
+            [statement-ids (with-handlers ([exn? raise-bad-module])
+                             (dynamic-require submod-datum
+                                              'plisqin-reserved:statement-ids
+                                              raise-bad-module))])
+       (quasisyntax/loc stx
+         (begin
+           (define dialect
+             ; Why does this report an error location from contract.rkt?
+             #,(syntax/loc #'raw-dialect raw-dialect.c))
+
+           (unsyntax-splicing
+            (for/list ([statement-id statement-ids])
+              (let* ([us ; uncompiled-statement
+                      (dynamic-require submod-datum statement-id)]
+                     [params
+                      (uncompiled-statement-params us)]
+                     [param-ids
+                      (map param-id params)])
+                (with-syntax ([(param-id ...) param-ids]
+                              [(param-kw ...)
+                               (map param-kw params)]
+                              [(param-has-default ...)
+                               (map param-has-default? params)]
+                              [id (datum->syntax stx statement-id stx)])
+                  (syntax/loc stx
+                    (compile-one #:id id
+                                 #:dialect dialect
+                                 #:modpath module
+                                 #:param-id [param-id ...]
+                                 #:param-kw [param-kw ...]
+                                 #:param-has-default [param-has-default ...]))))
+              )))))]))
+
+
 (struct unbound-statement (proc id sql)
+  ; A procedure that accepts the parameter values to produce a bound statement
   #:property prop:procedure 0
   #:methods gen:custom-write
   [(define (write-proc me port mode)
@@ -149,3 +206,6 @@
      (unbound-statement-sql s)]
     [(bound-statement? s)
      (bound-statement-sql s)]))
+
+(struct exn:fail:sql-compilation exn:fail
+  (uncompiled-statement orig-exn) #:transparent)

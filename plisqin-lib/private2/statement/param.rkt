@@ -1,7 +1,7 @@
 #lang racket
 
 (provide need-to-rewrite? rewrite-params
-         make-param param-id param-kw param-default)
+         make-param param-id param-kw param-default-value param-has-default?)
 
 (require "../token.rkt"
          "../_types.rkt"
@@ -23,13 +23,16 @@
   (and (not (postgres? dialect))
        (not (sqlite? dialect))))
 
-(define/contract (make-param index #:id [id #f] #:type [type #f]
-                             ; TODO #f is a real default, need a dedicated nothing
-                             #:kw [kw #f] #:default [default #f])
-  (->* (number?)
-       (#:id (or/c #f identifier?)
-        #:type (or/c #f type?)
-        #:kw (or/c #f syntax?)
+(struct nothing ())
+
+(define/contract (make-param #:index index
+                             #:id id
+                             #:type [type #f]
+                             #:kw [kw #f]
+                             #:default [default (nothing)])
+  (->* (#:index exact-positive-integer? #:id identifier?)
+       (#:type (or/c #f type?)
+        #:kw (or/c #f (syntax/c keyword?))
         #:default (not/c syntax?))
        any)
   (new param%
@@ -43,10 +46,6 @@
   (class* token% ()
     (inherit-field type as-name nullability fallback)
     (init-field index id kw default)
-    ; index        : the one-based index of this param
-    ; id           : identifier?
-    ; kw           : (or/c #f keyword?)
-    ; default-stx  : (or/c #f syntax?)
     (super-new)
 
     (define/override (change #:cast [type type]
@@ -94,14 +93,17 @@
   (values (class-field-accessor param% id)
           ...))
 
-(define-values (param-id param-kw param-default)
+(define-values (param-id param-kw param-default-value)
   (accessors id kw default))
+
+(define (param-has-default? param)
+  (not (nothing? (param-default-value param))))
 
 
 (module+ test
   (require rackunit
            "../_types.rkt")
-  (define p (make-param 1 #:id #'foo))
+  (define p (make-param #:index 1 #:id #'foo))
   (define p:Number (>> p #:cast Number))
   (check-equal? p p:Number)
   (check-equal? (get-type p:Number)
@@ -142,8 +144,8 @@
   (values sql rearranger))
 
 (module+ test
-  (define $foo (make-param 1 #:id #'foo))
-  (define $bar (make-param 2 #:id #'bar))
+  (define $foo (make-param #:index 1 #:id #'foo))
+  (define $bar (make-param #:index 2 #:id #'bar))
 
   (let-values ([(sql rearranger)
                 (rewrite-params "here we go #<<{param:2}>># #<<{param:2}>># #<<{param:1}>>#"
