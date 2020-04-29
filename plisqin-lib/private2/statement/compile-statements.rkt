@@ -93,6 +93,7 @@ HEREDOC
 (define-syntax (compile-one stx)
   (syntax-case stx ()
     [(_ #:id statement-id
+        #:provide provide-bool
         #:dialect dialect
         #:modpath modpath
         #:param-id [param-id ...]
@@ -120,7 +121,9 @@ HEREDOC
              (bound-statement sql (rearrange (list param-id ...))))
            (define statement-id
              (unbound-statement bind-param-values 'statement-id sql))
-           (provide statement-id)
+           #,@(if (syntax-e #'provide-bool)
+                  (list #'(provide statement-id))
+                  (list))
            )))]))
 
 (define-syntax (compile-statements stx)
@@ -134,7 +137,8 @@ HEREDOC
   ; based on a config setting. Is that desirable?
   (syntax-parse stx
     [(compile-statements #:module module:expr
-                         #:dialect raw-dialect)
+                         #:dialect raw-dialect
+                         (~optional (~seq #:provide? provide?:expr)))
      #:declare raw-dialect (expr/c #'dialect?)
      (let* ([raise-bad-module
              (lambda ([ex #f])
@@ -144,7 +148,8 @@ HEREDOC
             [statement-ids (with-handlers ([exn? raise-bad-module])
                              (dynamic-require submod-datum
                                               'plisqin-reserved:statement-ids
-                                              raise-bad-module))])
+                                              raise-bad-module))]
+            [provide-bool (and (syntax-e #'(~? provide? #t)) #t)])
        (quasisyntax/loc stx
          (begin
            (define dialect
@@ -165,8 +170,9 @@ HEREDOC
                               [(param-has-default ...)
                                (map param-has-default? params)]
                               [id (datum->syntax stx statement-id stx)])
-                  (syntax/loc stx
+                  (quasisyntax/loc stx
                     (compile-one #:id id
+                                 #:provide #,provide-bool
                                  #:dialect dialect
                                  #:modpath module
                                  #:param-id [param-id ...]
@@ -180,12 +186,14 @@ HEREDOC
   #:property prop:procedure 0
   #:methods gen:custom-write
   [(define (write-proc me port mode)
-     (unbound-statement-printer me port #t))])
+     (unbound-statement-printer me port mode))])
 
 (define unbound-statement-printer
   (make-constructor-style-printer
    (lambda (us) 'unbound-statement)
-   (lambda (us) (list (unbound-statement-id us)))))
+   ; this makes (displayln my-unbound-statement) look nice
+   (lambda (us) (list (unbound-statement-id us)
+                      (string-append "\n" (unbound-statement-sql us))))))
 
 (struct bound-statement (sql param-values) #:transparent
   #:property db:prop:statement

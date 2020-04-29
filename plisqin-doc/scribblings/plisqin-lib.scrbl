@@ -1,6 +1,7 @@
 #lang scribble/manual
 
-@(require (for-label plisqin "racket.rkt")
+@(require (for-label plisqin "racket.rkt"
+                     (prefix-in db: db))
           (for-syntax "racket.rkt")
           "helpers.rkt")
 
@@ -62,9 +63,8 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
                      [arg-id Type-expr default-expr])
           (kw-arg (code:line keyword plain-arg))]
          #:contracts ([Type-expr type?])]{
- Defines a normal procedure similar to @(racket define), but also stashes away
- some extra metadata that @(racket compile-statements) can use.
- Ignoring that metadata, the following two definitions are equivalent:
+ Defines an @deftech{uncompiled statement}, which is a normal procedure with some
+ extra metadata stashed away that @(racket compile-statements) can use.
  @(racketblock
    (define-statement (foo a
                           [b Number]
@@ -73,17 +73,70 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
                           #:e [e Number]
                           #:f [f String "f-default"])
      (list a b c d e f))
-   (code:comment "is equivalent to")
-   (define/contract (foo a
-                         b
-                         [c (%%val "c-default")]
-                         #:d d
-                         #:e e
-                         #:f [f (%%val "f-default")])
-     (list a b c d e f)))
+   (code:comment "produces code similar to")
+   (define (foo a
+                b
+                [c (%%val "c-default")]
+                #:d d
+                #:e e
+                #:f [f (%%val "f-default")])
+     (list a b c d e f))
+   (begin
+     (code:comment "this part is illustrative, not real code:")
+     (module+ metadata-for-compile-statements
+       (define meta:foo
+         (foo (param a Scalar)
+              (param b Number)
+              (param c String)
+              #:d (param d Scalar)
+              #:e (param e Number)
+              #:f (param f String))))))
 
- TODO explain what the Type-exprs are used for.
- If @(racket Type-expr) is absent, it defaults to @(racket Scalar).
+ In the code above, the hypothetical @(racket (param b Number)) expression
+ creates a placeholder token having type @(racket Number) and representing
+ an SQL parameter. The @(racket a) and @(racket d) parameters were assigned the
+ @(racket Scalar) type, which is the default when @(racket Type-expr) is absent.
+
+ TODO what about nullability?
+ We could attach @(racket /void) to each param, but that seems dangerous.
+ As of now, it's fine to force the user to add the fallback at the site of the
+ comparison.
+}
+
+@defform[(compile-statements #:module module-path
+                             #:dialect dialect-expr
+                             maybe-provide)
+         #:grammar
+         [(maybe-provide (code:line)
+                         (code:line #:provide? #t)
+                         (code:line #:provide? #f))]
+         #:contracts ([dialect-expr dialect?])]{
+ Produces an @deftech{unbound statement} for each @tech{uncompiled statement} in
+ the given @(racket module-path).
+ Each unbound statement is a procedure with the same arity as its corresponding
+ uncompiled statement, but its arguments are parameter values that will get passed
+ to the database when the statement is executed.
+ The unbound statement returns a @(racket db:statement?) suitable for use by
+ @(racket db:query-rows) and similar procedures.
+
+ @(repl
+   (code:comment "This module contains a `get-category` uncompiled statement:")
+   (compile-statements #:module plisqin-examples/adventure-works/statements
+                       #:dialect (sqlite)
+                       #:provide? #f)
+   (code:comment "Now `get-category` has been compiled to an unbound statement:")
+   (displayln get-category)
+   (code:comment "We just need to supply the parameter values and we can")
+   (code:comment "execute it against a real database!")
+   (define conn (aw:connect-adventure-works))
+   (db:query conn (get-category #:name "Bikes"))
+   (db:disconnect conn))
+
+ The SQL is generated only once, using the given @(racket dialect-expr).
+
+ Unless @(racket #:provide?) is @(racket #f), each unbound statement will be
+ @(racket provide)d. This option is really only intended for this documentation;
+ your code probably has no need to ever use this option.
 }
 
 @section[#:tag "reference:nullability"]{Nullability}

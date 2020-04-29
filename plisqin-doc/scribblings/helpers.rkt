@@ -23,7 +23,9 @@
     (interaction-eval #:eval eval
                       (require racket/match)
                       (require (only-in racket string-join))
-                      (require plisqin))
+                      (require (prefix-in aw: plisqin-examples/adventure-works)
+                               (prefix-in db: db)
+                               plisqin))
     eval))
 
 (define my-eval (make-eval))

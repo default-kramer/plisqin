@@ -34,6 +34,10 @@
 (require plisqin-lib/private2/define-schema)
 (provide define-schema this)
 
+(require "./private2/_statement.rkt")
+(provide define-statement compile-statements)
+
+
 (module+ test
   ;; Tests to be run with raco test
   )
