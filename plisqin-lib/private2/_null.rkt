@@ -41,11 +41,32 @@
 
 (define nulltrack? (is-a?/c nulltrack<%>))
 
-(define (nullability x)
-  (or (and (nulltrack? x)
-           (send x get-nullability))
-      (and (custom-nullability? x)
-           (get-custom-nullability x))))
+(define (nullability arg #:fallbacks [fallbacks (list)])
+  (cond
+    [(number? arg) no]
+    [(custom-nullability? arg)
+     (get-custom-nullability arg)]
+    [(nulltrack? arg)
+     (let ([nullability (send arg get-nullability)])
+       (if (eq? nullability no)
+           no
+           (let ([f (send arg get-fallback)])
+             (if (member f fallbacks)
+                 no
+                 nullability))))]
+    [(tuple? arg)
+     ; a tuple is never null
+     no]
+    [(join? arg)
+     ; TODO it would probably be cleaner to make join implement nulltrack<%>
+     ; ... temp workaround for now
+     (let ([jt (get-join-type arg)])
+       (case jt
+         [(left) yes]
+         [(inner) no]
+         [else (begin (println (format "TODO unexpected join type: ~a" jt))
+                      maybe)]))]
+    [else maybe]))
 
 (define (fallback x)
   (and (nulltrack? x)
@@ -84,35 +105,10 @@
   (define break-value (void))
 
   (for ([arg arglist])
-    (define nullability
-      (cond
-        [(number? arg) no]
-        [(custom-nullability? arg)
-         (get-custom-nullability arg)]
-        [(nulltrack? arg)
-         (let ([nullability (send arg get-nullability)])
-           (if (eq? nullability no)
-               no
-               (let ([f (send arg get-fallback)])
-                 (if (member f fallbacks)
-                     no
-                     nullability))))]
-        [(tuple? arg)
-         ; a tuple is never null
-         no]
-        [(join? arg)
-         ; TODO it would probably be cleaner to make join implement nulltrack<%>
-         ; ... temp workaround for now
-         (let ([jt (get-join-type arg)])
-           (case jt
-             [(left) yes]
-             [(inner) no]
-             [else (begin (println (format "TODO unexpected join type: ~a" jt))
-                          maybe)]))]
-        [else maybe]))
+    (define n (nullability arg #:fallbacks fallbacks))
     (set! inferred-nullability (cond
-                                 [(eq? nullability yes) yes]
-                                 [(eq? nullability maybe) maybe]
+                                 [(eq? n yes) yes]
+                                 [(eq? n maybe) maybe]
                                  [else inferred-nullability]))
     #:break (and (breaker inferred-nullability)
                  (set! break-value arg))

@@ -221,17 +221,29 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
    (eval:check (nullability? maybe) #t))
 }
 
-@defproc[(nullability [x any/c]) (or/c nullability? #f)]{
- If @(racket x) is a token, returns its @tech{nullability}.
- Otherwise returns false.
+@defproc[(nullability [x any/c]) nullability?]{
+ Returns the @tech{nullability} of the given item.
+ Literal values are never null:
  @(repl
-   (eval:check (nullability (%%sql "foo"))
-               maybe)
-   (eval:check (nullability "not a token")
-               #f))
- TODO the private @(racket nullcheck-core) has special handling, like
- that a @(racket tuple?) or a @(racket number?) is never null.
- Should those special cases be moved here?
+   (eval:check (nullability (val 3)) no)
+   (eval:check (nullability (val "hi")) no))
+
+ Racket numbers are never null, but Racket strings might be.
+ This is because Racket strings usually represent an arbitrary piece of SQL
+ that Plisqin knows nothing about:
+ @(repl
+   (eval:check (nullability 3) no)
+   (eval:check (nullability "case when 1=1 then null else null end") maybe)
+   (eval:check (nullability "case when 1=1 then 'foo' else 'bar' end") maybe))
+
+ The token constructors infer their own nullability from their contents.
+ Some (eg @(racket coalesce)) have special rules, but most just take the "worst"
+ nullability that was found.
+ From worst to best: @(racket yes), @(racket maybe), @(racket no).
+ @(repl
+   (define content (%%sql "foo = 1"))
+   (eval:check (nullability (%%where (>> content #:null no))) no)
+   (eval:check (nullability (%%where (>> content #:null yes))) yes))
 }
 
 @section{Token Types}
@@ -298,9 +310,6 @@ For example, @(racket Scalar) is a supertype of @(racket Number).
  TODO
 }
 @deftype[Bool]{
- TODO
-}
-@deftype[Interval]{
  TODO
 }
 @deftype[Datetime]{

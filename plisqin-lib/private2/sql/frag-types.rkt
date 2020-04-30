@@ -8,6 +8,7 @@
 
 (require "weave.rkt"
          "../_types.rkt"
+         "interval.rkt"
          "frags.helpers.rkt"
          (for-label plisqin-lib/types))
 
@@ -78,7 +79,14 @@
     [any/c ...+ -> Subquery])]
   [(count avg sum)
    (token-constructor
-    [any/c ...+ -> Number])])
+    [any/c ...+ -> Number])]
+  [(years months days hours minutes seconds)
+   (token-constructor
+    [any/c -> interval?])]
+  [(date+ date-)
+   (token-constructor
+    [any/c interval? ...+ -> Datetime])]
+  )
 
 (def-typetable type-dispatcher/loose loose-table
   [(select where group-by having order-by join-on sql)
@@ -110,7 +118,14 @@
     [content? ...+ -> Subquery])]
   [(count avg sum)
    (token-constructor
-    [content? ...+ -> Number])])
+    [content? ...+ -> Number])]
+  [(years months days hours minutes seconds)
+   (token-constructor
+    [content? -> interval?])]
+  [(date+ date-)
+   (token-constructor
+    [content? interval? ...+ -> Datetime])]
+  )
 
 (def-typetable type-dispatcher/strict strict-table
   [(select group-by)
@@ -175,4 +190,12 @@
     [content? ...+ -> Bool])] ; TODO figure out the real type
   [(+ - * /)
    (token-constructor
-    [Number ...+ -> Number])])
+    [Number ...+ -> Number])]
+  [(years months days hours minutes seconds)
+   (token-constructor
+    [Number -> interval?]
+    [number? -> interval?])]
+  [(date+ date-)
+   (token-constructor
+    [Datetime interval? ...+ -> Datetime])]
+  )

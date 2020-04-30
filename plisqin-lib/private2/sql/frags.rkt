@@ -21,7 +21,9 @@
     (export-all type-dispatcher null-dispatcher
                 select where group-by having order-by join-on
                 scalar bit aggregate subquery sql
-                count avg min max sum exists round coalesce)
+                count avg min max sum exists round coalesce
+                date+ date- years months days hours minutes seconds
+                )
     (module+ operators
       (export-all type-dispatcher null-dispatcher
                   and or not
@@ -69,7 +71,11 @@
 
   (check-frags select where group-by having order-by join-on
                scalar bit aggregate subquery sql
-               count avg min max sum exists round coalesce)
+               count avg min max sum exists round coalesce
+               ; The date math functions won't pass any tests because they are
+               ; too strict in all variants (by design):
+               #;[date+ date- years months days hours minutes seconds]
+               )
   (check-frags and or not
                = <> < <= > >=
                like not-like

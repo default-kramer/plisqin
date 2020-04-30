@@ -2,7 +2,8 @@
 
 (provide def-dispatcher define/weave)
 
-(require "fragment.rkt")
+(require "fragment.rkt"
+         "interval.rkt")
 
 ; A "head" is a syntax object with a shape like (= a b).
 ; If used like (define <head> body) it would define a procedure.
@@ -62,5 +63,7 @@
            (let* ([return-type #,(check-types #'head)]
                   [nullability #,(check-null #'head)]
                   [result #,(expand-body #'head)])
-             (>> result #:cast return-type #:null nullability))))]
+             (if (eq? return-type interval?)
+                 result
+                 (>> result #:cast return-type #:null nullability)))))]
     [else (error "TODO bfajkl352")]))

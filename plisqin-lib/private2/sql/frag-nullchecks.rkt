@@ -74,7 +74,13 @@
     #;(match arglist
         [(list 'asc rest ...) rest]
         [(list 'desc rest ...) rest]
-        [else arglist]))])
+        [else arglist]))]
+  ; Even in unsafe, intervals should never be null.
+  [(years months days hours minutes seconds)
+   (nullchecker #:deny-null)]
+  [(date+ date-)
+   (nullchecker #:permit-null)]
+  )
 
 (def-nulltable null-dispatcher/strict scribble-nulltable/strict
   [(select group-by
@@ -115,7 +121,15 @@
     #;(match arglist
         [(list 'asc rest ...) rest]
         [(list 'desc rest ...) rest]
-        [else arglist]))])
+        [else arglist]))]
+  ; Intervals should never be null.
+  [(years months days hours minutes seconds)
+   (nullchecker #:deny-null)]
+  ; We know the intervals will be non-null, but if the Datetime is null that's
+  ; fine, we accept and propogate it as normal.
+  [(date+ date-)
+   (nullchecker #:permit-null)]
+  )
 
 ; A nullchecker ignores the input and always returns "not null"
 (define (never-null . ignored-args) no)

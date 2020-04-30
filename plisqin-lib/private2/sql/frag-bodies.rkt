@@ -14,6 +14,8 @@
 (require "weave.rkt"
          "./fragment.rkt"
          "./frags.helpers.rkt"
+         "interval.rkt"
+         "../_dialect.rkt"
          (only-in "../_core.rkt" join? tuple?)
          (only-in "../_null.rkt" fallback-symbol)
          (only-in "truth.rkt" probe)
@@ -135,6 +137,23 @@
   [(+ - * /)
    (make2 'scalar
           #:reduce (parens (interpose (format " ~a " self) tokens)))]
+
+  ; == Date Math ==
+  ; PostgreSQL has intervals which are Scalars, but MS does not.
+  ; Let's standardize on MS-compatible date math, meaning that our intervals
+  ; are not Scalars. In fact, they are not even Tokens. This is because date+
+  ; and date- are the only functions that know how to do anything sensible
+  ; with intervals.
+  [(date+ date-)
+   (make2 'scalar
+          #:reduce (reduce-dateadd self arglist))]
+  [(years months days hours minutes seconds)
+   (match arglist
+     [(list a)
+      (make-interval self a)]
+     [else
+      ; The type checkers should prevent this case
+      (error "internal error - interval constructor needs exactly one arg")])]
   )
 
 (define (reduce-order-by tokens)
@@ -253,3 +272,74 @@
      (parens (list lhs" is null or "base-reduction))]
     [else
      (error "unhandled probe result" probe-result)]))
+
+
+
+(define (reduce-dateadd self arglist)
+  (define negate? (equal? self 'date-))
+  (define dialect (current-dialect))
+  (define dt (car arglist))
+  (define intervals (cdr arglist))
+  (cond
+    [(mssql? dialect)
+     (dateadd-mssql dt intervals negate?)]
+    [(postgres? dialect)
+     (dateadd-postgres dt intervals negate?)]
+    [(sqlite? dialect)
+     (dateadd-sqlite dt intervals negate?)]
+    [else
+     (error "Cannot perform date math with dialect:" dialect)]))
+
+(define (dateadd-mssql dt intervals negate?)
+  (define (reduce-qty qty)
+    (cond
+      [(number? qty)
+       (if negate?
+           (- 0 qty)
+           qty)]
+      [else
+       (list (if negate? "-" "+") (parens qty))]))
+  (match intervals
+    [(list) dt]
+    [(list iv rest ...)
+     (dateadd-mssql
+      (list "dateadd("
+            (~a (interval-unit iv))
+            ", "
+            (reduce-qty (interval-qty iv))
+            ", "
+            dt
+            ")")
+      rest negate?)]
+    [else
+     (error "dateadd-mssql expected a list")]))
+
+(define (dateadd-postgres dt intervals negate?)
+  (define (reduce num unit)
+    (list "interval '"num" "unit"'"))
+  (define (reduce-interval iv)
+    (let ([qty (interval-qty iv)]
+          [unit (~a (interval-unit iv))])
+      (if (number? qty)
+          (reduce qty unit)
+          (parens (list (parens qty)
+                        " * "
+                        (reduce 1 unit))))))
+  (define joiner (if negate? " - " " + "))
+  (parens (interpose joiner (cons dt (map reduce-interval intervals)))))
+
+(define (dateadd-sqlite dt intervals negate?)
+  (define (reduce-interval iv)
+    (let ([sign (if negate? "-" "+")]
+          [qty (interval-qty iv)]
+          [unit (~a (interval-unit iv))])
+      (cond
+        [(and negate? (number? qty) (negative? qty))
+         ; avoid double negatives
+         (format "'+~a ~a'" (- 0 qty) unit)]
+        [(number? qty)
+         (format "'~a~a ~a'" sign qty unit)]
+        [else
+         (list sign (parens qty)" || ' "unit"'")])))
+  (list "datetime(" (interpose ", " (cons dt (map reduce-interval intervals)))
+        ")"))

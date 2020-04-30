@@ -8,8 +8,6 @@
  Token Scalar
  ; booleans
  Boolish Bit Bool
- ; non-scalar values
- Interval
  ; scalar values
  Datetime Number String
  ; other expressions
@@ -47,9 +45,6 @@
   [Boolish Scalar]
   [Bit Boolish]
   [Bool Boolish]
-
-  ; non-scalar values
-  [Interval Token]
 
   ; scalar values
   [Datetime Scalar]
