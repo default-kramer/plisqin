@@ -33,6 +33,8 @@
                    [count avg min max sum]
                    ; misc
                    [exists coalesce round]
+                   ; date math
+                   [date+ date- years months days hours minutes seconds]
                    ; operators
                    [and or not
                     = <> < <= > >=
@@ -55,6 +57,7 @@
                                      [primitive-id ooo]
                                      [aggregate-id ooo]
                                      [misc-id ooo]
+                                     [datemath-id ooo]
                                      [operator-id ooo]])
              (begin
                ; We set the type-lookup parameter to whichever type table was given.
@@ -67,6 +70,7 @@
                (:section "Primitives" primitive-id ooo)
                (:section "Aggregates" aggregate-id ooo)
                (:section "Misc" misc-id ooo)
+               (:section "Date Math" datemath-id ooo)
                (:section "Operators")
                (defmodule operators-mod-id)
                (def operator-id)
