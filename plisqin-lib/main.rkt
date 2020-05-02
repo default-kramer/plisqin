@@ -24,7 +24,7 @@
 ;; See the current version of the racket style guide here:
 ;; http://docs.racket-lang.org/style/index.html
 
-(require "./private2/sql/fragment.rkt")
+(require "./private2/token.rkt")
 (provide >>)
 
 (require "./private2/_null.rkt")
@@ -37,6 +37,14 @@
 (require "./private2/_statement.rkt")
 (provide define-statement compile-statements)
 
+(require "./private2/_core.rkt")
+(provide to-sql)
+
+(require "./private2/sql/special-clauses.rkt")
+(provide limit offset distinct join-type)
+
+(require "./private2/from.rkt")
+(provide from join)
 
 (module+ test
   ;; Tests to be run with raco test

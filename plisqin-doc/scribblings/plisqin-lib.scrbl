@@ -2,13 +2,38 @@
 
 @(require (for-label plisqin "racket.rkt"
                      (prefix-in db: db))
-          (for-syntax "racket.rkt")
+          (for-syntax "racket.rkt"
+                      plisqin-lib/types)
           "helpers.rkt")
 
 @title{plisqin-lib}
 TODO explain that most of the good stuff is in strict, loose, and unsafe.
 
 @(defmodule plisqin-lib)
+
+@defform[(from TODO)]{
+ TODO
+}
+
+@defform[(join TODO)]{
+ TODO
+}
+
+@defproc[(limit [n nonnegative-integer?]) Limit]{
+ TODO does #f clear the limit?
+}
+
+@defproc[(offset [n nonnegative-integer?]) Offset]{
+ TODO does #f clear the offset?
+}
+
+@defproc[(distinct [distinct? any/c]) Distinct]{
+ TODO
+}
+
+@defproc[(join-type [type (or/c #f 'inner 'left)]) JoinType]{
+ TODO
+}
 
 @defform[#:literals(table)
          (define-schema schema-id table-def ...)
@@ -279,12 +304,69 @@ For example, @(racket Scalar) is a supertype of @(racket Number).
    (eval:check (type-supertypes Datetime) (list Scalar)))
 }
 
+@(begin-for-syntax
+   ; Stuff to help us introspect on the type hierarchy
+   (define all-types 'uninitialized) ; will be set to (listof syntax?)
+
+   (define type-map/sym (make-hash)) ; symbol? -> (listof symbol?)
+
+   (define (register-supertypes! t supers)
+     (hash-set! type-map/sym t supers))
+
+   (define (strip-srcloc stx)
+     (let* ([content (syntax-e stx)]
+            [content (if (list? content)
+                         (map strip-srcloc content)
+                         content)])
+       (datum->syntax stx content #f stx)))
+
+   (define (type->symbol t)
+     (string->symbol (format "~a" t)))
+
+   (define (get-supertypes t)
+     ; returns a list of syntax objects with the correct label and no srclocs
+     ; (assuming that they were registered with the correct label)
+     (cond
+       [(syntax? t)
+        (get-supertypes (syntax-e t))]
+       [(type? t)
+        (get-supertypes (type->symbol t))]
+       [(symbol? t)
+        (let ([super-syms (hash-ref type-map/sym t)])
+          (filter (λ(super-stx) (member (syntax-e super-stx) super-syms))
+                  all-types))]
+       [else
+        (error "contract violation:" t)])))
+
+@(define-syntax (register-types! stx)
+   (syntax-case stx ()
+     [(_ [Type ...])
+      (begin
+        (set! all-types (map strip-srcloc (syntax->list #'(Type ...))))
+        (for/list ([T (syntax->list #'(Type ...))])
+          (let ([supertypes (eval-syntax #`(type-supertypes #,T))])
+            (register-supertypes! (syntax-e T)
+                                  (map type->symbol supertypes))))
+        #'(void))]))
+
+@(register-types!
+  [Token Scalar
+   ; booleans
+   Boolish Bit Bool
+   ; scalar values
+   Datetime Number String
+   ; other expressions
+   Subquery
+   ; clauses
+   Clause JoinClause QueryClause
+   Select Where GroupBy Having OrderBy JoinOn
+   Limit Offset Distinct JoinType])
+
 @(define-syntax (show-supertypes stx)
    (syntax-case stx ()
-     [(_ Type)
-      ; strip srcloc to fix typesetting
-      (let ([t (datum->syntax #'Type (syntax-e #'Type) #f #'Type)])
-        #`(repl (type-supertypes #,t)))]))
+     [(_ Type content ...)
+      (with-syntax ([(supertype ...) (get-supertypes #'Type)])
+        #'(racketblock #:supertypes [supertype ...]))]))
 
 @(define-syntax-rule (deftype Type content ...)
    (defthing Type type?
@@ -324,6 +406,46 @@ For example, @(racket Scalar) is a supertype of @(racket Number).
 @deftype[Subquery]{
  TODO
 }
+@deftype[Clause]{
+ TODO
+}
+@deftype[JoinClause]{
+ TODO
+}
+@deftype[QueryClause]{
+ TODO
+}
+@deftype[Select]{
+ TODO
+}
+@deftype[Where]{
+ TODO
+}
+@deftype[GroupBy]{
+ TODO
+}
+@deftype[Having]{
+ TODO
+}
+@deftype[OrderBy]{
+ TODO
+}
+@deftype[JoinOn]{
+ TODO
+}
+@deftype[Limit]{
+ TODO
+}
+@deftype[Offset]{
+ TODO
+}
+@deftype[Distinct]{
+ TODO
+}
+@deftype[JoinType]{
+ TODO
+}
+
 
 TODO: Query and Join are not truly types right now.
 They are simply predicates.

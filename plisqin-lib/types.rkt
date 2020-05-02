@@ -12,4 +12,8 @@
  Datetime Number String
  ; other expressions
  Query Join Subquery
+ ; clauses
+ Clause JoinClause QueryClause
+ Select Where GroupBy Having OrderBy JoinOn
+ Limit Offset Distinct JoinType
  )

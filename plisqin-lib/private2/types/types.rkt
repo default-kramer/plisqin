@@ -12,6 +12,10 @@
  Datetime Number String
  ; other expressions
  Subquery
+ ; clauses
+ Clause JoinClause QueryClause
+ Select Where GroupBy Having OrderBy JoinOn
+ Limit Offset Distinct JoinType
  ; For now, make Query and Join predicates.
  ; Maybe there will be a reason to make them types later.
  (rename-out [query? Query]
@@ -52,4 +56,20 @@
   [String Scalar]
 
   ; other expressions
-  [Subquery Token])
+  [Subquery Token]
+
+  ; clauses
+  [Clause Token]
+  [JoinClause   Clause]
+  [QueryClause  Clause]
+  [Select    JoinClause QueryClause]
+  [Where     JoinClause QueryClause]
+  [GroupBy   JoinClause QueryClause]
+  [Having    JoinClause QueryClause]
+  [OrderBy   JoinClause QueryClause]
+  [JoinOn    JoinClause]
+  [Limit     JoinClause QueryClause]
+  [Offset    JoinClause QueryClause]
+  [Distinct  JoinClause QueryClause]
+  [JoinType  JoinClause]
+  )

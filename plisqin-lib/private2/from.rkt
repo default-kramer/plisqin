@@ -25,11 +25,7 @@
   (syntax-case stx ()
     [(_ a b #:to c clause ...)
      (quasisyntax/loc stx
-       (wrap (m:join a b #:to c #,@(map tweak (syntax->list #'(clause ...))))))]
-    ; TODO we want #:to to be required, but leave it optional for now
-    [(_ a b clause ...)
-     (quasisyntax/loc stx
-       (wrap (m:join a b #,@(map tweak (syntax->list #'(clause ...))))))]))
+       (wrap (m:join a b #:to c #,@(map tweak (syntax->list #'(clause ...))))))]))
 
 (module+ test
   (require rackunit)

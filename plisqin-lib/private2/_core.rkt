@@ -3,7 +3,8 @@
 ; This file is just a small insulation layer that
 ; provides bindings from Morsel that we want to use directly.
 (provide tuple? query? join? get-join-type gen:queryable get-queryable
-         to-sql limit offset distinct join-type)
+         to-sql
+         )
 
 (require morsel-lib
          morsel-lib/sql
@@ -16,6 +17,10 @@
 (module+ from-helper
   (provide from join attach flatten-lists?)
   (require (submod morsel-lib/private/essence/from TODO-PRIVATE)))
+
+(module+ special-clause-helper
+  (require (submod morsel-lib/private/sql/clauses TODO-for-plisqin))
+  (provide clause<%> content-set :limit :offset :distinct :join-type))
 
 (module+ fragment-helper
   (provide sql-token<%> define-token-aspect-stuff))

@@ -51,7 +51,25 @@
 (define content? any/c) ; TODO
 
 (def-typetable type-dispatcher/unsafe unsafe-table
-  [(select where group-by having order-by join-on sql)
+  [(select)
+   (token-constructor
+    [any/c ...+ -> Select])]
+  [(where)
+   (token-constructor
+    [any/c ...+ -> Where])]
+  [(group-by)
+   (token-constructor
+    [any/c ...+ -> GroupBy])]
+  [(having)
+   (token-constructor
+    [any/c ...+ -> Having])]
+  [(order-by)
+   (token-constructor
+    [any/c ...+ -> OrderBy])]
+  [(join-on)
+   (token-constructor
+    [any/c ...+ -> JoinOn])]
+  [(sql)
    (token-constructor
     [any/c ...+ -> Token])]
   [(scalar aggregate min max
@@ -89,7 +107,25 @@
   )
 
 (def-typetable type-dispatcher/loose loose-table
-  [(select where group-by having order-by join-on sql)
+  [(select)
+   (token-constructor
+    [content? ...+ -> Select])]
+  [(where)
+   (token-constructor
+    [content? ...+ -> Where])]
+  [(group-by)
+   (token-constructor
+    [content? ...+ -> GroupBy])]
+  [(having)
+   (token-constructor
+    [content? ...+ -> Having])]
+  [(order-by)
+   (token-constructor
+    [content? ...+ -> OrderBy])]
+  [(join-on)
+   (token-constructor
+    [content? ...+ -> JoinOn])]
+  [(sql)
    (token-constructor
     [content? ...+ -> Token])]
   [(scalar aggregate min max
@@ -128,16 +164,25 @@
   )
 
 (def-typetable type-dispatcher/strict strict-table
-  [(select group-by)
+  [(select)
    (token-constructor
-    [Scalar -> Token])]
+    [Scalar -> Select])]
+  [(group-by)
+   (token-constructor
+    [Scalar -> GroupBy])]
   [(order-by)
    (token-constructor
-    [(or/c 'asc 'desc) Scalar -> Token]
-    [Scalar -> Token])]
-  [(where join-on having)
+    [(or/c 'asc 'desc) Scalar -> OrderBy]
+    [Scalar -> OrderBy])]
+  [(where )
    (token-constructor
-    [Boolish -> Token])]
+    [Boolish -> Where])]
+  [(join-on)
+   (token-constructor
+    [Boolish -> JoinOn])]
+  [(having)
+   (token-constructor
+    [Boolish -> Having])]
   [(scalar aggregate)
    (token-constructor
     [content? ...+ -> Scalar])]
