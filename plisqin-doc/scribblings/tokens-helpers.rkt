@@ -49,6 +49,17 @@
       ...)))
 
 
+(module names-helper racket
+  (provide recognized-names)
+
+  (require doc-coverage
+           (prefix-in --hidden-- plisqin-lib/unsafe)
+           (prefix-in --hidden-- plisqin-lib/unsafe/operators))
+  (define recognized-names
+    (append (module->all-exported-names 'plisqin-lib/unsafe)
+            (module->all-exported-names 'plisqin-lib/unsafe/operators))))
+(require (for-syntax 'names-helper))
+
 (define-for-syntax the-ctx (make-parameter #f))
 
 ; Recursively change the context of certain ids so that they appear to have been
@@ -66,14 +77,7 @@
        (datum->syntax stx (cons (relabel (car result))
                                 (relabel (cdr result)))
                       stx stx)]
-      [(member (syntax-e stx)
-               '(select where group-by having order-by join-on
-                        scalar bool aggregate subquery sql
-                        count avg min max sum exists round coalesce
-                        and or not
-                        = <> < <= > >=
-                        like not-like is is-not in not-in
-                        + - * /))
+      [(member (syntax-e stx) recognized-names)
        (let ([ctx (or (the-ctx)
                       (error "CTX not set"))])
          (datum->syntax ctx (syntax-e stx) stx ctx))]
