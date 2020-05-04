@@ -11,12 +11,65 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
 
 @(defmodule plisqin-lib)
 
-@defform[(from TODO)]{
+@defform[#:literals (define join)
+         (from id queryable-expr statement ...)
+         #:grammar
+         [(statement (define (proc-id proc-arg ...) proc-body ...)
+                     (define val-id val-expr)
+                     (join join-stuff)
+                     clause-expr)]
+         #:contracts ([queryable-expr TODO]
+                      [clause-expr (or/c QueryClause (listof QueryClause))])]{
  TODO
 }
 
-@defform[(join TODO)]{
- TODO
+@defform[#:literals (define join)
+         (join id queryable-expr maybe-to statement ...)
+         #:grammar
+         [(maybe-to (code:line)
+                    (code:line #:to link-expr))
+          (statement (define (proc-id proc-arg ...) proc-body ...)
+                     (define val-id val-expr)
+                     (join join-stuff ...)
+                     clause-expr)]
+         #:contracts ([queryable-expr TODO]
+                      [link-expr instance?]
+                      [clause-expr (or/c JoinClause (listof JoinClause))])]{
+ TODO this is imagining that @(racket instance?) is @(racket (or/c tuple? simple-join?)).
+ I still need to write that and test it out.
+
+ Similar to @(racket from), but creates a join instead of a query.
+
+ The @(racket #:to) option @bold{must} be omitted when this @(racket join)
+ is a @(racket statement) of an enclosing @(racket from) or @(racket join).
+ In that case, it is automatically linked to the enclosing query or join:
+ @(racketblock
+   (from a 'A
+         (join b 'B)
+         (%%where b".foo = "a".foo"))
+   (code:comment "is nearly equivalent to")
+   (from a 'A
+         (define b
+           (join b 'B #:to a))
+         (%%where b".foo = "a".foo")))
+ @(repl
+   ; I can't think of a reason that this *must* be an error.
+   ; This is mostly to make sure I update the docs if I relax that restriction.
+   (eval:error (from a 'A
+                     (join b 'B #:to a))))
+
+ Otherwise, the @(racket #:to) option is usually required.
+ The value of the @(racket link-expr) specifies which query this join belongs to.
+ In most real code, you only have one reasonable choice.
+ In the following hypothetical example, @(racket pet) is the only @(racket instance?)
+ in scope; it is the obvious and only possible @(racket link-expr):
+ @(racketblock
+   (define/contract (Owner pet)
+     (-> (instanceof Pet) (instanceof Person))
+     (join p Person
+           #:to pet
+           (join-on (.= (PersonId p)
+                        (OwnerId pet))))))
 }
 
 @defproc[(limit [n nonnegative-integer?]) Limit]{
