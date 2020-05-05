@@ -38,13 +38,13 @@
 (provide define-statement compile-statements)
 
 (require "./private2/_core.rkt")
-(provide to-sql)
+(provide to-sql query? join?)
 
 (require "./private2/sql/special-clauses.rkt")
 (provide limit offset distinct join-type)
 
 (require "./private2/from.rkt")
-(provide from join)
+(provide from join instance? instanceof)
 
 (module+ test
   ;; Tests to be run with raco test

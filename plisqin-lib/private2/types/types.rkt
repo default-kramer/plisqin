@@ -1,7 +1,6 @@
 #lang racket
 
 (require "./lib/core.rkt")
-(require (only-in "../_core.rkt" query? join?))
 
 (provide
  ; base types
@@ -16,10 +15,8 @@
  Clause JoinClause QueryClause
  Select Where GroupBy Having OrderBy JoinOn
  Limit Offset Distinct JoinType
- ; For now, make Query and Join predicates.
- ; Maybe there will be a reason to make them types later.
- (rename-out [query? Query]
-             [join? Join]))
+ )
+
 
 ; On booleans
 ; ===

@@ -11,7 +11,7 @@
  ; scalar values
  Datetime Number String
  ; other expressions
- Query Join Subquery
+ Subquery
  ; clauses
  Clause JoinClause QueryClause
  Select Where GroupBy Having OrderBy JoinOn

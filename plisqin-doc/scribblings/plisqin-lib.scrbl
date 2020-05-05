@@ -12,7 +12,7 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
 @(defmodule plisqin-lib)
 
 @defform[#:literals (define join)
-         (from id queryable-expr statement ...)
+         (from instance-id queryable-expr statement ...)
          #:grammar
          [(statement (define (proc-id proc-arg ...) proc-body ...)
                      (define val-id val-expr)
@@ -24,7 +24,7 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
 }
 
 @defform[#:literals (define join)
-         (join id queryable-expr maybe-to statement ...)
+         (join instance-id queryable-expr maybe-to statement ...)
          #:grammar
          [(maybe-to (code:line)
                     (code:line #:to link-expr))
@@ -35,9 +35,6 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
          #:contracts ([queryable-expr TODO]
                       [link-expr instance?]
                       [clause-expr (or/c JoinClause (listof JoinClause))])]{
- TODO this is imagining that @(racket instance?) is @(racket (or/c tuple? simple-join?)).
- I still need to write that and test it out.
-
  Similar to @(racket from), but creates a join instead of a query.
 
  The @(racket #:to) option @bold{must} be omitted when this @(racket join)
@@ -70,6 +67,48 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
            #:to pet
            (join-on (.= (PersonId p)
                         (OwnerId pet))))))
+}
+
+@defproc[(query? [x any/c]) any/c]{
+ Predicate that recognizes queries.
+ @(repl
+   (eval:check (query? (from a 'A)) #t))
+}
+
+@defproc[(join? [x any/c]) any/c]{
+ Predicate that recognizes joins.
+ @(repl
+   (define (B-given-A a)
+     (join b 'B #:to a
+           (%%join-on b".Foo = "a".Foo")))
+   (from a 'A
+         (if (join? (B-given-A a))
+             (%%select "of course it is a join")
+             (error "Inconceivable!"))))
+}
+
+@defproc[(instance? [x any/c]) any/c]{
+ Predicate that recognizes @deftech{instances}.
+ An instance can be thought of as a row of data.
+ If you translate code to English, you might translate an instance as
+ @italic{the [table-name]} or @italic{each [table-name]}.
+ For example, the following where clause can be translated to English as
+ "where the Age of @italic{the Person} is at least 21":
+ @(racketblock
+   (from p Person
+         (where (>= (Age p)
+                    (val 21)))))
+
+ Additionally, every @(racket join?) is also an instance!
+ TODO link to a refactoring recipe that demonstrates why this is awesome.
+}
+
+@defproc[(instanceof [queryable any/c]) procedure?]{
+ Creates a predicate roughly equivalent to
+ @(racketblock
+   (lambda (x)
+     (and (instance? x)
+          (has-same-queryable? x queryable))))
 }
 
 @defproc[(limit [n nonnegative-integer?]) Limit]{
@@ -215,6 +254,15 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
  Unless @(racket #:provide?) is @(racket #f), each unbound statement will be
  @(racket provide)d. This option is really only intended for this documentation;
  your code probably has no need to ever use this option.
+}
+
+@defproc[(to-sql [x any/c]) string?]{
+ TODO need to tighten up this contract.
+ @(repl
+   (displayln
+    (to-sql
+     (from a "Album"
+           (%%where a".ReleaseYear = 1973")))))
 }
 
 @section[#:tag "reference:nullability"]{Nullability}

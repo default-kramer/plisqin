@@ -4,6 +4,7 @@
 
 (require (only-in "_core.rkt" gen:queryable get-queryable)
          (only-in "sql/fragment.rkt" fragment? >>)
+         (submod "from.rkt" define-schema-helper)
          (for-syntax syntax/parse)
          "_null.rkt"
          (submod "_null.rkt" more)
@@ -18,6 +19,7 @@
 
 (struct table (proc name) #:transparent
   #:property prop:procedure 0
+  #:property prop:instance #t
   #:methods gen:queryable
   [(define (unwrap-queryable me)
      (table-name me))]
@@ -282,7 +284,7 @@
 
 (module+ test
   (require rackunit
-           (only-in "from.rkt" from)
+           (only-in "from.rkt" from instance? instanceof)
            (only-in "_core.rkt" to-sql)
            plisqin-lib/unsafe)
 
@@ -324,4 +326,11 @@ HEREDOC
   (check-equal? (nullability (Bar A))
                 yes)
   (check-equal? (nullability (Bar B))
-                maybe))
+                maybe)
+
+  ; tables are instances
+  (check-pred instance? A)
+  (check-pred instance? B)
+  (check-pred (instanceof A) A)
+  (check-pred (instanceof B) B)
+  )

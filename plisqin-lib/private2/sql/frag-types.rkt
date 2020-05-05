@@ -8,6 +8,7 @@
 
 (require "weave.rkt"
          "../_types.rkt"
+         (only-in "../_core.rkt" query? join?)
          "interval.rkt"
          "frags.helpers.rkt"
          (for-label plisqin-lib/types))
@@ -213,7 +214,7 @@
     [Number -> Number])]
   [(exists)
    (token-constructor
-    [(or/c Query Subquery) -> Bool])]
+    [(or/c query? Subquery) -> Bool])]
   [(round)
    (token-constructor
     [Number -> Number]

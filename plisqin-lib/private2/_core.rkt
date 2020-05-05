@@ -2,8 +2,12 @@
 
 ; This file is just a small insulation layer that
 ; provides bindings from Morsel that we want to use directly.
-(provide tuple? query? join? get-join-type gen:queryable get-queryable
-         to-sql
+(provide tuple? get-join-type gen:queryable get-queryable
+         ; Adding contracts makes doc-coverage consider them different from Morsel's
+         ; identifiers, so it will alert if they are undocumented.
+         (contract-out [to-sql (-> any/c string?)] ; TODO tighten this contract
+                       [query? (-> any/c any/c)]
+                       [join?  (-> any/c any/c)])
          )
 
 (require morsel-lib

@@ -1,10 +1,28 @@
 #lang racket
 
-(provide from join)
+(provide from join instance? instanceof)
+
+(module+ define-schema-helper
+  (provide prop:instance))
 
 (require (prefix-in m: (submod "_core.rkt" from-helper))
+         "_core.rkt"
          "_types.rkt"
          (for-syntax syntax/parse))
+
+(define-values (prop:instance custom-instance? --ignored--)
+  (make-struct-type-property 'prop:instance))
+
+(define (instance? x)
+  (or (tuple? x)
+      (join? x)
+      (custom-instance? x)))
+
+(define (instanceof t)
+  (lambda (x)
+    (and (instance? x)
+         (equal? (get-queryable t)
+                 (get-queryable x)))))
 
 (define-for-syntax to-not-allowed
   (string-append
@@ -53,9 +71,11 @@
 
 (define-syntax (join stx)
   (syntax-parse stx
-    [(_ id:id queryable:expr #:to link:expr statement ...)
-     ; TODO need a contract on queryable and link.
+    [(_ id:id queryable:expr #:to raw-link statement ...)
+     ; TODO need a contract on queryable
+     #:declare raw-link (expr/c #'instance?)
      (syntax/loc stx
-       (wrap (m:join id queryable #:to link
-                     (handle-statement #:join statement)
-                     ...)))]))
+       (let ([link raw-link.c])
+         (wrap (m:join id queryable #:to link
+                       (handle-statement #:join statement)
+                       ...))))]))
