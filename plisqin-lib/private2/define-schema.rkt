@@ -20,6 +20,7 @@
 (struct table (proc name) #:transparent
   #:property prop:procedure 0
   #:property prop:instance #t
+  #:property prop:trusted-queryable #t
   #:methods gen:queryable
   [(define (unwrap-queryable me)
      (table-name me))]

@@ -16,9 +16,12 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
          #:grammar
          [(statement (define (proc-id proc-arg ...) proc-body ...)
                      (define val-id val-expr)
-                     (join join-stuff)
+                     (join join-stuff ...)
                      clause-expr)]
-         #:contracts ([queryable-expr TODO]
+         #:contracts ([queryable-expr (or/c symbol?
+                                            query?
+                                            Subquery
+                                            trusted-queryable?)]
                       [clause-expr (or/c QueryClause (listof QueryClause))])]{
  TODO
 }
@@ -32,7 +35,10 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
                      (define val-id val-expr)
                      (join join-stuff ...)
                      clause-expr)]
-         #:contracts ([queryable-expr TODO]
+         #:contracts ([queryable-expr (or/c symbol?
+                                            join?
+                                            Subquery
+                                            trusted-queryable?)]
                       [link-expr instance?]
                       [clause-expr (or/c JoinClause (listof JoinClause))])]{
  Similar to @(racket from), but creates a join instead of a query.
@@ -261,7 +267,7 @@ TODO explain that most of the good stuff is in strict, loose, and unsafe.
  @(repl
    (displayln
     (to-sql
-     (from a "Album"
+     (from a 'Album
            (%%where a".ReleaseYear = 1973")))))
 }
 

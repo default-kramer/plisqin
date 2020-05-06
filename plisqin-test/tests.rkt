@@ -18,10 +18,10 @@
  ; Aliases are made to be unique if needed.
  ; Both of these want the alias "x" but the subquery gets renamed to "x1":
  (define (my-subquery parent)
-   (from x "Sub"
+   (from x 'Sub
          (where x".Something = "parent".Something")))
  (define my-query
-   (from x "Parent"
+   (from x 'Parent
          (where "not "(exists (my-subquery x)))))
 
  (check-sql my-query #<<HEREDOC
@@ -47,7 +47,7 @@ HEREDOC
 
 (test
  ; Using subquery prevents appending
- (check-sql (from x (subquery (from y "Y"
+ (check-sql (from x (subquery (from y 'Y
                                     (select y".ONE")))
                   (select x".ONE"))
             #<<HEREDOC
@@ -63,8 +63,8 @@ HEREDOC
 (test
  ; Joins are included even if they don't appear in a fragment:
  (define my-query
-   (from x "X"
-         (join y "Y"
+   (from x 'X
+         (join y 'Y
                (join-on "1=1"))))
 
  (check-sql my-query #<<HEREDOC
@@ -78,7 +78,7 @@ HEREDOC
 (test
  ; The query-building macros accept a single clause or a list for greater composability:
  (define my-query
-   (from x "X"
+   (from x 'X
          (if #t
              (select x".First")
              (list))
@@ -102,8 +102,8 @@ HEREDOC
 (test
  ; Aggregate functions don't need to be injected if they refer only to the main query and "simple" joins:
  (define my-query
-   (from t "Title"
-         (join r "Rating"
+   (from t 'Title
+         (join r 'Rating
                (join-on r".TitleID = "t".TitleID"))
          (select (sum t".TitleID + "r".Score"))
          (group-by t".TitleID")))
@@ -119,7 +119,7 @@ HEREDOC
 (test
  ; The SQL `having' clause:
  (define my-query
-   (from r "Rating"
+   (from r 'Rating
          (group-by r".TitleID")
          (having "count("r".TitleID) > 100")
          (select r".TitleID")
@@ -136,8 +136,8 @@ HEREDOC
 (test
  ; We can deduplicate injections!
  (define my-query
-   (from t "Title"
-         (join ratings "Rating"
+   (from t 'Title
+         (join ratings 'Rating
                (group-by ratings".TitleID")
                (join-on (scalar ratings".TitleID")" = "t".TitleID"))
          (select (avg ratings".Score")" as AvgScore")
@@ -161,11 +161,11 @@ HEREDOC
  ; a join in the fragments. In other words, that all joins would be inlined.
  ; This is no longer true. Let's try to create a failing test here:
  (define (TitleType-of/s title)
-   (join tt "TitleType" #:to title
+   (join tt 'TitleType #:to title
          (join-on tt".TitleTypeID = "title".TitleTypeID")))
 
  (define my-query
-   (from t "Title"
+   (from t 'Title
          (join tt1 (TitleType-of/s t))
          (join tt2 (TitleType-of/s t))
          (select tt1".a1")
@@ -187,10 +187,10 @@ HEREDOC
 (test
  ; Regression test. A joined subquery should be able to explicitly join other other joins.
  (define my-query
-   (from x "X"
-         (join y "Y"
+   (from x 'X
+         (join y 'Y
                (join-on "'y'='y'")
-               (join z "Z"
+               (join z 'Z
                      (join-on "'z'='z'"))
                (select y".Foo")
                (select z".Bar"))))
@@ -211,8 +211,8 @@ HEREDOC
 (test
  ; Auto-inject scalars in join-on clauses:
  (define my-query
-   (from x "X"
-         (join y "Y"
+   (from x 'X
+         (join y 'Y
                (group-by y".XID")
                (join-on (scalar y".XID")" = "(scalar x".XID")))
          (select x".*")
@@ -233,7 +233,7 @@ HEREDOC
 
 
 ; Tests of `exists`
-(check-sql (from x "X"
+(check-sql (from x 'X
                  (where (exists "select * from blah")))
            #<<HEREDOC
 select x.*
@@ -242,8 +242,8 @@ where exists (select * from blah)
 HEREDOC
            )
 
-(check-sql (from x "X"
-                 (where (exists (from y "Y"
+(check-sql (from x 'X
+                 (where (exists (from y 'Y
                                       (where y".Foo = "x".Bar")))))
            #<<HEREDOC
 select x.*
@@ -257,7 +257,7 @@ HEREDOC
            )
 
 ; tests of count
-(check-sql (from x "X"
+(check-sql (from x 'X
                  (select (count x)))
            #<<HEREDOC
 select count(*)
@@ -265,7 +265,7 @@ from X x
 HEREDOC
            )
 
-(check-sql (from x "X"
+(check-sql (from x 'X
                  (select (count x".foo")))
            #<<HEREDOC
 select count(x.foo)
@@ -274,7 +274,7 @@ HEREDOC
            )
 
 
-(check-sql (from x "X"
+(check-sql (from x 'X
                  (select (count 'distinct x".foo")))
            #<<HEREDOC
 select count(distinct x.foo)
@@ -282,8 +282,8 @@ from X x
 HEREDOC
            )
 
-(check-sql (from x "X"
-                 (join y "Y")
+(check-sql (from x 'X
+                 (join y 'Y)
                  (select (count y)))
            #<<HEREDOC
 select count(*)
@@ -293,8 +293,8 @@ inner join Y y
 HEREDOC
            )
 
-(check-sql (from x "X"
-                 (join y "Y")
+(check-sql (from x 'X
+                 (join y 'Y)
                  (select (count y".foo")))
            #<<HEREDOC
 select count(y.foo)
@@ -304,8 +304,8 @@ inner join Y y
 HEREDOC
            )
 
-(check-sql (from x "X"
-                 (join y "Y")
+(check-sql (from x 'X
+                 (join y 'Y)
                  (select (count 'distinct y".foo")))
            #<<HEREDOC
 select count(distinct y.foo)
@@ -315,8 +315,8 @@ inner join Y y
 HEREDOC
            )
 
-(check-sql (from x "X"
-                 (join y "Y"
+(check-sql (from x 'X
+                 (join y 'Y
                        (group-by y".foo"))
                  (select (count y)))
            #<<HEREDOC
@@ -331,8 +331,8 @@ inner join (
 HEREDOC
            )
 
-(check-sql (from x "X"
-                 (join y "Y"
+(check-sql (from x 'X
+                 (join y 'Y
                        (group-by y".foo"))
                  (select (count y".bar")))
            #<<HEREDOC
@@ -347,8 +347,8 @@ inner join (
 HEREDOC
            )
 
-(check-sql (from x "X"
-                 (join y "Y"
+(check-sql (from x 'X
+                 (join y 'Y
                        (group-by y".foo"))
                  (select (count 'distinct y".bar")))
            #<<HEREDOC
@@ -370,15 +370,15 @@ HEREDOC
  ; This is the (sum (sum (grouping (grouping ...)))) pattern, in which the
  ; aggregates and grouped joins remind me of opening and closing parens.
  (define (Rentals/g checkout)
-   (join r "Rental" #:to checkout
+   (join r 'Rental #:to checkout
          (group-by r".CheckoutId")
          (join-on (scalar r".CheckoutId")" = "checkout".CheckoutId")))
  (define (Checkouts/g employee)
-   (join c "Checkout" #:to employee
+   (join c 'Checkout #:to employee
          (group-by c".EmployeeId")
          (join-on (scalar c".EmployeeId")" = "employee".EmployeeId")))
  (define q
-   (from e "Employee"
+   (from e 'Employee
          (define rentals/g
            (Rentals/g (Checkouts/g e)))
          (select (sum (sum (scalar rentals/g".Cost")))" as TotalCost")))
@@ -405,12 +405,12 @@ HEREDOC
 (test
  ; Check the join type inference works
  (check-sql
-  (from x "X"
-        (join y "Y"
+  (from x 'X
+        (join y 'Y
               (join-type 'left)
               (join-on y".foo = "x".foo"))
         ; z is inferred to be a left join because it depends on y (which is left)
-        (join z "Z"
+        (join z 'Z
               (join-on z".bar = "y".bar"))
         (select z".baz"))
   #<<HEREDOC

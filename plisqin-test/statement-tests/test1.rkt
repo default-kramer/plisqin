@@ -6,7 +6,7 @@
 (define-statement (get-category [id Number]
                                 [name String])
   ; use the second parameter before the first to test that we handle it correctly
-  (from cat "ProductCategory"
+  (from cat 'ProductCategory
         (%%where cat".Name = "name)
         (%%where cat".ProductCategoryID = "id)
         (%%where cat".ProductCategoryID = "id)
@@ -20,7 +20,7 @@
                        #:e [e Number]
                        #:f [f Number 1]
                        )
-  (from cat "ProductCategory"
+  (from cat 'ProductCategory
         (%%where cat".ProductCategoryID = "a)
         (%%where cat".ProductCategoryID = "b)
         (%%where cat".ProductCategoryID = "c)
@@ -38,7 +38,7 @@
         [name (val "Bikes")])
     (check-equal? (get-category id name)
                   ; copy-paste the body from define-statement:
-                  (from cat "ProductCategory"
+                  (from cat 'ProductCategory
                         (%%where cat".Name = "name)
                         (%%where cat".ProductCategoryID = "id)
                         (%%where cat".ProductCategoryID = "id)

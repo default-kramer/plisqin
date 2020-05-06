@@ -3,7 +3,7 @@
 (provide from join instance? instanceof)
 
 (module+ define-schema-helper
-  (provide prop:instance))
+  (provide prop:instance prop:trusted-queryable))
 
 (require (prefix-in m: (submod "_core.rkt" from-helper))
          "_core.rkt"
@@ -24,6 +24,23 @@
          (equal? (get-queryable t)
                  (get-queryable x)))))
 
+; This prop is just a marker interface that allows the tables from
+; define-schema to pass the `from` and `join` contracts.
+(define-values (prop:trusted-queryable trusted-queryable? --ignored2--)
+  (make-struct-type-property 'prop:trusted-queryable))
+
+(define (from-queryable? x)
+  (or (symbol? x)
+      (trusted-queryable? x)
+      (Subquery x)
+      (query? x)))
+
+(define (join-queryable? x)
+  (or (symbol? x)
+      (trusted-queryable? x)
+      (Subquery x)
+      (join? x)))
+
 (define-for-syntax to-not-allowed
   (string-append
    "The `#:to` option is not allowed here."
@@ -40,11 +57,12 @@
     #:literals (join define)
     [(join a b #:to c ...)
      (raise-syntax-error #f to-not-allowed stx)]
-    [(join a b statement ...)
+    [(join id queryable statement ...)
+     #:declare queryable (expr/c #'join-queryable?)
      ; Translate our `join` into Morsel's `attach`. This should only be used
      ; where `stx` is in "clause position"; otherwise Morsel will error.
      (syntax/loc stx
-       (m:attach a b
+       (m:attach id (preformat queryable.c)
                  (handle-statement #:join statement)
                  ...))]
     [(define stuff ...)
@@ -60,22 +78,31 @@
   (parameterize ([m:flatten-lists? #t])
     expr))
 
+; TODO temp workaround - The better solution is to make all SQL table names and
+; column names into symbols, and convert to strings during reduction (when the
+; dialect is available)
+(define (preformat queryable)
+  (if (symbol? queryable)
+      (format "~a" queryable)
+      queryable))
+
 (define-syntax (from stx)
   (syntax-parse stx
-    [(_ id:id queryable:expr statement ...)
-     ; TODO need a contract on queryable
+    [(_ id:id queryable statement ...)
+     #:declare queryable (expr/c #'from-queryable?)
      (syntax/loc stx
-       (wrap (m:from id queryable
+       (wrap (m:from id (preformat queryable.c)
                      (handle-statement #:from statement)
                      ...)))]))
 
 (define-syntax (join stx)
   (syntax-parse stx
-    [(_ id:id queryable:expr #:to raw-link statement ...)
-     ; TODO need a contract on queryable
+    [(_ id:id queryable #:to raw-link statement ...)
+     #:declare queryable (expr/c #'join-queryable?)
      #:declare raw-link (expr/c #'instance?)
      (syntax/loc stx
        (let ([link raw-link.c])
-         (wrap (m:join id queryable #:to link
+         (wrap (m:join id (preformat queryable.c)
+                       #:to link
                        (handle-statement #:join statement)
                        ...))))]))
