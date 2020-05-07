@@ -3,7 +3,10 @@
 @(begin
    (provide custom-strict-docs)
 
-   (require (for-label plisqin
+   (require scribble/example
+            "helpers.rkt"
+            (for-label plisqin
+                       (prefix-in %% plisqin-lib/unsafe)
                        "racket.rkt"))
 
    (define (custom-strict-docs)
@@ -12,9 +15,14 @@
 
    (define (doc-val)
      @defform[(val x)]{
- Identical to @(racket (%val x)).
-}
-     )
+ A variant of @(racket (%%val x)).
+ This variant protects against SQL injection by requiring @(racket x) to be a
+ literal string or literal number.
+ @(examples #:eval my-eval
+            (val "a string literal")
+            (eval:error (let ([not-a-string-literal "hi"])
+                          (val not-a-string-literal))))
+ })
    (define (doc-??)
      @defform[#:kind "procedure" (?? token-1 [token-N ...+] [/fallback])
               #:contracts ([token-1 Token]

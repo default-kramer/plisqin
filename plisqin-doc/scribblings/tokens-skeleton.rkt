@@ -1,7 +1,6 @@
 #lang at-exp racket
 
 (provide docgen/unsafe
-         docgen/loose
          docgen/strict)
 
 (require scribble/manual
@@ -97,10 +96,6 @@
 (define-docgen docgen/unsafe
   example-get-content unsafe-ctx unsafe-table
   plisqin-lib/unsafe plisqin-lib/unsafe/operators)
-
-(define-docgen docgen/loose
-  default-content loose-ctx loose-table
-  plisqin-lib/loose plisqin-lib/loose/operators)
 
 (define-docgen docgen/strict
   default-content strict-ctx strict-table

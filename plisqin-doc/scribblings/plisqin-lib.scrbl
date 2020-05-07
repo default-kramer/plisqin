@@ -7,7 +7,7 @@
           "helpers.rkt")
 
 @title{plisqin-lib}
-TODO explain that most of the good stuff is in strict, loose, and unsafe.
+TODO explain that most of the good stuff is in strict and unsafe.
 
 @(defmodule plisqin-lib)
 

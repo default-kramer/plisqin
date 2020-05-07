@@ -3,8 +3,8 @@
 ; Capture type signatures twice.
 ; The dispatchers are used to weave type checking into the fragment constructors.
 ; The tables are used by Scribble to generate documentation
-(provide type-dispatcher/unsafe type-dispatcher/loose type-dispatcher/strict
-         unsafe-table loose-table strict-table)
+(provide type-dispatcher/unsafe type-dispatcher/strict
+         unsafe-table strict-table)
 
 (require "weave.rkt"
          "../_types.rkt"
@@ -105,63 +105,6 @@
   [(date+ date-)
    (token-constructor
     [any/c interval? ...+ -> Datetime])]
-  )
-
-(def-typetable type-dispatcher/loose loose-table
-  [(select)
-   (token-constructor
-    [content? ...+ -> Select])]
-  [(where)
-   (token-constructor
-    [content? ...+ -> Where])]
-  [(group-by)
-   (token-constructor
-    [content? ...+ -> GroupBy])]
-  [(having)
-   (token-constructor
-    [content? ...+ -> Having])]
-  [(order-by)
-   (token-constructor
-    [content? ...+ -> OrderBy])]
-  [(join-on)
-   (token-constructor
-    [content? ...+ -> JoinOn])]
-  [(sql)
-   (token-constructor
-    [content? ...+ -> Token])]
-  [(scalar aggregate min max
-           + - * /)
-   (token-constructor
-    [content? ...+ -> Scalar])]
-  [(bit)
-   (token-constructor
-    [content? ...+ -> Bit])]
-  [(coalesce)
-   (token-constructor
-    [content? content? ...+ -> Scalar])]
-  [(exists and or not
-           = <> < <= > >=
-           like not-like
-           is is-not
-           in not-in)
-   (token-constructor
-    [content? ...+ -> Bool])]
-  [(round)
-   (token-constructor
-    [content? -> Number]
-    [content? number? -> Number])]
-  [(subquery)
-   (token-constructor
-    [content? ...+ -> Subquery])]
-  [(count avg sum)
-   (token-constructor
-    [content? ...+ -> Number])]
-  [(years months days hours minutes seconds)
-   (token-constructor
-    [content? -> interval?])]
-  [(date+ date-)
-   (token-constructor
-    [content? interval? ...+ -> Datetime])]
   )
 
 (def-typetable type-dispatcher/strict strict-table

@@ -1,7 +1,6 @@
 #lang racket
 
 (provide null-dispatcher/unsafe
-         (rename-out [null-dispatcher/unsafe null-dispatcher/loose])
          null-dispatcher/strict)
 
 (require "weave.rkt"

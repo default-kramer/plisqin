@@ -1,6 +1,6 @@
 #lang racket
 
-; There are 3 submodules: unsafe, loose, and strict.
+; There are 2 submodules: unsafe and strict.
 ; Each one weaves the procs together and provides all the ids.
 
 (require "frag-bodies.rkt"
@@ -34,7 +34,6 @@
                   + - * /))))
 
 (do-export unsafe type-dispatcher/unsafe null-dispatcher/unsafe)
-(do-export loose  type-dispatcher/loose  null-dispatcher/loose)
 (do-export strict type-dispatcher/strict null-dispatcher/strict)
 
 (module+ test

@@ -9,8 +9,6 @@
            (only-in "fragment.rkt" >>)
            (submod "frags.rkt" strict)
            (prefix-in |.| (submod "frags.rkt" strict operators))
-           (prefix-in % (submod "frags.rkt" loose))
-           (prefix-in % (submod "frags.rkt" loose operators))
            (prefix-in %% (submod "frags.rkt" unsafe))
            (prefix-in %% (submod "frags.rkt" unsafe operators)))
 

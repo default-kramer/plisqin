@@ -25,5 +25,4 @@
       (provide (all-from-out (submod "./sql/frags.rkt" id operators))))))
 
 (do-provide unsafe ...)
-(do-provide loose ...)
 (do-provide strict ...)

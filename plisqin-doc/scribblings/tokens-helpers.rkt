@@ -2,12 +2,12 @@
 
 (provide %% def-token def-content-provider
          type-lookup
-         unsafe-table loose-table strict-table
-         (for-syntax unsafe-ctx loose-ctx strict-ctx)
+         unsafe-table strict-table
+         (for-syntax unsafe-ctx strict-ctx)
          (for-syntax relabel2))
 
 (require (only-in plisqin-lib/private2/sql/frag-types
-                  unsafe-table loose-table strict-table)
+                  unsafe-table strict-table)
          scribble/manual)
 
 (define type-lookup (make-parameter "type-lookup-not-set"))
@@ -27,9 +27,6 @@
 
 (def-ctx unsafe-ctx ab1 plisqin-lib/unsafe plisqin-lib/unsafe/operators)
 (require (for-syntax 'ab1))
-
-(def-ctx loose-ctx ab2 plisqin-lib/loose plisqin-lib/loose/operators)
-(require (for-syntax 'ab2))
 
 (def-ctx strict-ctx ab3 plisqin-lib/strict plisqin-lib/strict/operators)
 (require (for-syntax 'ab3))
