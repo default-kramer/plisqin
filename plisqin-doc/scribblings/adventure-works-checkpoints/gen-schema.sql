@@ -5,9 +5,9 @@ select '(table '
 	+ (select '['
 			+ c.COLUMN_NAME
 			+ case when c.DATA_TYPE like '%int' or c.DATA_TYPE like '%decimal' or c.DATA_TYPE like '%money'
-					or c.DATA_TYPE like '%numeric' then ' #:type Number'
-				when c.DATA_TYPE like '%char' then ' #:type String'
-				when c.DATA_TYPE in ('datetime', 'date') then ' #:type Datetime'
+					or c.DATA_TYPE like '%numeric' then ' #:type Number?'
+				when c.DATA_TYPE like '%char' then ' #:type String?'
+				when c.DATA_TYPE in ('datetime', 'date') then ' #:type Datetime?'
 				else '' end
 			+ case when c.IS_NULLABLE = 'NO' then ' #:null no'
 				else ' #:null yes' end

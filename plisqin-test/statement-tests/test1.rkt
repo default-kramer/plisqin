@@ -3,8 +3,8 @@
 (require plisqin
          plisqin-lib/private2/statement/define-statement)
 
-(define-statement (get-category [id Number]
-                                [name String])
+(define-statement (get-category [id Number?]
+                                [name String?])
   ; use the second parameter before the first to test that we handle it correctly
   (from cat 'ProductCategory
         (%%where cat".Name = "name)
@@ -14,11 +14,11 @@
 
 ; This is to test every kind of argument we have
 (define-statement (foo a
-                       [b Number]
-                       [c Number 1]
+                       [b Number?]
+                       [c Number? 1]
                        #:d d
-                       #:e [e Number]
-                       #:f [f Number 1]
+                       #:e [e Number?]
+                       #:f [f Number? 1]
                        )
   (from cat 'ProductCategory
         (%%where cat".ProductCategoryID = "a)

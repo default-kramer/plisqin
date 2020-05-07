@@ -15,15 +15,15 @@
              (doc-??)))
 
    (define (doc-val)
-     @defproc*[([(val [x string?]) String]
-                [(val [x number?]) Number])]{
- Converts a Racket value into a @(racket Token).
+     @defproc*[([(val [x string?]) String?]
+                [(val [x number?]) Number?])]{
+ Converts a Racket value into a @(racket Token?).
  The token's @tech{nullability} is always @(racket no).
  })
    (define (doc-??)
      @defform[#:kind "procedure" (?? token-1 [token-N ...+] [/fallback])
-              #:contracts ([token-1 Token]
-                           [token-N Token]
+              #:contracts ([token-1 Token?]
+                           [token-N Token?]
                            [/fallback fallback?])]{
  This procedure is typically used to attach a @tech{fallback}, but it can also be
  used as a synonym for @(racket %%coalesce) if no fallback is given.

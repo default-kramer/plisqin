@@ -27,8 +27,8 @@ of @(racket define-schema), as in the following example:
   (define-schema my-test-schema
     (table Album
            #:column
-           [AlbumID #:type Number #:null no]
-           [ReleaseYear #:type Number #:null yes]))
+           [AlbumID #:type Number? #:null no]
+           [ReleaseYear #:type Number? #:null yes]))
   (eval:check (nullability (AlbumID Album))
               no)
   (eval:check (nullability (ReleaseYear Album))
@@ -63,9 +63,9 @@ if x is null or y is null or both are null.
 The @tech{strict} version of Plisqin prevents these kinds of mistakes.
 It does this in two ways:
 @(itemlist
-  @item{Anywhere that it accepts a @(racket Bool), it demands that its nullability
+  @item{Anywhere that it accepts a @(racket Bool?), it demands that its nullability
  is @(racket no), meaning that it cannot contain the unknown value.}
-  @item{Anywhere that it returns a @(racket Bool), it guarantees that its nullability
+  @item{Anywhere that it returns a @(racket Bool?), it guarantees that its nullability
  is @(racket no), meaning that it cannot contain the unknown value.})
 
 @subsection{An Example}

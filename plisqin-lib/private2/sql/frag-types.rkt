@@ -54,137 +54,137 @@
 (def-typetable type-dispatcher/unsafe unsafe-table
   [(select)
    (token-constructor
-    [any/c ...+ -> Select])]
+    [any/c ...+ -> Select?])]
   [(where)
    (token-constructor
-    [any/c ...+ -> Where])]
+    [any/c ...+ -> Where?])]
   [(group-by)
    (token-constructor
-    [any/c ...+ -> GroupBy])]
+    [any/c ...+ -> GroupBy?])]
   [(having)
    (token-constructor
-    [any/c ...+ -> Having])]
+    [any/c ...+ -> Having?])]
   [(order-by)
    (token-constructor
-    [any/c ...+ -> OrderBy])]
+    [any/c ...+ -> OrderBy?])]
   [(join-on)
    (token-constructor
-    [any/c ...+ -> JoinOn])]
+    [any/c ...+ -> JoinOn?])]
   [(sql)
    (token-constructor
-    [any/c ...+ -> Token])]
+    [any/c ...+ -> Token?])]
   [(scalar aggregate min max
            + - * /)
    (token-constructor
-    [any/c ...+ -> Scalar])]
+    [any/c ...+ -> Scalar?])]
   [(bit)
    (token-constructor
-    [any/c ...+ -> Bit])]
+    [any/c ...+ -> Bit?])]
   [(coalesce)
    (token-constructor
-    [any/c any/c ...+ -> Scalar])]
+    [any/c any/c ...+ -> Scalar?])]
   [(exists and or not
            = <> < <= > >=
            like not-like
            is is-not
            in not-in)
    (token-constructor
-    [any/c ...+ -> Bool])]
+    [any/c ...+ -> Bool?])]
   [(round)
    (token-constructor
-    [any/c ...+ -> Number])]
+    [any/c ...+ -> Number?])]
   [(subquery)
    (token-constructor
-    [any/c ...+ -> Subquery])]
+    [any/c ...+ -> Subquery?])]
   [(count avg sum)
    (token-constructor
-    [any/c ...+ -> Number])]
+    [any/c ...+ -> Number?])]
   [(years months days hours minutes seconds)
    (token-constructor
     [any/c -> interval?])]
   [(date+ date-)
    (token-constructor
-    [any/c interval? ...+ -> Datetime])]
+    [any/c interval? ...+ -> Datetime?])]
   )
 
 (def-typetable type-dispatcher/strict strict-table
   [(select)
    (token-constructor
-    [Scalar -> Select])]
+    [Scalar? -> Select?])]
   [(group-by)
    (token-constructor
-    [Scalar -> GroupBy])]
+    [Scalar? -> GroupBy?])]
   [(order-by)
    (token-constructor
-    [(or/c 'asc 'desc) Scalar -> OrderBy]
-    [Scalar -> OrderBy])]
+    [(or/c 'asc 'desc) Scalar? -> OrderBy?]
+    [Scalar? -> OrderBy?])]
   [(where )
    (token-constructor
-    [Boolish -> Where])]
+    [Boolish? -> Where?])]
   [(join-on)
    (token-constructor
-    [Boolish -> JoinOn])]
+    [Boolish? -> JoinOn?])]
   [(having)
    (token-constructor
-    [Boolish -> Having])]
+    [Boolish? -> Having?])]
   [(scalar aggregate)
    (token-constructor
-    [content? ...+ -> Scalar])]
+    [content? ...+ -> Scalar?])]
   [(bit)
    (token-constructor
-    [content? ...+ -> Bit])]
+    [content? ...+ -> Bit?])]
   [(sql)
    (token-constructor
-    [content? ...+ -> Token])]
+    [content? ...+ -> Token?])]
   [(subquery)
    (token-constructor
-    [content? ...+ -> Subquery])]
+    [content? ...+ -> Subquery?])]
   [(count)
    (token-constructor
-    [Scalar -> Number])]
+    [Scalar? -> Number?])]
   [(coalesce)
    (token-constructor
-    [String String ...+ -> String]
-    [Datetime Datetime ...+ -> Datetime]
-    [Number Number ...+ -> Number])]
+    [String? String? ...+ -> String?]
+    [Datetime? Datetime? ...+ -> Datetime?]
+    [Number? Number? ...+ -> Number?])]
   [(avg sum)
    (token-constructor
-    [Number -> Number])]
+    [Number? -> Number?])]
   [(min max)
    (token-constructor
-    [String -> String]
-    [Datetime -> Datetime]
-    [Number -> Number])]
+    [String? -> String?]
+    [Datetime? -> Datetime?]
+    [Number? -> Number?])]
   [(exists)
    (token-constructor
-    [(or/c query? Subquery) -> Bool])]
+    [(or/c query? Subquery?) -> Bool?])]
   [(round)
    (token-constructor
-    [Number -> Number]
-    [Number number? -> Number])]
+    [Number? -> Number?]
+    [Number? number? -> Number?])]
   [(and or)
    (token-constructor
-    [Boolish ...+ -> Bool])]
+    [Boolish? ...+ -> Bool?])]
   [(not)
    (token-constructor
-    [Boolish -> Bool])]
+    [Boolish? -> Bool?])]
   [(= <> < <= > >=
       like not-like) ; confirmed that like works on numbers and datetimes in SQL Server
    (token-constructor
-    [Number Number -> Bool]
-    [String String -> Bool]
-    [Datetime Datetime -> Bool])]
+    [Number? Number? -> Bool?]
+    [String? String? -> Bool?]
+    [Datetime? Datetime? -> Bool?])]
   [(is is-not in not-in)
    (token-constructor
-    [content? ...+ -> Bool])] ; TODO figure out the real type
+    [content? ...+ -> Bool?])] ; TODO figure out the real type
   [(+ - * /)
    (token-constructor
-    [Number ...+ -> Number])]
+    [Number? ...+ -> Number?])]
   [(years months days hours minutes seconds)
    (token-constructor
-    [Number -> interval?]
+    [Number? -> interval?]
     [number? -> interval?])]
   [(date+ date-)
    (token-constructor
-    [Datetime interval? ...+ -> Datetime])]
+    [Datetime? interval? ...+ -> Datetime?])]
   )

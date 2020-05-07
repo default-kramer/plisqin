@@ -2,10 +2,10 @@
 
 (provide
  (contract-out
-  [limit (-> nonnegative-integer? Limit)]
-  [offset (-> nonnegative-integer? Offset)]
-  [distinct (-> any/c Distinct)]
-  [join-type (-> (or/c #f 'inner 'left) JoinType)]
+  [limit (-> nonnegative-integer? Limit?)]
+  [offset (-> nonnegative-integer? Offset?)]
+  [distinct (-> any/c Distinct?)]
+  [join-type (-> (or/c #f 'inner 'left) JoinType?)]
   ))
 
 (require (prefix-in m: (submod "../_core.rkt" special-clause-helper))
@@ -74,7 +74,7 @@
 
 (define-clauses
   ; we use the m::properties from Morsel so that it can read what we write
-  [limit Limit m::limit]
-  [offset Offset m::offset]
-  [distinct Distinct m::distinct]
-  [join-type JoinType m::join-type])
+  [limit Limit? m::limit]
+  [offset Offset? m::offset]
+  [distinct Distinct? m::distinct]
+  [join-type JoinType? m::join-type])

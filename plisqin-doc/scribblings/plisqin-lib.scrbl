@@ -20,9 +20,9 @@ TODO explain that most of the good stuff is in strict and unsafe.
                      clause-expr)]
          #:contracts ([queryable-expr (or/c symbol?
                                             query?
-                                            Subquery
+                                            Subquery?
                                             trusted-queryable?)]
-                      [clause-expr (or/c QueryClause (listof QueryClause))])]{
+                      [clause-expr (or/c QueryClause? (listof QueryClause?))])]{
  TODO
 }
 
@@ -37,10 +37,10 @@ TODO explain that most of the good stuff is in strict and unsafe.
                      clause-expr)]
          #:contracts ([queryable-expr (or/c symbol?
                                             join?
-                                            Subquery
+                                            Subquery?
                                             trusted-queryable?)]
                       [link-expr instance?]
-                      [clause-expr (or/c JoinClause (listof JoinClause))])]{
+                      [clause-expr (or/c JoinClause? (listof JoinClause?))])]{
  Similar to @(racket from), but creates a join instead of a query.
 
  The @(racket #:to) option @bold{must} be omitted when this @(racket join)
@@ -117,19 +117,19 @@ TODO explain that most of the good stuff is in strict and unsafe.
           (has-same-queryable? x queryable))))
 }
 
-@defproc[(limit [n nonnegative-integer?]) Limit]{
+@defproc[(limit [n nonnegative-integer?]) Limit?]{
  TODO does #f clear the limit?
 }
 
-@defproc[(offset [n nonnegative-integer?]) Offset]{
+@defproc[(offset [n nonnegative-integer?]) Offset?]{
  TODO does #f clear the offset?
 }
 
-@defproc[(distinct [distinct? any/c]) Distinct]{
+@defproc[(distinct [distinct? any/c]) Distinct?]{
  TODO
 }
 
-@defproc[(join-type [type (or/c #f 'inner 'left)]) JoinType]{
+@defproc[(join-type [type (or/c #f 'inner 'left)]) JoinType?]{
  TODO
 }
 
@@ -153,7 +153,7 @@ TODO explain that most of the good stuff is in strict and unsafe.
    #:column
    FirstName
    LastName
-   [UserId #:type Number]
+   [UserId #:type Number?]
    AnotherColumn)
 }
 
@@ -190,11 +190,11 @@ TODO explain that most of the good stuff is in strict and unsafe.
  extra metadata stashed away that @(racket compile-statements) can use.
  @(racketblock
    (define-statement (foo a
-                          [b Number]
-                          [c String "c-default"]
+                          [b Number?]
+                          [c String? "c-default"]
                           #:d d
-                          #:e [e Number]
-                          #:f [f String "f-default"])
+                          #:e [e Number?]
+                          #:f [f String? "f-default"])
      (list a b c d e f))
    (code:comment "produces code similar to")
    (define (foo a
@@ -208,17 +208,17 @@ TODO explain that most of the good stuff is in strict and unsafe.
      (code:comment "this part is illustrative, not real code:")
      (module+ metadata-for-compile-statements
        (define meta:foo
-         (foo (param a Scalar)
-              (param b Number)
-              (param c String)
-              #:d (param d Scalar)
-              #:e (param e Number)
-              #:f (param f String))))))
+         (foo (param a Scalar?)
+              (param b Number?)
+              (param c String?)
+              #:d (param d Scalar?)
+              #:e (param e Number?)
+              #:f (param f String?))))))
 
- In the code above, the hypothetical @(racket (param b Number)) expression
- creates a placeholder token having type @(racket Number) and representing
+ In the code above, the hypothetical @(racket (param b Number?)) expression
+ creates a placeholder token having type @(racket Number?) and representing
  an SQL parameter. The @(racket a) and @(racket d) parameters were assigned the
- @(racket Scalar) type, which is the default when @(racket Type-expr) is absent.
+ @(racket Scalar?) type, which is the default when @(racket Type-expr) is absent.
 
  TODO what about nullability?
  We could attach @(racket /void) to each param, but that seems dangerous.
@@ -383,32 +383,32 @@ TODO explain that most of the good stuff is in strict and unsafe.
 Plisqin's types are plain Racket values.
 They start with a capital letter.
 @(repl
-  (eval:check Subquery Subquery)
-  (eval:check (type? Subquery) #t))
+  (eval:check Subquery? Subquery?)
+  (eval:check (type? Subquery?) #t))
 
 Types can be used as predicates, therefore they can also be used as contracts.
 @(repl
-  (eval:check (Number (val 20)) #t)
-  (eval:check (Token (%%where "x.foo = 'bar'")) #t))
+  (eval:check (Number? (val 20)) #t)
+  (eval:check (Token? (%%where "x.foo = 'bar'")) #t))
 
 Most types have at least one supertype.
-For example, @(racket Scalar) is a supertype of @(racket Number).
+For example, @(racket Scalar?) is a supertype of @(racket Number?).
 @(repl
-  (eval:check (type-supertypes Number) (list Scalar))
-  (eval:check (Number (val 20)) #t)
-  (eval:check (Scalar (val 20)) #t))
+  (eval:check (type-supertypes Number?) (list Scalar?))
+  (eval:check (Number? (val 20)) #t)
+  (eval:check (Scalar? (val 20)) #t))
 
 @defproc[(type? [x any/c]) any/c]{
  Predicate that recognizes types.
  @(repl
-   (eval:check (type? Token) #t)
-   (eval:check (type? Datetime) #t))
+   (eval:check (type? Token?) #t)
+   (eval:check (type? Datetime?) #t))
 }
 
 @defproc[(type-supertypes [t type?]) (listof type?)]{
  Returns the supertypes of the given type.
  @(repl
-   (eval:check (type-supertypes Datetime) (list Scalar)))
+   (eval:check (type-supertypes Datetime?) (list Scalar?)))
 }
 
 @(begin-for-syntax
@@ -457,17 +457,17 @@ For example, @(racket Scalar) is a supertype of @(racket Number).
         #'(void))]))
 
 @(register-types!
-  [Token Scalar
+  [Token? Scalar?
    ; booleans
-   Boolish Bit Bool
+   Boolish? Bit? Bool?
    ; scalar values
-   Datetime Number String
+   Datetime? Number? String?
    ; other expressions
-   Subquery
+   Subquery?
    ; clauses
-   Clause JoinClause QueryClause
-   Select Where GroupBy Having OrderBy JoinOn
-   Limit Offset Distinct JoinType])
+   Clause? JoinClause? QueryClause?
+   Select? Where? GroupBy? Having? OrderBy? JoinOn?
+   Limit? Offset? Distinct? JoinType?])
 
 @(define-syntax (show-supertypes stx)
    (syntax-case stx ()
@@ -479,77 +479,77 @@ For example, @(racket Scalar) is a supertype of @(racket Number).
    (defthing Type type?
      (show-supertypes Type)
      content ...))
-@deftype[Token]{
+@deftype[Token?]{
  The root of the type hierarchy.
 }
 
-@deftype[Scalar]{
+@deftype[Scalar?]{
  In general, every data type that a database column can have should correspond
- to @(racket Scalar) or one of its subtypes.
- To use some PostgreSQL examples, "varchar(50)" corresponds to @(racket String),
- and "bigint" corresponds to @(racket Number).
- Less common data types such as "cidr" correspond to @(racket Scalar) because
+ to @(racket Scalar?) or one of its subtypes.
+ To use some PostgreSQL examples, "varchar(50)" corresponds to @(racket String?),
+ and "bigint" corresponds to @(racket Number?).
+ Less common data types such as "cidr" correspond to @(racket Scalar?) because
  Plisqin has no more appropriate subtype for them.
 }
 
-@deftype[Boolish]{
+@deftype[Boolish?]{
  TODO
 }
-@deftype[Bit]{
+@deftype[Bit?]{
  TODO
 }
-@deftype[Bool]{
+@deftype[Bool?]{
  TODO
 }
-@deftype[Datetime]{
+@deftype[Datetime?]{
  TODO
 }
-@deftype[Number]{
+@deftype[Number?]{
  TODO
 }
-@deftype[String]{
+@deftype[String?]{
  TODO
 }
-@deftype[Subquery]{
+@deftype[Subquery?]{
  TODO
 }
-@deftype[Clause]{
+@deftype[Clause?]{
  TODO
 }
-@deftype[JoinClause]{
+@deftype[JoinClause?]{
  TODO
 }
-@deftype[QueryClause]{
+@deftype[QueryClause?]{
  TODO
 }
-@deftype[Select]{
+@deftype[Select?]{
  TODO
 }
-@deftype[Where]{
+@deftype[Where?]{
  TODO
 }
-@deftype[GroupBy]{
+@deftype[GroupBy?]{
  TODO
 }
-@deftype[Having]{
+@deftype[Having?]{
  TODO
 }
-@deftype[OrderBy]{
+@deftype[OrderBy?]{
  TODO
 }
-@deftype[JoinOn]{
+@deftype[JoinOn?]{
  TODO
 }
-@deftype[Limit]{
+@deftype[Limit?]{
  TODO
 }
-@deftype[Offset]{
+@deftype[Offset?]{
  TODO
 }
-@deftype[Distinct]{
+@deftype[Distinct?]{
  TODO
 }
-@deftype[JoinType]{
+@deftype[JoinType?]{
  TODO
 }
 

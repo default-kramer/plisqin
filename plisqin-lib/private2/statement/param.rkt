@@ -38,7 +38,7 @@
   (new param%
        [index index]
        [id id]
-       [type (or type Scalar)]
+       [type (or type Scalar?)]
        [kw kw]
        [default default]))
 
@@ -104,10 +104,10 @@
   (require rackunit
            "../_types.rkt")
   (define p (make-param #:index 1 #:id #'foo))
-  (define p:Number (>> p #:cast Number))
-  (check-equal? p p:Number)
-  (check-equal? (get-type p:Number)
-                Number))
+  (define p:Number? (>> p #:cast Number?))
+  (check-equal? p p:Number?)
+  (check-equal? (get-type p:Number?)
+                Number?))
 
 
 ; This regex matches our special pattern, eg #<<{param:123}>>#

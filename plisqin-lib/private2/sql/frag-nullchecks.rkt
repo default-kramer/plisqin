@@ -95,8 +95,8 @@
    coalesce-nullchecker]
   [(where having join-on
           and or not)
-   ; All arguments are Boolish. In this strict variant, we enforce that
-   ; every Boolish is not null
+   ; All arguments are Boolish?. In this strict variant, we enforce that
+   ; every Boolish? is not null
    (nullchecker
     #:deny-null)]
   [(= <> < <= > >=
@@ -124,7 +124,7 @@
   ; Intervals should never be null.
   [(years months days hours minutes seconds)
    (nullchecker #:deny-null)]
-  ; We know the intervals will be non-null, but if the Datetime is null that's
+  ; We know the intervals will be non-null, but if the Datetime? is null that's
   ; fine, we accept and propogate it as normal.
   [(date+ date-)
    (nullchecker #:permit-null)]

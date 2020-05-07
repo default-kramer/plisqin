@@ -3,7 +3,7 @@
 (require plisqin
          "schema.rkt")
 
-(define-statement (get-category #:name [name String])
+(define-statement (get-category #:name [name String?])
   (from cat ProductCategory
         (where (.= (Name cat)
                    (?? name /void)))

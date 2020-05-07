@@ -20,9 +20,9 @@
                                                            snippet message)))))])
            expr))]))
 
-(check-exn+message (join-on "not a Token")
+(check-exn+message (join-on "not a Token?")
                    "join-on: contract violation")
-(check-exn+message (coalesce "not a Token")
+(check-exn+message (coalesce "not a Token?")
                    "coalesce: contract violation")
 
 (define/contract (test-that-instanceof-prints-correctly x)

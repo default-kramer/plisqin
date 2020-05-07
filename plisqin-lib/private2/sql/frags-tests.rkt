@@ -134,24 +134,24 @@
   (check-cmp %%= #f /void   "(rhs is not null and (lhs = rhs))")
 
 
-  ; == Datetime Math ==
-  (define-syntax-rule (make-Datetime anything ...)
-    (>> (%%scalar anything ...) #:cast Datetime #:null no))
+  ; == Datetime? Math ==
+  (define-syntax-rule (make-Datetime? anything ...)
+    (>> (%%scalar anything ...) #:cast Datetime? #:null no))
   (check-equal? (nullability (hours 3))
                 no)
-  (check-sql (date+ (make-Datetime "now")
+  (check-sql (date+ (make-Datetime? "now")
                     (hours 3)
                     (days 1))
              #:ms "dateadd(day, 1, dateadd(hour, 3, now))"
              #:pg "(now + interval '3 hour' + interval '1 day')"
              #:lite "datetime(now, '+3 hour', '+1 day')")
-  (check-sql (date- (make-Datetime "now")
+  (check-sql (date- (make-Datetime? "now")
                     (hours 3)
                     (days 1))
              #:ms "dateadd(day, -1, dateadd(hour, -3, now))"
              #:pg "(now - interval '3 hour' - interval '1 day')"
              #:lite "datetime(now, '-3 hour', '-1 day')")
-  (check-sql (date- (make-Datetime "now")
+  (check-sql (date- (make-Datetime? "now")
                     ; watch out for double negatives
                     (hours -3)
                     (days 1))
@@ -159,29 +159,29 @@
              #:pg "(now - interval '-3 hour' - interval '1 day')"
              #:lite "datetime(now, '+3 hour', '-1 day')")
   ; Here's a tricky thing: date addition is not commutative.
-  (check-sql (date+ (make-Datetime "Feb28")
+  (check-sql (date+ (make-Datetime? "Feb28")
                     (months 1)
                     (days 2))
              #:ms "dateadd(day, 2, dateadd(month, 1, Feb28))"
              #:pg "(Feb28 + interval '1 month' + interval '2 day')"
              #:lite "datetime(Feb28, '+1 month', '+2 day')")
-  (check-sql (date+ (make-Datetime "Feb28")
+  (check-sql (date+ (make-Datetime? "Feb28")
                     (days 2)
                     (months 1))
              #:ms "dateadd(month, 1, dateadd(day, 2, Feb28))"
              #:pg "(Feb28 + interval '2 day' + interval '1 month')"
              #:lite "datetime(Feb28, '+2 day', '+1 month')")
   ; Intervals can be based on a column
-  (check-sql (date- (make-Datetime "now")
-                    (months (>> (%%sql "foo") #:cast Number #:null no))
-                    (days (>> (%%sql "bar") #:cast Number #:null no)))
+  (check-sql (date- (make-Datetime? "now")
+                    (months (>> (%%sql "foo") #:cast Number? #:null no))
+                    (days (>> (%%sql "bar") #:cast Number? #:null no)))
              #:ms "dateadd(day, -(bar), dateadd(month, -(foo), now))"
              #:pg "(now - ((foo) * interval '1 month') - ((bar) * interval '1 day'))"
              #:lite "datetime(now, -(foo) || ' month', -(bar) || ' day')")
   ; Repeat previous test with date+ instead of date-
-  (check-sql (date+ (make-Datetime "now")
-                    (months (>> (%%sql "foo") #:cast Number #:null no))
-                    (days (>> (%%sql "bar") #:cast Number #:null no)))
+  (check-sql (date+ (make-Datetime? "now")
+                    (months (>> (%%sql "foo") #:cast Number? #:null no))
+                    (days (>> (%%sql "bar") #:cast Number? #:null no)))
              #:ms "dateadd(day, +(bar), dateadd(month, +(foo), now))"
              #:pg "(now + ((foo) * interval '1 month') + ((bar) * interval '1 day'))"
              #:lite "datetime(now, +(foo) || ' month', +(bar) || ' day')")

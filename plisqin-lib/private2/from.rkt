@@ -38,13 +38,13 @@
 (define (from-queryable? x)
   (or (symbol? x)
       (trusted-queryable? x)
-      (Subquery x)
+      (Subquery? x)
       (query? x)))
 
 (define (join-queryable? x)
   (or (symbol? x)
       (trusted-queryable? x)
-      (Subquery x)
+      (Subquery? x)
       (join? x)))
 
 (define-for-syntax to-not-allowed
@@ -56,9 +56,9 @@
   (define-values (clause-contract stx)
     (syntax-case stx-orig ()
       [(_ #:from a)
-       (values #'(or/c QueryClause (listof QueryClause)) #'a)]
+       (values #'(or/c QueryClause? (listof QueryClause?)) #'a)]
       [(_ #:join a)
-       (values #'(or/c JoinClause (listof JoinClause)) #'a)]))
+       (values #'(or/c JoinClause? (listof JoinClause?)) #'a)]))
   (syntax-parse stx
     #:literals (join define)
     [(join a b #:to c ...)

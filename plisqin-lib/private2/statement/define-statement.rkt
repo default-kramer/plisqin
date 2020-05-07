@@ -42,7 +42,7 @@
                     (generate-temporaries (syntax->list #'(a.id ...)))])
        (syntax/loc stx
          (begin
-           (define Type (~? a.type Scalar))
+           (define Type (~? a.type Scalar?))
            ...
            (define param-id (make-param #:index param-number
                                         #:id (syntax a.id)
@@ -58,7 +58,7 @@
              ; But would we even want to? I think not.
              ; There is a good chance this uncompiled proc will never get called
              ; by user code. And even if it does, the user might want to be able
-             ; to pass 42 for a Number instead of (val 42), especially if they
+             ; to pass 42 for a Number? instead of (val 42), especially if they
              ; are using a non-strict dialect.
              ; Also, no contract makes testing way easier...
              body ...)
@@ -87,14 +87,14 @@
                 '(a))
 
   (define-statement (f2 a
-                        [b Number])
+                        [b Number?])
     (list a b))
   (check-equal? (f2 'a 'b)
                 '(a b))
 
   (define-statement (f3 a
-                        [b Number]
-                        [c String "c-default"])
+                        [b Number?]
+                        [c String? "c-default"])
     (list a b c))
   (check-equal? (f3 'a 'b)
                 (list 'a 'b (%%val "c-default")))
@@ -102,11 +102,11 @@
                 '(a b c))
 
   (define-statement (f4 a
-                        [b Number]
-                        [c String "c-default"]
+                        [b Number?]
+                        [c String? "c-default"]
                         #:d d
-                        #:e [e Number]
-                        #:f [f String "f-default"])
+                        #:e [e Number?]
+                        #:f [f String? "f-default"])
     (list a b c d e f))
   (check-equal? (f4 'a 'b #:d 'd #:e 'e)
                 (list 'a 'b (%%val "c-default") 'd 'e (%%val "f-default")))

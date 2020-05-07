@@ -5,15 +5,15 @@
 (provide
  type? type-supertypes
  ; base types
- Token Scalar
+ Token? Scalar?
  ; booleans
- Boolish Bit Bool
+ Boolish? Bit? Bool?
  ; scalar values
- Datetime Number String
+ Datetime? Number? String?
  ; other expressions
- Subquery
+ Subquery?
  ; clauses
- Clause JoinClause QueryClause
- Select Where GroupBy Having OrderBy JoinOn
- Limit Offset Distinct JoinType
+ Clause? JoinClause? QueryClause?
+ Select? Where? GroupBy? Having? OrderBy? JoinOn?
+ Limit? Offset? Distinct? JoinType?
  )

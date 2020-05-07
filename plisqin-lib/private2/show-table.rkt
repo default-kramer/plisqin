@@ -5,10 +5,10 @@
 (require (prefix-in db: db)
          "rows-result-to-string.rkt"
          (only-in "_core.rkt" query? to-sql)
-         (only-in "_types.rkt" Token))
+         (only-in "_types.rkt" Token?))
 
 (define/contract (show-table-internal x conn)
-  (-> (or/c query? Token string?)
+  (-> (or/c query? Token? string?)
       (or/c db:connection? (-> db:connection?))
       any/c)
   (if (procedure? conn)

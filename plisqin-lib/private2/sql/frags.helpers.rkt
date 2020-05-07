@@ -95,7 +95,7 @@
 (define (->Bit tokens)
   (match tokens
     [(list a)
-     #:when (and (Bool a)
+     #:when (and (Bool? a)
                  (mssql? (current-dialect)))
      (list "cast(case when "a" then 1 else 0 end as bit)")]
     [else tokens]))
@@ -105,7 +105,7 @@
 (define (->Bool tokens)
   (match tokens
     [(list a)
-     #:when (Bit a)
+     #:when (Bit? a)
      (list a" = 1")]
     [else tokens]))
 

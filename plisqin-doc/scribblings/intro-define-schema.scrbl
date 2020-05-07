@@ -602,8 +602,8 @@ We could modify it to accept a time window of sales to consider as follows:
   ; TODO should have a %%datetime proc available here
   (aw:show-table
    (sales-report
-    #:start-date (>> (%%sql "'2012-01-01'") #:cast Datetime #:null no)
-    #:end-date (>> (%%sql "'2013-01-01'") #:cast Datetime #:null no)
+    #:start-date (>> (%%sql "'2012-01-01'") #:cast Datetime? #:null no)
+    #:end-date (>> (%%sql "'2013-01-01'") #:cast Datetime? #:null no)
     (from subcat ProductSubcategory
           (select (SubcategoryName subcat))
           (select (CategoryName subcat))))))

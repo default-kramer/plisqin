@@ -89,11 +89,11 @@
 ; checks (at runtime) the arglist to see if it satisfies any of the specs.
 ; If so, the expression's value will be the return type.
 ; Otherwise an type error will be raised.
-; As a rough idea [Number Number -> Number] expands to something like
+; As a rough idea [Number? Number? -> Number?] expands to something like
 #;(match arglist
-    [(list a b) #:when (and (Number a)
-                            (Number b))
-                Number]
+    [(list a b) #:when (and (Number? a)
+                            (Number? b))
+                Number?]
     [else
      (error "Expected two numbers")])
 (define-syntax (build-typechecker stx)

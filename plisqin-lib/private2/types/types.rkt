@@ -4,17 +4,17 @@
 
 (provide
  ; base types
- Token Scalar
+ Token? Scalar?
  ; booleans
- Boolish Bit Bool
+ Boolish? Bit? Bool?
  ; scalar values
- Datetime Number String
+ Datetime? Number? String?
  ; other expressions
- Subquery
+ Subquery?
  ; clauses
- Clause JoinClause QueryClause
- Select Where GroupBy Having OrderBy JoinOn
- Limit Offset Distinct JoinType
+ Clause? JoinClause? QueryClause?
+ Select? Where? GroupBy? Having? OrderBy? JoinOn?
+ Limit? Offset? Distinct? JoinType?
  )
 
 
@@ -39,34 +39,34 @@
 
 (define-types
   ; base types
-  [Token]
-  [Scalar Token]
+  [Token?]
+  [Scalar? Token?]
 
   ; booleans
-  [Boolish Scalar]
-  [Bit Boolish]
-  [Bool Boolish]
+  [Boolish? Scalar?]
+  [Bit? Boolish?]
+  [Bool? Boolish?]
 
   ; scalar values
-  [Datetime Scalar]
-  [Number Scalar]
-  [String Scalar]
+  [Datetime? Scalar?]
+  [Number? Scalar?]
+  [String? Scalar?]
 
   ; other expressions
-  [Subquery Token]
+  [Subquery? Token?]
 
   ; clauses
-  [Clause Token]
-  [JoinClause   Clause]
-  [QueryClause  Clause]
-  [Select    JoinClause QueryClause]
-  [Where     JoinClause QueryClause]
-  [GroupBy   JoinClause QueryClause]
-  [Having    JoinClause QueryClause]
-  [OrderBy   JoinClause QueryClause]
-  [JoinOn    JoinClause]
-  [Limit     JoinClause QueryClause]
-  [Offset    JoinClause QueryClause]
-  [Distinct  JoinClause QueryClause]
-  [JoinType  JoinClause]
+  [Clause? Token?]
+  [JoinClause?   Clause?]
+  [QueryClause?  Clause?]
+  [Select?    JoinClause? QueryClause?]
+  [Where?     JoinClause? QueryClause?]
+  [GroupBy?   JoinClause? QueryClause?]
+  [Having?    JoinClause? QueryClause?]
+  [OrderBy?   JoinClause? QueryClause?]
+  [JoinOn?    JoinClause?]
+  [Limit?     JoinClause? QueryClause?]
+  [Offset?    JoinClause? QueryClause?]
+  [Distinct?  JoinClause? QueryClause?]
+  [JoinType?  JoinClause?]
   )
