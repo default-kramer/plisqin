@@ -19,10 +19,16 @@
       (custom-instance? x)))
 
 (define (instanceof t)
-  (lambda (x)
-    (and (instance? x)
-         (equal? (get-queryable t)
-                 (get-queryable x)))))
+  (let* ([queryable (get-queryable t)]
+         [ctc (coerce-flat-contract 'instanceof queryable)])
+    (flat-named-contract
+     ; Can't pass in 'Foo directly, it will print as (instanceof Foo) and we
+     ; want (instanceof 'Foo). That's why we needed to use coerce-flat-contract
+     (build-compound-type-name 'instanceof ctc)
+     (lambda (x)
+       (and (instance? x)
+            (equal? queryable
+                    (get-queryable x)))))))
 
 ; This prop is just a marker interface that allows the tables from
 ; define-schema to pass the `from` and `join` contracts.
