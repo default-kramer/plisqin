@@ -53,12 +53,12 @@
    " This join is automatically linked to the enclosing query or join."))
 
 (define-syntax (handle-statement stx-orig)
-  (define-values (clause-contract stx)
+  (define-values (clause-contract stx macro-name)
     (syntax-case stx-orig ()
       [(_ #:from a)
-       (values #'(or/c QueryClause? (listof QueryClause?)) #'a)]
+       (values #'(or/c QueryClause? (listof QueryClause?)) #'a 'from)]
       [(_ #:join a)
-       (values #'(or/c JoinClause? (listof JoinClause?)) #'a)]))
+       (values #'(or/c JoinClause? (listof JoinClause?)) #'a 'join)]))
   (syntax-parse stx
     #:literals (join define)
     [(join a b #:to c ...)
@@ -75,7 +75,7 @@
      ; Morsel recognizes `define` so just pass it through.
      stx]
     [clause-expr
-     #:declare clause-expr (expr/c clause-contract)
+     #:declare clause-expr (expr/c clause-contract #:macro macro-name)
      (syntax/loc stx
        (let ([c clause-expr.c])
          c))]))
@@ -84,13 +84,10 @@
   (parameterize ([m:flatten-lists? #t])
     expr))
 
-; TODO temp workaround - The better solution is to make all SQL table names and
-; column names into symbols, and convert to strings during reduction (when the
-; dialect is available)
 (define (preformat queryable)
-  (if (symbol? queryable)
-      (format "~a" queryable)
-      queryable))
+  ; no preformatting needed anymore, but it's better to enforce the
+  ; queryable's contract sooner rather than later
+  queryable)
 
 (define-syntax (from stx)
   (syntax-parse stx

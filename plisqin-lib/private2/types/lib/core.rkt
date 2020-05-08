@@ -57,7 +57,8 @@
                       (member id (type-flattened-supertypes actual-type) eq?))
                   #t)))
          (define id
-           (type contract-proc 'id my-supertypes flattened-supertypes))))]))
+           (type (procedure-rename contract-proc 'id)
+                 'id my-supertypes flattened-supertypes))))]))
 
 (define-syntax (define-types stx)
   (syntax-case stx ()
