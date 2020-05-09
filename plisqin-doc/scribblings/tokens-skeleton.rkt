@@ -4,7 +4,8 @@
          docgen/strict)
 
 (require scribble/manual
-         "tokens-helpers.rkt")
+         "tokens-helpers.rkt"
+         "tokens-strict.scrbl")
 
 ; Defines a "document generator" which produces the documentation for the Token Constructors.
 ; This macro is parameterized to work with the 3 variants: unsafe, loose, and strict.
@@ -98,12 +99,8 @@
   plisqin-lib/unsafe plisqin-lib/unsafe/operators)
 
 (define-docgen docgen/strict
-  default-content strict-ctx strict-table
+  get-strict-content strict-ctx strict-table
   plisqin-lib/strict plisqin-lib/strict/operators)
-
-(def-content-provider (default-content id)
-  [else
-   @nested{Stricter version of @(%% (racket id))}])
 
 ; This eventually belongs in another file, when I get around to writing the documentation.
 (def-content-provider (example-get-content id)

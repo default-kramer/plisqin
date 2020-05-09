@@ -25,6 +25,8 @@
                       (require (only-in racket string-join))
                       (require (prefix-in aw: plisqin-examples/adventure-works)
                                (prefix-in db: db)
+                               ; TODO figure out what, if any, prefix we want:
+                               plisqin-examples/adventure-works/schema
                                plisqin))
     eval))
 
@@ -81,7 +83,8 @@
                             (begin
                               (displayln ex)
                               (error-proc ex)))])
-      (my-eval `(to-sql ,query-datum))))
+      (my-eval `(parameterize ([current-dialect (sqlite)])
+                  (to-sql ,query-datum)))))
   (define result
     (let* ([conn (connect-adventure-works)]
            [result (with-handlers ([exn? (λ(ex) (displayln sql) (raise ex))])
@@ -101,7 +104,7 @@
      (let* ([query (syntax-case #'show-table-form ()
                      [(_ q) #'q])]
             [query-datum (syntax->datum query)])
-       #`(begin
-           (racketinput show-table-form)
-           #,(quasisyntax/loc stx
-               (show-results '#,query-datum))))]))
+       #`(nested
+          (racketinput show-table-form)
+          #,(quasisyntax/loc stx
+              (show-results '#,query-datum))))]))

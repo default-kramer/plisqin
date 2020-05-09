@@ -1,6 +1,6 @@
 #lang racket
 
-(require plisqin-lib/private2/sql/check-sql
+(require "helpers.rkt"
          (only-in plisqin from join distinct limit offset))
 
 ; Test combinations of limit, offset, and distinct.

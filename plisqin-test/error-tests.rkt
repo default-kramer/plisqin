@@ -110,3 +110,9 @@
                    "expected: instance?"
                    "given: '(not an instance)"
                    blame-this-file)
+
+; Regression - our type machinery couldn't handle a raw symbol as a contract.
+; Wrap the symbol in or/c as a cheap workaround.
+(check-exn+message (from a 'A
+                         (select (count 'distinct a)))
+                   "count: contract violation")
