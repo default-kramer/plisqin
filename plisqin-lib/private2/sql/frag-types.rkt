@@ -149,10 +149,11 @@
    (token-constructor
     [content? ...+ -> Subquery?])]
   [(count)
+   ; We could allow (or/c 'distinct 'all) and ignore 'all during reduction.
+   ; But no need to do that yet.
    (token-constructor
     [instance? -> Number?]
     [Scalar? -> Number?]
-    ; maybe change to (or/c 'distinct 'all) and ignore 'all during reduction
     [(or/c 'distinct) Scalar? -> Number?])]
   [(coalesce)
    (token-constructor

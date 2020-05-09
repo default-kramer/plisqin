@@ -45,11 +45,11 @@
        (aw:show-table
         (from p Product
               (select (>> (count (ProductID p))
-                          #:as 'NumProducts))
+                          #:as 'Num_Products))
               (select (>> (count (ProductSubcategoryID p))
-                          #:as 'NumProductsWithSubcategories))
+                          #:as 'Num_Products_With_Subcategories))
               (select (>> (count 'distinct (ProductSubcategoryID p))
-                          #:as 'NumUniqueSubcategories)))))
+                          #:as 'Num_Unique_Subcategories)))))
      }]
    [(select where)
     @nested{This is just a demonstration of how I could write custom content
