@@ -38,7 +38,7 @@
                    [and or not
                     = <> < <= > >=
                     like not-like
-                    is is-not in not-in
+                    is is-not
                     + - * /])]))
 
            (define-for-syntax (fixup stx)

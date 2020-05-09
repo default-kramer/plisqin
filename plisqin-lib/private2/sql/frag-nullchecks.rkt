@@ -54,8 +54,7 @@
    coalesce-nullchecker]
   [(= <> < <= > >=
       like not-like
-      is is-not
-      in not-in)
+      is is-not)
    (nullchecker
     #:accept /void /minval /maxval /any
     #:permit-null)]
@@ -101,8 +100,7 @@
     #:deny-null)]
   [(= <> < <= > >=
       like not-like
-      is is-not
-      in not-in)
+      is is-not)
    (nullchecker
     #:accept /void /minval /maxval /any
     #:deny-null)]

@@ -30,7 +30,6 @@
                   = <> < <= > >=
                   like not-like
                   is is-not
-                  in not-in
                   + - * /))))
 
 (do-export unsafe type-dispatcher/unsafe null-dispatcher/unsafe)
@@ -79,5 +78,4 @@
                = <> < <= > >=
                like not-like
                is is-not
-               in not-in
                + - * /))

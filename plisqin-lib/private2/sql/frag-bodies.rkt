@@ -131,7 +131,7 @@
   [(= <> < <= > >=)
    (make2 'bool
           #:reduce (reduce-comparison self tokens))]
-  [(like not-like is is-not in not-in)
+  [(like not-like is is-not)
    (make2 'bool
           #:reduce (reduce-operation self tokens))]
   [(+ - * /)
@@ -184,10 +184,13 @@
 
 (define (translate-op sym)
   (case sym
+    [(= <> < <= > >=)
+     (~a sym)]
+    [(like) "like"]
     [(not-like) "not like"]
+    [(is) "is"]
     [(is-not) "is not"]
-    [(not-in) "not in"]
-    [else (~a sym)]))
+    [else (error "unknown op:" sym)]))
 
 (define (reduce-operation op tokens)
   (let ([sqlname (translate-op op)])

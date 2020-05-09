@@ -86,8 +86,7 @@
   [(exists and or not
            = <> < <= > >=
            like not-like
-           is is-not
-           in not-in)
+           is is-not)
    (token-constructor
     [any/c ...+ -> Bool?])]
   [(round)
@@ -174,7 +173,7 @@
     [Number? Number? -> Bool?]
     [String? String? -> Bool?]
     [Datetime? Datetime? -> Bool?])]
-  [(is is-not in not-in)
+  [(is is-not)
    (token-constructor
     [content? ...+ -> Bool?])] ; TODO figure out the real type
   [(+ - * /)
