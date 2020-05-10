@@ -307,6 +307,14 @@ TODO explain that most of the good stuff is in strict and unsafe.
            (%%where a".ReleaseYear = 1973")))))
 }
 
+@defproc[(interval? [x any/c]) interval?]{
+ Predicate that recognizes intervals.
+ @(repl
+   (eval:check (interval? (days 2)) #t))
+
+ See also the date math examples at @(racket date+).
+}
+
 @section[#:tag "reference:nullability"]{Nullability}
 @deftogether[(@defthing[/void fallback?]
                @defthing[/minval fallback?]

@@ -46,6 +46,9 @@
 (require "./private2/from.rkt")
 (provide from join instance? instanceof)
 
+(require "./private2/sql/interval.rkt")
+(provide interval?)
+
 (module+ test
   ;; Tests to be run with raco test
   )
