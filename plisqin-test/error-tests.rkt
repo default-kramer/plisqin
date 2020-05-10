@@ -63,14 +63,14 @@
 (check-exn+message (from x 'Foo
                          '(not a query clause))
                    "from: contract violation"
-                   "expected: (or/c QueryClause? (listof QueryClause?))"
+                   "expected: (or/c void? QueryClause? (listof (or/c void? QueryClause?)))"
                    "given: '(not a query clause)"
                    blame-this-file)
 (check-exn+message (from x 'X
                          (join y 'Y
                                '(not a join clause)))
                    "join: contract violation"
-                   "expected: (or/c JoinClause? (listof JoinClause?))"
+                   "expected: (or/c void? JoinClause? (listof (or/c void? JoinClause?)))"
                    "given: '(not a join clause)"
                    blame-this-file)
 (check-exn+message (from x 'X
@@ -79,7 +79,7 @@
                                  '(not a join clause)))
                          (%%select y".blah"))
                    "join: contract violation"
-                   "expected: (or/c JoinClause? (listof JoinClause?))"
+                   "expected: (or/c void? JoinClause? (listof (or/c void? JoinClause?)))"
                    "given: '(not a join clause)"
                    blame-this-file)
 
