@@ -22,7 +22,8 @@ TODO explain that most of the good stuff is in strict and unsafe.
                                             query?
                                             Subquery?
                                             trusted-queryable?)]
-                      [clause-expr (or/c QueryClause? (listof QueryClause?))])]{
+                      [clause-expr (or/c void? QueryClause?
+                                         (listof (or/c void? QueryClause?)))])]{
  TODO
 }
 
@@ -40,7 +41,8 @@ TODO explain that most of the good stuff is in strict and unsafe.
                                             Subquery?
                                             trusted-queryable?)]
                       [link-expr instance?]
-                      [clause-expr (or/c JoinClause? (listof JoinClause?))])]{
+                      [clause-expr (or/c void? JoinClause?
+                                         (listof (or/c void? JoinClause?)))])]{
  Similar to @(racket from), but creates a join instead of a query.
 
  The @(racket #:to) option @bold{must} be omitted when this @(racket join)

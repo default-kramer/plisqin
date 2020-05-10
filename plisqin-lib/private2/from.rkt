@@ -56,9 +56,13 @@
   (define-values (clause-contract stx macro-name)
     (syntax-case stx-orig ()
       [(_ #:from a)
-       (values #'(or/c QueryClause? (listof QueryClause?)) #'a 'from)]
+       (values #'(or/c void? QueryClause?
+                       (listof (or/c void? QueryClause?)))
+               #'a 'from)]
       [(_ #:join a)
-       (values #'(or/c JoinClause? (listof JoinClause?)) #'a 'join)]))
+       (values #'(or/c void? JoinClause?
+                       (listof (or/c void? JoinClause?)))
+               #'a 'join)]))
   (syntax-parse stx
     #:literals (join define)
     [(join a b #:to c ...)
