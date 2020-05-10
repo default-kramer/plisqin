@@ -1,7 +1,6 @@
 #lang scribble/manual
 
-@(require (for-label plisqin "racket.rkt"
-                     (prefix-in db: db))
+@(require (for-label "standard-label.rkt")
           (for-syntax "racket.rkt"
                       plisqin-lib/types)
           "helpers.rkt")
@@ -119,16 +118,51 @@ TODO explain that most of the good stuff is in strict and unsafe.
           (has-same-queryable? x queryable))))
 }
 
-@defproc[(limit [n nonnegative-integer?]) Limit?]{
- TODO does #f clear the limit?
+@defproc[(limit [n (or/c #f nonnegative-integer?)]) Limit?]{
+ Places an upper bound on the number of rows that the query or join will produce.
+ @(repl-query
+   (aw:show-table
+    (from pc ProductCategory
+          (limit 2))))
+
+ The last @(racket limit) clause overrides all the previous ones.
+ The following example uses @(racket #f) to clear the limit.
+ @(repl-query
+   (aw:show-table
+    (from pc ProductCategory
+          (limit 2)
+          (limit #f))))
 }
 
-@defproc[(offset [n nonnegative-integer?]) Offset?]{
- TODO does #f clear the offset?
+@defproc[(offset [n (or/c #f nonnegative-integer?)]) Offset?]{
+ Skips past the first @(racket n) rows of the result set.
+ If using MSSQL, you must also have at least one @(racket order-by) clause or the
+ SQL that is produced will be invalid.
+ Offset is frequently used with @(racket limit) to implement paging.
+ @(repl-query
+   (aw:show-table
+    (from p Product
+          (order-by (ProductID p))
+          (offset 30)
+          (limit 3))))
+
+ The last @(racket offset) clause overrides all the previous ones.
+ A value of @(racket #f) clears the offset.
 }
 
 @defproc[(distinct [distinct? any/c]) Distinct?]{
- TODO
+ Specifies whether duplicate rows are eliminated from the result set.
+ The default behavior is @(racket #f) which allows duplicate rows.
+ Any non-false value means that duplicate rows will be eliminated.
+ The last @(racket distinct) clause overrides all previous ones.
+
+ The following query would return hundreds of rows (one for each Product)
+ if the distinct flag was @(racket #f) instead:
+ @(repl-query
+   (aw:show-table
+    (from p Product
+          (select (Color p))
+          (distinct #t))))
 }
 
 @defproc[(join-type [type (or/c #f 'inner 'left)]) JoinType?]{

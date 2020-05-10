@@ -2,8 +2,8 @@
 
 (provide
  (contract-out
-  [limit (-> nonnegative-integer? Limit?)]
-  [offset (-> nonnegative-integer? Offset?)]
+  [limit (-> (or/c #f nonnegative-integer?) Limit?)]
+  [offset (-> (or/c #f nonnegative-integer?) Offset?)]
   [distinct (-> any/c Distinct?)]
   [join-type (-> (or/c #f 'inner 'left) JoinType?)]
   ))
