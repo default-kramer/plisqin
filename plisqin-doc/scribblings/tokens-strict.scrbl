@@ -128,4 +128,38 @@
               (select (>> (count 'distinct (ProductSubcategoryID p))
                           #:as 'Num_Unique_Subcategories)))))
      }]
+   [(date+)
+    @nested{
+     Adds each interval to the given datetime.
+     The following example shows that the order of the intervals matters:
+     @(repl-query
+       (aw:show-table
+        (from x (%%subquery "select 1 as one")
+              (define feb-01
+                (>> (%%sql "'2019-02-01'") #:cast Datetime?))
+              (select (date+ feb-01 (months 1) (days 29)))
+              (select (date+ feb-01 (days 29) (months 1))))))
+
+     For this reason, Plisqin provides no way to add intervals to each other.
+     One possible implementation would preserve the sequence of intervals;
+     another would eagerly combine them into one interval.
+
+     Note also that intervals may be dynamic, as in the following query:
+     @(repl-query
+       (aw:show-table
+        (from pc ProductCategory
+              (select (ProductCategoryID pc))
+              (select (ModifiedDate pc))
+              (select (>> (date+ (ModifiedDate pc)
+                                 (years (ProductCategoryID pc)))
+                          #:as 'AddSomeYears)))))
+     }]
+   [(date-)
+    @nested{
+     Equivalent to calling @(racket date+) with each interval negated.
+     }]
+   [(years months days hours minutes seconds)
+    @nested{
+     Creates an @(racket interval?). See example on @(racket date+).
+     }]
    [else "~~ TODO ~~"])
