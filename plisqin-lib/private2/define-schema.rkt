@@ -51,6 +51,12 @@
            (~? (~@ #:as asname)
                (~@ #:as 'id))))]))
 
+(define-syntax (handle-property stx)
+  (syntax-parse stx
+    [(_ [id:id body:expr])
+     (quasisyntax/loc stx
+       (>> body #:as 'id))]))
+
 ; Given that `(CategoryName Category)` and `(CategoryName Product)` are both defined
 ; via define-schema, this builds the procedure `(CategoryName x)` which uses cond
 ; to choose the correct body based on `(get-queryable x)`
@@ -172,11 +178,17 @@
        (parse2 dict cond-id
                #'(join-kw [id (join a b #:to this c stuff ...)] rest ...))]
       [(keyword [id body] rest ...)
-       ; TODO verify that it is a keyword we recognize
-       (kw? #'keyword)
-       (parse2 (add dict #'id cond-id #'body)
+       (member (syntax-e #'keyword) '(#:has-one #:has-group #:property))
+       (parse2 (add dict #'id cond-id
+                    (case (syntax-e #'keyword)
+                      [(#:property)
+                       #'(handle-property [id body])]
+                      [else #'body]))
                cond-id
-               #'(keyword rest ...))])))
+               #'(keyword rest ...))]
+      [else
+       (raise-syntax-error 'define-schema "something went wrong..." stx)]))
+  )
 
 ; Creates a procedure that searches the meta-datums for '(ProcSym x) and returns x.
 (define (proc-matcher ProcSym)
@@ -298,14 +310,18 @@
            #:column
            Bar
            Baz
-           [Carrot #:as "Carat" #:dbname "car_rot"]))
+           [Carrot #:as "Carat" #:dbname "car_rot"]
+           #:property
+           [Carrot2
+            (Carrot this)]
+           ))
 
   (check-equal? ($$ 'tables)
                 '(A B))
   (check-equal? ($$ '(_ A))
                 '(Bar Foo))
   (check-equal? ($$ '(_ B))
-                '(Bar Baz Carrot))
+                '(Bar Baz Carrot Carrot2))
   (check-equal? ($$ '(Foo _))
                 '(A))
   (check-equal? ($$ '(Bar _))
@@ -315,6 +331,20 @@
                  (select (Carrot b)))])
     (check-equal? (to-sql q) #<<HEREDOC
 select b.car_rot as Carat
+from B b
+HEREDOC
+                  ))
+
+  ; The as-name is automatically set on each #:property.
+  ; If this is not desired, maybe allow
+  #;[Carrot2
+     #:as (or 'something-else #f)
+     (Carrot this)]
+  ; But for now we don't need it
+  (let ([q (from b B
+                 (select (Carrot2 b)))])
+    (check-equal? (to-sql q) #<<HEREDOC
+select b.car_rot as Carrot2
 from B b
 HEREDOC
                   ))
