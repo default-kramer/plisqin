@@ -28,19 +28,21 @@
                                                               #,snippet message))))))])
            (force expr)))]))
 
-(check-exn+message (join-on "not a Token?")
+(check-exn+message (join-on (%%sql "not a bool"))
                    "join-on: contract violation"
-                   "expected:"
-                   "An argument list satisfying one of the following:"
-                   "Boolish? -> JoinOn?")
+                   "expected an argument list satisfying one of the following:"
+                   "Boolish? -> JoinOn?"
+                   "given an argument list with the following types:"
+                   "(Token?)")
 
 (check-exn+message (coalesce "not a Token?")
                    "coalesce: contract violation"
-                   "expected:"
-                   "An argument list satisfying one of the following:"
+                   "expected an argument list satisfying one of the following:"
                    "String? String? ...+ -> String?"
                    "Datetime? Datetime? ...+ -> Datetime?"
-                   "Number? Number? ...+ -> Number?")
+                   "Number? Number? ...+ -> Number?"
+                   "given an argument list with the following types:"
+                   "(Untyped)")
 
 (define/contract (test-instanceof-symbol x)
   (-> (instanceof 'Foo) any/c)
@@ -116,3 +118,19 @@
 (check-exn+message (from a 'A
                          (select (count 'distinct a)))
                    "count: contract violation")
+
+
+; Comparison operators require non-null or an acceptable fallback
+(check-exn+message (from a 'A
+                         (where (.< (>> (%%sql a".foo") #:cast Number?)
+                                    (>> (%%sql a".bar") #:cast Number?))))
+                   "expected: a token that is non-nullable or has an acceptable fallback"
+                   "given: a token with nullability: maybe"
+                   "argument value: (sql #<tuple: 'A> \".foo\")")
+
+; Where requires non-null, no fallbacks accepted
+(check-exn+message (from a 'A
+                         (where (>> (%%sql a".foo") #:cast Bool?)))
+                   "expected: a token that is non-nullable"
+                   "given: a token with nullability: maybe"
+                   "argument value: (sql #<tuple: 'A> \".foo\")")

@@ -151,8 +151,7 @@
     override the inferred nullability wherever the token is created.
   argument value: ~e
 HEREDOC
-                     proc-name nullability (add1 bad-index) nullability
-                     "TODO-show-bad-value" #;bad-value)])
+                     proc-name nullability (add1 bad-index) nullability bad-value)])
     (raise (exn:fail:contract msg continuation-marks))))
 
 (define (err-msg-with-fallbacks
@@ -171,8 +170,8 @@ HEREDOC
     override the inferred nullability wherever the token is created.
   argument value: ~e
 HEREDOC
-                     proc-name nullability (add1 bad-index) fallbacks nullability nullability
-                     "TODO-show-bad-value" #;bad-value)])
+                     proc-name nullability (add1 bad-index) fallbacks nullability
+                     nullability bad-value)])
     (raise (exn:fail:contract msg continuation-marks))))
 
 

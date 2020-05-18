@@ -84,6 +84,21 @@
   (map (λ (x) (or (get-type x) 'Untyped))
        arglist))
 
+(define (raise-type-error func-name specs arglist)
+  (define msg (format #<<HEREDOC
+~a: contract violation
+  expected an argument list satisfying one of the following:
+    ~a
+  given an argument list with the following types:
+    ~a
+HEREDOC
+                      func-name
+                      (string-join (map ~a specs) "\n    ")
+                      (display-types arglist)))
+  (define ex
+    (make-exn:fail:contract msg (current-continuation-marks)))
+  (raise ex))
+
 ;;; build-typechecker
 ; (build-typechecker func-name arglist spec ...) constructs an expression that
 ; checks (at runtime) the arglist to see if it satisfies any of the specs.
@@ -105,17 +120,7 @@
            #,@(map (λ(spec) (spec->match-clause2 spec))
                    (syntax->list #'(spec ...)))
            [else
-            (raise-argument-error
-             func-name
-             (format "An argument list satisfying one of the following:\n~a"
-                     (format-specs '(spec ...)))
-             ; It might be possible to print the actual values in addition
-             ; to the types, but be careful. A naive strategy will trigger the
-             ; infinite cycle detector. You would have to add a parameter or
-             ; something that says "don't raise an error on infinite cycles,
-             ; just print #whatever instead."
-             ; But for now, let's just display the types.
-             (display-types arglist))])))]))
+            (raise-type-error func-name '(spec ...) arglist)])))]))
 
 (module+ test
   (require rackunit)
