@@ -58,14 +58,12 @@
      ; a tuple is never null
      no]
     [(join? arg)
-     ; TODO it would probably be cleaner to make join implement nulltrack<%>
-     ; ... temp workaround for now
+     ; It might be cleaner to make join implement nulltrack<%>, but this works
      (let ([jt (get-join-type arg)])
        (case jt
          [(left) yes]
          [(inner) no]
-         [else (begin (println (format "TODO unexpected join type: ~a" jt))
-                      maybe)]))]
+         [else (error "unexpected join type:" jt)]))]
     [else maybe]))
 
 (define (fallback x)
