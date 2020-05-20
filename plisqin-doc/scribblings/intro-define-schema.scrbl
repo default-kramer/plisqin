@@ -16,29 +16,7 @@
                   (list @nested{-- your boss}))))
 
 
-@title{Using define-schema}
-@section{My Personal Motivation}
-TODO this section belongs somewhere else.
-
-During my software development career, many of my tasks could be described
-as "fetch data from an SQL database and display that data."
-Some tasks have very little display logic, such as a report that simply
-shows an SQL result set verbatim.
-Other tasks have more complicated display logic, such as a web page that shows
-a musical artist, their albums, and the track listings for each album.
-But regardless of how complex the display logic might be, I found that my favorite
-strategy for these tasks is usually
-@(itemlist
-  #:style 'ordered
-  @item{Imagine the ideal result set(s) for the task.}
-  @item{Use SQL to produce those result sets.}
-  @item{Use something else to display the results.})
-
-It is step 2 that Plisqin aims to improve.
-SQL and all the SQL alternatives I have tried are lacking in some way.
-I always end up duplicating fragments of queries and joins all over the place.
-Using Plisqin allows me to reduce duplication to what I suspect is the theoretical minimum.
-
+@title[#:tag "using-define-schema"]{Using define-schema}
 @section{Teaser}
 @margin-note{
  TODO: need some link or quick explanation of the Adventure Works
