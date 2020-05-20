@@ -16,7 +16,7 @@
   (syntax-case stx ()
     [(_ id stuff ...)
      #'(defthing #:kind "procedure" id #,(or ((type-lookup) (syntax-e #'id))
-                                             #'INTERNAL-ERROR)
+                                             (error "type-lookup is missing:" #'id))
          stuff ...)]))
 
 (define-syntax-rule (def-ctx ctx-id blah label-mod-id ...)
