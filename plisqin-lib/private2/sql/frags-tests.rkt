@@ -1,7 +1,7 @@
 #lang racket
 
 (module+ test
-  (require "./check-sql.rkt"
+  (require (submod "./check-sql.rkt" test)
            "../_types.rkt"
            rackunit
            (only-in "../_null.rkt" nullability yes no maybe

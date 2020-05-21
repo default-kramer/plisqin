@@ -1,6 +1,6 @@
 #lang info
 (define collection "plisqin-lib")
-(define deps '("base" "db-lib"))
+(define deps '("base" "db-lib" "morsel"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib" "sandbox-lib"))
 (define scribblings '())
 (define pkg-desc "SQL Generator")
