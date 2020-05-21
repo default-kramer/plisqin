@@ -6,22 +6,13 @@
 (provide type-dispatcher/unsafe type-dispatcher/strict
          unsafe-table strict-table)
 
-(define-syntax-rule (require+label spec ...)
-  (begin
-    (require spec)
-    ...
-    (require (for-label spec))
-    ...))
-
 (require "weave.rkt"
          "../_types.rkt"
          "frags.helpers.rkt"
-         (for-label plisqin-lib/types))
-
-; Need to figure out why this labelling isn't working...
-(require+label (only-in "../_core.rkt" query? join?)
-               (only-in "../from.rkt" instance?)
-               "interval.rkt")
+         (only-in "../_core.rkt" query? join?)
+         (only-in "../from.rkt" instance?)
+         "interval.rkt"
+         )
 
 (define-syntax (~def-typetable stx)
   (syntax-case stx ()

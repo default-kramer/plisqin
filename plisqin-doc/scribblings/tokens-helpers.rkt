@@ -15,8 +15,14 @@
 (define-syntax (def-token stx)
   (syntax-case stx ()
     [(_ id stuff ...)
-     #'(defthing #:kind "procedure" id #,(or ((type-lookup) (syntax-e #'id))
-                                             (error "type-lookup is missing:" #'id))
+     #'(defthing #:kind "procedure" id
+         ; NOTE: The fact that we are not inside quasisyntax here is unusual
+         ; but important. This unsyntax is for `defthing`.
+         ; This is "normal" code (meaning "phase 0" maybe?)
+         #,(let ([typesig ((type-lookup) (syntax-e #'id))])
+             (if typesig
+                 (relabel-typesig typesig)
+                 (error "type-lookup is missing:" #'id)))
          stuff ...)]))
 
 (define-syntax-rule (def-ctx ctx-id blah label-mod-id ...)
@@ -84,3 +90,23 @@
   (syntax-case stx ()
     [(_ a)
      (relabel2 #'a unsafe-ctx)]))
+
+
+; We will use this to recontextualize each (token-constructor ....) form
+; because we cannot label things at the source without a circular dependency
+(module label-helper racket
+  (require (for-label (except-in "standard-label.rkt"
+                                 -> ...)))
+  (define typesig-ctx #'here)
+  (provide typesig-ctx))
+(require 'label-helper)
+
+(define (relabel-typesig stx)
+  (let* ([content (syntax-e stx)]
+         [content (if (list? content)
+                      (map relabel-typesig content)
+                      content)]
+         [shape (syntax-property stx 'paren-shape)])
+    (syntax-property
+     (datum->syntax typesig-ctx content stx typesig-ctx)
+     'paren-shape shape)))
