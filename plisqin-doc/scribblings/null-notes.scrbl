@@ -1,5 +1,5 @@
 #lang scribble/manual
-@(require (for-label plisqin))
+@(require (for-label "standard-label.rkt"))
 
 This is to be a log of things that surprised me while implementing and
 then using null checking.

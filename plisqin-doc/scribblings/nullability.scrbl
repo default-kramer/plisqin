@@ -2,9 +2,7 @@
 
 @(begin
    (require plisqin
-            (for-label plisqin
-                       (prefix-in aw: plisqin-examples/adventure-works)
-                       "racket.rkt")
+            (for-label "standard-label.rkt")
             "helpers.rkt"
             "racket.rkt"
             (for-syntax (only-in (submod plisqin-lib/private2/sql/truth for-scribble)

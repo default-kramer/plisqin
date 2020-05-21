@@ -5,9 +5,7 @@
 
    (require scribble/example
             "helpers.rkt"
-            (for-label plisqin
-                       (prefix-in %% plisqin-lib/unsafe)
-                       "racket.rkt"))
+            (for-label "standard-label.rkt"))
 
    (define (custom-strict-docs)
      (nested (doc-val)

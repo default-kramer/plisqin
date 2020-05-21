@@ -6,9 +6,7 @@
           racket/string
           (prefix-in db: db)
           (for-syntax racket/base)
-          (for-label plisqin
-                     (prefix-in aw: plisqin-examples/adventure-works)
-                     "racket.rkt"))
+          (for-label "standard-label.rkt"))
 
 @(define-syntax-rule (bossquote stuff ...)
    (tabular #:row-properties '(left right)
