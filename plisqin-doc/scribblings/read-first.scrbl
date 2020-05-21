@@ -6,6 +6,9 @@
 @title{Read Me First}
 
 @section{Project Status}
+@bold{Warning!!} Even this documentation is not ready yet.
+Check back next week.
+
 Plisqin is still unstable and may introduce breaking changes at any time.
 If you want a stable release, please contact me and I will probably be
 happy to provide one. You can
