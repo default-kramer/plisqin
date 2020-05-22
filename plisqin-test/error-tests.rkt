@@ -3,9 +3,8 @@
 (require plisqin
          rackunit)
 
-(define blame-this-file
-  ; Not sure how reliable this will be. We can always relax it if needed.
-  "blaming: <pkgs>/plisqin/plisqin-test/error-tests.rkt")
+(define this-file
+  "error-tests.rkt")
 
 (define (force x)
   ; needed because queries and joins are evaluated lazily
@@ -54,7 +53,7 @@
                    "in: the 1st argument of"
                    "(-> (instanceof 'Foo) any/c)"
                    "given: #<tuple: 'Bar>"
-                   blame-this-file)
+                   "blaming:" this-file)
 
 ; regression test - this should not throw an exception
 (check-not-exn
@@ -67,14 +66,14 @@
                    "from: contract violation"
                    "expected: (or/c void? QueryClause? (listof (or/c void? QueryClause?)))"
                    "given: '(not a query clause)"
-                   blame-this-file)
+                   "blaming:" this-file)
 (check-exn+message (from x 'X
                          (join y 'Y
                                '(not a join clause)))
                    "join: contract violation"
                    "expected: (or/c void? JoinClause? (listof (or/c void? JoinClause?)))"
                    "given: '(not a join clause)"
-                   blame-this-file)
+                   "blaming:" this-file)
 (check-exn+message (from x 'X
                          (define y
                            (join y 'Y #:to x
@@ -83,27 +82,27 @@
                    "join: contract violation"
                    "expected: (or/c void? JoinClause? (listof (or/c void? JoinClause?)))"
                    "given: '(not a join clause)"
-                   blame-this-file)
+                   "blaming:" this-file)
 
 ; Violate the queryable contract
 (check-exn+message (from x 123)
                    "from: contract violation"
                    "expected: from-queryable?"
                    "given: 123"
-                   blame-this-file)
+                   "blaming:" this-file)
 (check-exn+message (from x 'X
                          (join y 234))
                    "join: contract violation"
                    "expected: join-queryable?"
                    "given: 234"
-                   blame-this-file)
+                   "blaming:" this-file)
 (check-exn+message (from x 'X
                          (define y
                            (join y 345 #:to x)))
                    "join: contract violation"
                    "expected: join-queryable?"
                    "given: 345"
-                   blame-this-file)
+                   "blaming:" this-file)
 
 ; Violate the "join to" contract
 (check-exn+message (join x 'X
@@ -111,7 +110,7 @@
                    "join: contract violation"
                    "expected: instance?"
                    "given: '(not an instance)"
-                   blame-this-file)
+                   "blaming:" this-file)
 
 ; Regression - our type machinery couldn't handle a raw symbol as a contract.
 ; Wrap the symbol in or/c as a cheap workaround.
