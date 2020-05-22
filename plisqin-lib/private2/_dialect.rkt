@@ -1,16 +1,14 @@
 #lang racket
 
-(provide (all-from-out morsel-lib/sql/dialect))
+(provide (contract-out
+          [dialect? (-> any/c any/c)]
+          [current-dialect (parameter/c (or/c #f dialect?))]
+          [mssql (-> dialect?)]
+          [mssql? (-> any/c any/c)]
+          [postgres (-> dialect?)]
+          [postgres? (-> any/c any/c)]
+          [sqlite (-> dialect?)]
+          [sqlite? (-> any/c any/c)]
+          ))
 
-(require morsel-lib/sql/dialect
-         (prefix-in db: db))
-
-; TODO decide if this code is still useful:
-(define (infer-dialect x)
-  #;(-> (or/c db:connection? db:dbsystem?) (or/c dialect? #f))
-  (if (db:connection? x)
-      (infer-dialect (db:connection-dbsystem x))
-      (match (db:dbsystem-name x)
-        ['postgresql (postgres)]
-        ['sqlite3 (sqlite)]
-        [else #f])))
+(require morsel-lib/sql/dialect)

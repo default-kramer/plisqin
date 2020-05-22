@@ -1,4 +1,4 @@
 #lang racket/base
 
-(require morsel-lib/sql/dialect)
-(provide (all-from-out morsel-lib/sql/dialect))
+(require "private2/_dialect.rkt")
+(provide (all-from-out "private2/_dialect.rkt"))

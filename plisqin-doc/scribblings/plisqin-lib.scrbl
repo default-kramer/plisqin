@@ -598,6 +598,40 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
 }
 
 
-TODO: Query and Join are not truly types right now.
-They are simply predicates.
-We should probably make them types for consistency.
+@section{Dialects}
+@(defmodule plisqin-lib/dialect)
+@defparam[current-dialect dialect (or/c #f dialect?)]{
+ This parameter controls which flavor of SQL to generate.
+ @(repl
+   (define q (from x 'X
+                   (limit 3)))
+   (parameterize ([current-dialect (postgres)])
+     (displayln (to-sql q)))
+   (parameterize ([current-dialect (mssql)])
+     (displayln (to-sql q))))
+}
+
+@defproc[(dialect? [x any/c]) any/c]{
+ Predicate that recognizes dialects.
+ @(repl
+   (eval:check (dialect? (postgres)) #t)
+   (eval:check (dialect? (mssql)) #t)
+   (eval:check (dialect? (sqlite)) #t))
+}
+
+@deftogether[(@defproc[(postgres) dialect?]
+               @defproc[(mssql) dialect?]
+               @defproc[(sqlite) dialect?])]{
+ Creates a dialect representing PostgreSQL, Microsoft SQL Server, or SQLite.
+}
+
+@deftogether[(@defproc[(postgres? [x any/c]) any/c]
+               @defproc[(mssql? [x any/c]) any/c]
+               @defproc[(sqlite? [x any/c]) any/c])]{
+ Tests whether @(racket x) is a @(racket dialect?) representing PostgreSQL,
+ Microsoft SQL Server, or SQLite.
+ @(repl
+   (eval:check (postgres? (postgres)) #t)
+   (eval:check (postgres? (mssql)) #f)
+   (eval:check (mssql? (mssql)) #t))
+}
