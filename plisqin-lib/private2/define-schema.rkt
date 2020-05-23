@@ -42,8 +42,7 @@
                      ; The nullability of the entire expression will be inferred from
                      ; whatever `this` is plus this fragment:
                      (>> (%%sql (~? (~@ "." dbname)
-                                    ; TODO can leave 'id as a symbol once Morsel can handle it
-                                    (~@ "." (~a 'id))))
+                                    (~@ "." 'id)))
                          (~? (~@ #:null nullability)
                              (~@))))
            (~? (~@ #:cast Type)
@@ -85,9 +84,6 @@
        (syntax/loc #'id
          (begin
            (def-dispatch-proc proc-id
-             ; TODO [id this] means that (Product x) will return x if x is already a Product.
-             ; But do we want this? I think we used to, but not anymore...
-             #;[id this]
              [given-id given-body] ...)
            (define id (table proc-id (~a 'id))))))]))
 

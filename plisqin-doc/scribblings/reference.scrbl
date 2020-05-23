@@ -52,10 +52,7 @@ listed below (prefixed) except for @(racket plisqin-examples/adventure-works).
     Contains data types, which are normal Racket values.
     You can use them as predicates and contracts.}]
   [plisqin-lib/dialect #f mssql @nested{
-    Allows you to control which dialect of SQL gets generated.
-
-    TODO this is linking back to Morsel.
-    We should re-export and re-document these.}]
+    Allows you to control which dialect of SQL gets generated.}]
   [plisqin-lib/strict #f where @nested{
     Contains the @tech{strict} variant of Plisqin.}]
   [plisqin-lib/strict/operators |.| .<= @nested{
