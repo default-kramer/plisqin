@@ -559,7 +559,7 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
  and with any numeric field that desires the following semantics:
  @margin-note{
   See @(secref "Nullability") for an explanation of "the unknown boolean value"
-  and how the @tech{strict} variant helps avoid strange three-valued logic.}
+  and how to avoid strange three-valued logic.}
  @(itemlist
    @item{A null value represents the unknown boolean value.}
    @item{A zero value represents false.}
@@ -595,56 +595,43 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
    (displayln (to-sql q)))
 }
 @deftype[Datetime?]{
- TODO
+ Represents a datetime type in your database such as "timestamp" or "datetime2".
 }
 @deftype[Number?]{
- TODO
+ Represents a numeric type in your database such as "bigint" or "decimal(10, 4)".
 }
 @deftype[String?]{
- TODO
+ Represents a string type in your database such as "char(10)" or "varchar(max)".
 }
 @deftype[Subquery?]{
  TODO
 }
 @deftype[Clause?]{
- TODO
+ The supertype of all clauses.
 }
 @deftype[JoinClause?]{
- TODO
+ The supertype of all clauses that can be used inside @(racket join).
 }
 @deftype[QueryClause?]{
- TODO
+ The supertype of all clauses that can be used inside @(racket from).
 }
-@deftype[Select?]{
- TODO
-}
-@deftype[Where?]{
- TODO
-}
-@deftype[GroupBy?]{
- TODO
-}
-@deftype[Having?]{
- TODO
-}
-@deftype[OrderBy?]{
- TODO
-}
-@deftype[JoinOn?]{
- TODO
-}
-@deftype[Limit?]{
- TODO
-}
-@deftype[Offset?]{
- TODO
-}
-@deftype[Distinct?]{
- TODO
-}
-@deftype[JoinType?]{
- TODO
-}
+@(define-syntax-rule (def-clauses [id ctor] ...)
+   (begin
+     @deftype[id]{
+ The return type of @(racket ctor).
+ You should never cast to this type.}
+     ...))
+@(def-clauses
+   [Select? select]
+   [Where? where]
+   [GroupBy? group-by]
+   [Having? having]
+   [OrderBy? order-by]
+   [JoinOn? join-on]
+   [Limit? limit]
+   [Offset? offset]
+   [Distinct? distinct]
+   [JoinType? join-type])
 
 
 @section{Dialects}

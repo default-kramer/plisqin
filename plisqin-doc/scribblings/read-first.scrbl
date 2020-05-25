@@ -9,12 +9,10 @@
 @bold{Warning!!} Even this documentation is not ready yet.
 Check back next week.
 
-Plisqin is still unstable and may introduce breaking changes at any time.
-If you want a stable release, please contact me and I will probably be
-happy to provide one. You can
-@hyperlink["https://github.com/default-kramer/plisqin"]{open an issue} or
-find my email address on
-@hyperlink["https://pkgd.racket-lang.org/pkgn/search?q=plisqin"]{the package catalog}.
+@bold{Plisqin is still unstable and may introduce breaking changes at any time.}
+If you want a stable release, please
+@hyperlink["https://github.com/default-kramer/plisqin"]{open an issue}
+and I will probably be happy to provide one.
 
 @section{What is Plisqin?}
 @(itemlist
