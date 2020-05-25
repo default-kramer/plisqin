@@ -49,13 +49,13 @@
            ; (id a ...) must come before (id . rest) because
            ; the latter matches the former, but not vice-versa.
            [(id a ooo)
-            (syntax-parameterize ([self (TODO #'(quote id))]
-                                  [arglist (TODO #'(list a ooo))])
+            (syntax-parameterize ([self (bind:: #'(quote id))]
+                                  [arglist (bind:: #'(list a ooo))])
               body)]
            ...
            [(id . args)
-            (syntax-parameterize ([self (TODO #'(quote id))]
-                                  [arglist (TODO #'args)])
+            (syntax-parameterize ([self (bind:: #'(quote id))]
+                                  [arglist (bind:: #'args)])
               body)]
            ...
            )))]))
@@ -68,7 +68,7 @@
      (quasisyntax/loc stx
        (define-bodies2 dispatcher-id
          #,@(matchup #'(a ...))))]
-    [else (error "TODO bfakjl4523")]))
+    [else (error "assert fail: define-bodies")]))
 
 
 (define-bodies retval-dispatcher
@@ -83,8 +83,7 @@
                            [else #f])]
                 [tokens (->Bit tokens)])
             (if as-name
-                ; TODO should leave as-name unchanged, but Morsel doesn't render symbols for now
-                (list tokens " as " (~a as-name))
+                (list tokens " as " as-name)
                 tokens)))]
   [(group-by)
    (make2 self
@@ -119,7 +118,6 @@
   [(coalesce)
    (make2 'scalar
           #:reduce (list "coalesce" (parens (interpose ", " tokens))))]
-  ; TODO still need `case-when` and `case` but they are probably macros, not procs
 
   ; == "Operators" ==
   [(and or)

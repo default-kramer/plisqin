@@ -48,7 +48,7 @@
                 [head #`body]
                 ...
                 [else (error "dispatcher has no match:" 'id (syntax->datum requested-head))]))))))]
-    [else (error "TODO bvf014jl")]))
+    [else (error "assert fail: def-dispatcher")]))
 
 (define-syntax (define/weave stx)
   (syntax-case stx ()
@@ -66,4 +66,4 @@
              (if (eq? return-type interval?)
                  result
                  (>> result #:cast return-type #:null nullability)))))]
-    [else (error "TODO bfajkl352")]))
+    [else (error "assert fail: define/weave")]))
