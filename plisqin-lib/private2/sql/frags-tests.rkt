@@ -26,7 +26,7 @@
              #:all "(22 = 33)")
   (check-sql (%%where (%%bit "bar"))
              ; all dialects require Bit->Bool conversion
-             #:all "bar = 1")
+             #:all "bar <> 0")
   (check-sql (%%where (%%= 42 42))
              ; no conversion
              #:all "(42 = 42)")

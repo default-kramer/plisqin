@@ -106,7 +106,7 @@
   (match tokens
     [(list a)
      #:when (Bit? a)
-     (list a" = 1")]
+     (list a" <> 0")]
     [else tokens]))
 
 
