@@ -279,7 +279,7 @@ create table Product (
   , MakeFlag text not null
   , FinishedGoodsFlag text not null
   , Color text null
-  , SafetyStockLevel text not null
+  , SafetyStockLevel integer not null
   , ReorderPoint text not null
   , StandardCost text not null
   , ListPrice text not null
