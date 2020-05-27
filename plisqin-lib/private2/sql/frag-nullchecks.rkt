@@ -53,11 +53,13 @@
   [(coalesce)
    coalesce-nullchecker]
   [(= <> < <= > >=
-      like not-like
-      is is-not)
+      like not-like)
    (nullchecker
     #:accept /void /minval /maxval /any
     #:permit-null)]
+  [(is is-not)
+   ; We guarantee to produce a non-null Bool? for all inputs
+   never-null]
   [(count)
    (nullchecker
     #:permit-null
@@ -99,11 +101,13 @@
    (nullchecker
     #:deny-null)]
   [(= <> < <= > >=
-      like not-like
-      is is-not)
+      like not-like)
    (nullchecker
     #:accept /void /minval /maxval /any
     #:deny-null)]
+  [(is is-not)
+   ; We guarantee to produce a non-null Bool? for all inputs
+   never-null]
   [(count)
    (nullchecker
     #:permit-null

@@ -201,8 +201,7 @@ HEREDOC
     (define sql (bound-statement-sql me))
     (define param-values (bound-statement-param-values me))
     (define prepared (db:prepare conn sql))
-    ; TODO saw this pattern here: https://github.com/rmculpepper/sql/blob/792895fae759c6ef60aff054c1f707bb4f15407a/private/syntax.rkt#L148
-    ; Not sure if this is necessary, or just an optimization:
+    ; Saw this pattern here: https://github.com/rmculpepper/sql/blob/792895fae759c6ef60aff054c1f707bb4f15407a/private/syntax.rkt#L148
     (if (empty? param-values)
         prepared
         (db:bind-prepared-statement prepared param-values))))

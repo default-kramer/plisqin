@@ -134,6 +134,33 @@
   (check-cmp %%= #f /void   "(rhs is not null and (lhs = rhs))")
 
 
+  ; == "is" and "is not" comparisons ==
+  (define foo (>> (%%sql "foo") #:cast Number?))
+  (define bar (>> (%%sql "bar") #:cast Number?))
+  ; I'm not sure which dialects allow "null is [not] null", but I know that all
+  ; dialects will accept (1=1) and (1<>1)
+  (check-sql (.is 'null 'null)
+             #:all "(1=1)")
+  (check-sql (.is-not 'null 'null)
+             #:all "(1<>1)")
+  (check-sql (.is foo 'null)
+             #:all "(foo is null)")
+  (check-sql (.is-not foo 'null)
+             #:all "(foo is not null)")
+  ; SQL Server (at least) does not allow "null is [not] foo" so we generate
+  ; "foo is [not] null" instead
+  (check-sql (.is 'null foo)
+             #:all "(foo is null)")
+  (check-sql (.is-not 'null foo)
+             #:all "(foo is not null)")
+  ; SQL Server (at least) does not allow "foo is bar" so we have to generate
+  ; "foo = bar" or "foo <> bar" with fallbacks as needed.
+  (check-sql (.is foo bar)
+             #:all      "((foo is null and bar is null) or (foo = bar))")
+  (check-sql (.is-not foo bar)
+             #:all "(not ((foo is null and bar is null) or (foo = bar)))")
+
+
   ; == Datetime? Math ==
   (define-syntax-rule (make-Datetime? anything ...)
     (>> (%%scalar anything ...) #:cast Datetime? #:null no))

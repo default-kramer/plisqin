@@ -46,9 +46,10 @@
   ; Check that each id is bound to a fragment constructor.
   (define-syntax-rule (check-frags frag-id ...)
     (begin
-      ; The unsafe fragment constructor should accept any arguments
-      (let* ([result (frag-id 1 "2" '(three four))]
-             [expected (format "(~a 1 \"2\" '(three four))" 'frag-id)]
+      ; Almost everything accepts two arguments. The comparisons typically
+      ; require exactly two, so that is how many we will use
+      (let* ([result (frag-id '(1 "2") '(three four))]
+             [expected (format "(~a '(1 \"2\") '(three four))" 'frag-id)]
              [actual (format "~v" result)])
         (check-pred fragment? result)
         (check-equal? expected actual))
@@ -57,7 +58,7 @@
       ; Test that (frag-id "foo") is `maybe` nullable.
       ; Also test annotation and inference.
       ; Skip some that have special handling.
-      (when (r:not (member 'frag-id '(exists coalesce)))
+      (when (r:not (member 'frag-id '(exists coalesce is is-not)))
         (let* ([default (frag-id "foo")]
                [annotated (>> default #:null no)]
                [inferred (frag-id annotated)])
