@@ -42,7 +42,7 @@
 
 (def-nulltable null-dispatcher/unsafe scribble-nulltable/unsafe
   [(select where group-by having join-on
-           scalar bit aggregate subquery sql round
+           scalar aggregate subquery sql round
            ; TODO do the other aggregates (besides count) also work with 'distinct
            avg min max sum
            and or not
@@ -84,7 +84,7 @@
 
 (def-nulltable null-dispatcher/strict scribble-nulltable/strict
   [(select group-by
-           scalar bit aggregate subquery sql round
+           subquery round
            ; TODO these definitely need something
            avg min max sum
            + - * /)

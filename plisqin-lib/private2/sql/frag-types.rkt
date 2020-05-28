@@ -78,9 +78,6 @@
            + - * /)
    (token-constructor
     [any/c ...+ -> Scalar?])]
-  [(bit)
-   (token-constructor
-    [any/c ...+ -> Bit?])]
   [(coalesce)
    (token-constructor
     [any/c any/c ...+ -> Scalar?])]
@@ -129,18 +126,9 @@
   [(having)
    (token-constructor
     [Boolish? -> Having?])]
-  [(scalar aggregate)
-   (token-constructor
-    [content? ...+ -> Scalar?])]
-  [(bit)
-   (token-constructor
-    [content? ...+ -> Bit?])]
-  [(sql)
-   (token-constructor
-    [content? ...+ -> Token?])]
   [(subquery)
    (token-constructor
-    [content? ...+ -> Subquery?])]
+    [query? -> Subquery?])]
   [(count)
    ; We could allow (or/c 'distinct 'all) and ignore 'all during reduction.
    ; But no need to do that yet.

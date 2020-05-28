@@ -454,8 +454,8 @@ create table SalesOrderDetail (
   , OrderQty text not null
   , ProductID integer_id not null
   , SpecialOfferID integer_id not null
-  , UnitPrice text not null
-  , UnitPriceDiscount text not null
+  , UnitPrice real not null
+  , UnitPriceDiscount real not null
   , LineTotal text not null
   , rowguid text not null
   , ModifiedDate text not null

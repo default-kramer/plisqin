@@ -20,7 +20,7 @@
   (module+ mod-id
     (export-all type-dispatcher null-dispatcher
                 select where group-by having order-by join-on
-                scalar bit aggregate subquery sql
+                subquery
                 count avg min max sum exists round coalesce
                 date+ date- years months days hours minutes seconds
                 )
@@ -31,6 +31,11 @@
                   like not-like
                   is is-not
                   + - * /))))
+
+; these are in unsafe only
+(module+ unsafe
+  (export-all type-dispatcher/unsafe null-dispatcher/unsafe
+              scalar aggregate sql))
 
 (do-export unsafe type-dispatcher/unsafe null-dispatcher/unsafe)
 (do-export strict type-dispatcher/strict null-dispatcher/strict)
@@ -69,7 +74,7 @@
       ))
 
   (check-frags select where group-by having order-by join-on
-               scalar bit aggregate subquery sql
+               scalar aggregate subquery sql
                count avg min max sum exists round coalesce
                ; The date math functions won't pass any tests because they are
                ; too strict in all variants (by design):

@@ -3,7 +3,10 @@
 @(begin
    (provide custom-unsafe-docs)
 
-   (require racket/require)
+   (require racket/require
+            "tokens-helpers.rkt"
+            "helpers.rkt"
+            )
    (require (for-label plisqin-lib/unsafe
                        (prefix-in %% plisqin-lib/unsafe)
                        plisqin-lib
@@ -11,8 +14,53 @@
                        "racket.rkt"))
 
    (define (custom-unsafe-docs)
-     (nested (doc-val)
-             (doc-??)))
+     (parameterize ([type-lookup unsafe-table])
+       (nested (doc-aggregate)
+               (doc-scalar)
+               (doc-sql)
+               (doc-val)
+               (doc-??))))
+
+   (define (doc-aggregate)
+     @def-token[aggregate]{
+ A primitive building block with no @tech{strict} counterpart.
+ Constructs an arbitrary fragment of SQL that represents an aggregate operation.
+ This fragment will recognize grouped joins like the built-in aggregates, such
+ as @(racket %%count) or @(racket %%max).
+ Let's show the maximum UnitPriceDiscount we've ever given for each Product,
+ and add 42 just for fun:
+ @(repl
+   (define (%%max-plus-42 . tokens)
+     (%%aggregate "max(" tokens ") + 42")))
+ @(repl-query
+   (aw:show-table
+    (from p Product
+          (join detailsG SalesOrderDetail
+                (group-by (ProductID detailsG))
+                (join-on (.= (ProductID detailsG)
+                             (ProductID p))))
+          (select (ProductName p))
+          (select (%%max-plus-42 (UnitPriceDiscount detailsG)))
+          (limit 3))))
+ })
+
+   (define (doc-scalar)
+     @def-token[scalar]{
+ A primitive building block with no @tech{strict} counterpart.
+ Constructs an arbitrary fragment of SQL that represents a scalar.
+ This fragment will be injected into a grouped join if needed.
+ In the example on @(racket %%aggregate), notice that
+ @(racket (ProductID detailsG)) occurs in a join-on clause of a grouped join.
+ This is why it appears as "__INJECT0" in the generated SQL.
+ This behavior is enabled because @(racket (ProductID detailsG)) is returning
+ a @(racket %%scalar).
+ Although every @(racket %%scalar) @italic{should} be a @(racket Scalar?),
+ the type @(racket Scalar?) is irrelevant to this behavior.})
+
+   (define (doc-sql)
+     @def-token[sql]{
+ A primitive building block with no @tech{strict} counterpart.
+ Constructs an arbitrary fragment of SQL with no special behavior.})
 
    (define (doc-val)
      @defproc*[([(val [x string?]) String?]

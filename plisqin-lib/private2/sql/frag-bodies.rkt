@@ -100,8 +100,6 @@
    (make2 self)]
   [(subquery)
    (make2 self #:reduce (parens tokens))]
-  [(bit)
-   (make2 'scalar)]
 
   ; == SQL Functions ==
   [(count)

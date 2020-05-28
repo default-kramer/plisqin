@@ -27,12 +27,10 @@
                 #'(GO2
                    ;clauses
                    [select where group-by having order-by join-on]
-                   ; primitives
-                   [scalar bit aggregate subquery sql]
                    ; aggregates
                    [count avg min max sum]
                    ; misc
-                   [exists coalesce round]
+                   [exists subquery coalesce round]
                    ; date math
                    [date+ date- years months days hours minutes seconds]
                    ; operators
@@ -54,7 +52,6 @@
            ; At this point, each id should have the correct context.
            ; Now we can generate some scribble stuff.
            (define-syntax-rule (GO3 [[clause-id ooo]
-                                     [primitive-id ooo]
                                      [aggregate-id ooo]
                                      [misc-id ooo]
                                      [datemath-id ooo]
@@ -67,7 +64,6 @@
                ; This `defmodule` has been moved to the parent doc:
                ;(defmodule mod-id)
                (:section "Clauses" clause-id ooo)
-               (:section "Primitives" primitive-id ooo)
                (:section "Aggregates" aggregate-id ooo)
                (:section "Misc" misc-id ooo)
                (:section "Date Math" datemath-id ooo)

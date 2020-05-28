@@ -12,9 +12,11 @@
            (prefix-in %% (submod "frags.rkt" unsafe))
            (prefix-in %% (submod "frags.rkt" unsafe operators)))
 
-  ; TODO need to implement this
   (define (?? token fallback)
     (>> token #:fallback fallback))
+
+  (define (%%bit . tokens)
+    (>> (apply %%sql tokens) #:cast Bit?))
 
   ; check bits and bools
   (check-sql (select (%%bit "foo"))
