@@ -20,7 +20,7 @@
   (module+ mod-id
     (export-all type-dispatcher null-dispatcher
                 select where group-by having order-by join-on
-                scalar bit aggregate subquery sql
+                subquery
                 count avg min max sum exists round coalesce
                 date+ date- years months days hours minutes seconds
                 )
@@ -31,6 +31,11 @@
                   like not-like
                   is is-not
                   + - * /))))
+
+; these are in unsafe only
+(module+ unsafe
+  (export-all type-dispatcher/unsafe null-dispatcher/unsafe
+              scalar aggregate sql))
 
 (do-export unsafe type-dispatcher/unsafe null-dispatcher/unsafe)
 (do-export strict type-dispatcher/strict null-dispatcher/strict)
@@ -46,9 +51,10 @@
   ; Check that each id is bound to a fragment constructor.
   (define-syntax-rule (check-frags frag-id ...)
     (begin
-      ; The unsafe fragment constructor should accept any arguments
-      (let* ([result (frag-id 1 "2" '(three four))]
-             [expected (format "(~a 1 \"2\" '(three four))" 'frag-id)]
+      ; Almost everything accepts two arguments. The comparisons typically
+      ; require exactly two, so that is how many we will use
+      (let* ([result (frag-id '(1 "2") '(three four))]
+             [expected (format "(~a '(1 \"2\") '(three four))" 'frag-id)]
              [actual (format "~v" result)])
         (check-pred fragment? result)
         (check-equal? expected actual))
@@ -57,7 +63,7 @@
       ; Test that (frag-id "foo") is `maybe` nullable.
       ; Also test annotation and inference.
       ; Skip some that have special handling.
-      (when (r:not (member 'frag-id '(exists coalesce)))
+      (when (r:not (member 'frag-id '(exists coalesce is is-not)))
         (let* ([default (frag-id "foo")]
                [annotated (>> default #:null no)]
                [inferred (frag-id annotated)])
@@ -68,7 +74,7 @@
       ))
 
   (check-frags select where group-by having order-by join-on
-               scalar bit aggregate subquery sql
+               scalar aggregate subquery sql
                count avg min max sum exists round coalesce
                ; The date math functions won't pass any tests because they are
                ; too strict in all variants (by design):

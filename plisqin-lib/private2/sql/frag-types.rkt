@@ -31,7 +31,7 @@
              [(proc-id . arglist)
               (build-typechecker 'proc-id arglist type-spec ...)]
              ...))))]
-    [else (error "assert fail brq9j053")]))
+    [else (error "assert fail ~def-typetable")]))
 
 (define-syntax (def-typetable stx)
   (syntax-case stx ()
@@ -48,7 +48,7 @@
              [(id ...) #'body]
              ...
              [else #f]))))]
-    [else (error "TODO bvfqjkl2")]))
+    [else (error "assert fail def-typetable")]))
 
 (define content? any/c) ; TODO
 
@@ -78,18 +78,17 @@
            + - * /)
    (token-constructor
     [any/c ...+ -> Scalar?])]
-  [(bit)
-   (token-constructor
-    [any/c ...+ -> Bit?])]
   [(coalesce)
    (token-constructor
     [any/c any/c ...+ -> Scalar?])]
   [(exists and or not
            = <> < <= > >=
-           like not-like
-           is is-not)
+           like not-like)
    (token-constructor
     [any/c ...+ -> Bool?])]
+  [(is is-not)
+   (token-constructor
+    [any/c any/c -> Bool?])]
   [(round)
    (token-constructor
     [any/c ...+ -> Number?])]
@@ -127,18 +126,9 @@
   [(having)
    (token-constructor
     [Boolish? -> Having?])]
-  [(scalar aggregate)
-   (token-constructor
-    [content? ...+ -> Scalar?])]
-  [(bit)
-   (token-constructor
-    [content? ...+ -> Bit?])]
-  [(sql)
-   (token-constructor
-    [content? ...+ -> Token?])]
   [(subquery)
    (token-constructor
-    [content? ...+ -> Subquery?])]
+    [query? -> Subquery?])]
   [(count)
    ; We could allow (or/c 'distinct 'all) and ignore 'all during reduction.
    ; But no need to do that yet.
@@ -180,7 +170,9 @@
     [Datetime? Datetime? -> Bool?])]
   [(is is-not)
    (token-constructor
-    [content? ...+ -> Bool?])] ; TODO figure out the real type
+    [(or/c 'null Number?) (or/c 'null Number?) -> Bool?]
+    [(or/c 'null String?) (or/c 'null String?) -> Bool?]
+    [(or/c 'null Datetime?) (or/c 'null Datetime?) -> Bool?])]
   [(+ - * /)
    (token-constructor
     [Number? ...+ -> Number?])]

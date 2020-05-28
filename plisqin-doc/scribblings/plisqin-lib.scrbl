@@ -6,8 +6,6 @@
           "helpers.rkt")
 
 @title{plisqin-lib}
-TODO explain that most of the good stuff is in strict and unsafe.
-
 @(defmodule plisqin-lib)
 
 @defform[#:literals (define join)
@@ -537,65 +535,103 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
 }
 
 @deftype[Boolish?]{
- TODO
+ The supertype of @(racket Bit?) and @(racket Bool?).
+ Most procedures that accept a @(racket Boolish?) argument really want a
+ @(racket Bool?) but will tolerate a @(racket Bit?).
+ The following example shows @(racket where) converting a bit to a bool by
+ comparing it against zero.
+ @(repl
+   (displayln
+    (to-sql
+     (from x 'X
+           (where (>> (val 0) #:cast Bit?)))))
+   (displayln
+    (to-sql
+     (from x 'X
+           (where (>> (val 1) #:cast Bit?))))))
 }
+
 @deftype[Bit?]{
- TODO
+ MSSQL and SQLite do not have a boolean data type for columns.
+ MSSQL databases typically use the "bit" data type while SQLite
+ databases typically use a regular number.
+ The @(racket Bit?) type is designed to be compatible with these patterns,
+ and with any numeric field that desires the following semantics:
+ @margin-note{
+  See @(secref "Nullability") for an explanation of "the unknown boolean value"
+  and how to avoid strange three-valued logic.}
+ @(itemlist
+   @item{A null value represents the unknown boolean value.}
+   @item{A zero value represents false.}
+   @item{Any other value represents true.})
+
+ See example on @(racket Boolish?).
 }
+
 @deftype[Bool?]{
- TODO
+ Represents a boolean expression.
+ Corresponds to the "boolean" data type in PostgreSQL.
+ In MSSQL and SQLite, the only way to obtain a @(racket Bool?) is as a return
+ value (for example, of a comparison).
+ Columns in MSSQL and SQLite should never be declared as @(racket Bool?);
+ consider using @(racket Bit?) instead.
+
+ @subsubsub*section{MSSQL and Bool -> Scalar Conversion}
+ In MSSQL, a boolean expression cannot be used as a scalar.
+ For example, @(racket "select 42=42") is an error in MSSQL.
+ But @(racket Bool?) is a subtype of @(racket Scalar?) (indirectly).
+ This tension is resolved by generating SQL that converts a bool to a bit
+ when a scalar is needed, as in the following example:
+ @(repl
+   (define q
+     (from x 'X
+           (define a-bool (.= (val 42)
+                              (val 42)))
+           (where a-bool)
+           (select a-bool)))
+   (parameterize ([current-dialect (mssql)])
+     (displayln (to-sql q)))
+   (code:comment "non-MSSQL dialects are much easier:")
+   (displayln (to-sql q)))
 }
 @deftype[Datetime?]{
- TODO
+ Represents a datetime type in your database such as "timestamp" or "datetime2".
 }
 @deftype[Number?]{
- TODO
+ Represents a numeric type in your database such as "bigint" or "decimal(10, 4)".
 }
 @deftype[String?]{
- TODO
+ Represents a string type in your database such as "char(10)" or "varchar(max)".
 }
 @deftype[Subquery?]{
  TODO
 }
 @deftype[Clause?]{
- TODO
+ The supertype of all clauses.
 }
 @deftype[JoinClause?]{
- TODO
+ The supertype of all clauses that can be used inside @(racket join).
 }
 @deftype[QueryClause?]{
- TODO
+ The supertype of all clauses that can be used inside @(racket from).
 }
-@deftype[Select?]{
- TODO
-}
-@deftype[Where?]{
- TODO
-}
-@deftype[GroupBy?]{
- TODO
-}
-@deftype[Having?]{
- TODO
-}
-@deftype[OrderBy?]{
- TODO
-}
-@deftype[JoinOn?]{
- TODO
-}
-@deftype[Limit?]{
- TODO
-}
-@deftype[Offset?]{
- TODO
-}
-@deftype[Distinct?]{
- TODO
-}
-@deftype[JoinType?]{
- TODO
-}
+@(define-syntax-rule (def-clauses [id ctor] ...)
+   (begin
+     @deftype[id]{
+ The return type of @(racket ctor).
+ You should never cast to this type.}
+     ...))
+@(def-clauses
+   [Select? select]
+   [Where? where]
+   [GroupBy? group-by]
+   [Having? having]
+   [OrderBy? order-by]
+   [JoinOn? join-on]
+   [Limit? limit]
+   [Offset? offset]
+   [Distinct? distinct]
+   [JoinType? join-type])
 
 
 @section{Dialects}

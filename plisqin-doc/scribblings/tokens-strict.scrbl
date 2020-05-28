@@ -162,4 +162,126 @@
     @nested{
      Creates an @(racket interval?). See example on @(racket date+).
      }]
+   [(and)
+    @nested{
+     Boolean "and" -- Produces true when all arguments are true.
+     Usually prefixed @(racket .and).}]
+   [(or)
+    @nested{
+     Boolean "or" -- Produces true when any argument is true.
+     Usually prefixed @(racket .or).}]
+   [(not)
+    @nested{
+     Boolean "not" -- Produces true when the argument is false.
+     Usually prefixed @(racket .not).}]
+   [(=)
+    @nested{
+     "Equals" -- Produces true when its arguments are equal.
+     Usually prefixed @(racket .=).}]
+   [(<>)
+    @nested{
+     "Does not Equal" -- Produces true when its arguments are not equal.
+     Usually prefixed @(racket .<>).}]
+   [(<)
+    @nested{
+     "Less Than" -- Produces true when the first argument is less than the second.
+     Usually prefixed @(racket .<).}]
+   [(<=)
+    @nested{
+     "Less Than or Equal To" --
+     Produces true when the first argument is less than or equal to the second.
+     Usually prefixed @(racket .<=).}]
+   [(>)
+    @nested{
+     "Greater Than" -- Produces true when the first argument is greater than the second.
+     Usually prefixed @(racket .>).}]
+   [(>=)
+    @nested{
+     "Greater Than or Equal To" --
+     Produces true when the first argument is greater than or equal to the second.
+     Usually prefixed @(racket .>=).}]
+   [(like)
+    @nested{
+     Usually prefixed @(racket .like).
+     Returns true if the first argument matches the second.
+     The use of @(racket %) to match zero or more characters is guaranteed
+     to be supported.
+     Other matching patterns may exist; see "like" in your database's
+     documentation for more details.
+     @(repl-query
+       (aw:show-table
+        (from p Product
+              (where (.like (ProductNumber p)
+                            (val "CS-%")))
+              (select (ProductName p))
+              (select (ProductNumber p)))))
+     }]
+   [(not-like)
+    @nested{
+     Inverse of @(racket .like).
+     Returns true if the first argument does not match the second.
+     Usually prefixed @(racket .not-like).}]
+   [(is)
+    @nested{
+     An equality test in which dbnull is considered equal to dbnull.
+     The value @(racket 'null) can be used as a constant representing dbnull.
+     Assuming that @(racket foo) and @(racket bar) are both @(racket Scalar?)s,
+     the truth table is:
+     @(itemlist
+       @item{@(racket (.is 'null 'null)) -- always true}
+       @item{@(racket (.is foo 'null)) -- true when foo is dbnull}
+       @item{@(racket (.is 'null bar)) -- true when bar is dbnull}
+       @item{@(racket (.is foo bar)) -- true when foo equals bar, or when
+      both foo and bar are dbnull})
+
+     Unlike other comparisons, @(racket .is) ignores any @tech{fallbacks}
+     because the comparison behavior of dbnull is already completely specified.
+     @(repl-query
+       (aw:show-table
+        (from p Product
+              (limit 3)
+              (select (ProductName p))
+              (select (ProductNumber p))
+              (select (Color p))
+              (where (.is (Color p) 'null)))))
+     @(repl-query
+       (aw:show-table
+        (from p Product
+              (limit 3)
+              (select (ProductName p))
+              (select (ProductNumber p))
+              (select (Color p))
+              (where (.is (Color p) (val "Silver"))))))
+     }]
+   [(is-not)
+    @nested{
+     The expression @(racket (.is-not a b)) is always equivalent to
+     @(racket (.not (.is a b))).}]
+   [(+)
+    @nested{
+     Numeric addition.
+     Usually prefixed @(racket .+).}]
+   [(-)
+    @nested{
+     Numeric subtraction.
+     Usually prefixed @(racket .-).}]
+   [(*)
+    @nested{
+     Numeric multiplication.
+     Usually prefixed @(racket .*)}]
+   [(/)
+    @nested{
+     Numeric division.
+     Usually prefixed @(racket ./)
+     @(repl-query
+       (aw:show-table
+        (from pc ProductCategory
+              (define pcid
+                (ProductCategoryID pc))
+              (select pcid)
+              (select (.+ pcid (val 1)))
+              (select (.- pcid (val 1)))
+              (select (.* pcid (val 10)))
+              (select (./ pcid (val 2))))))
+     }]
    [else "~~ TODO ~~"])

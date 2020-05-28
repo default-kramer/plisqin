@@ -17,7 +17,7 @@
          "interval.rkt"
          "../_dialect.rkt"
          (only-in "../_core.rkt" join? tuple?)
-         (only-in "../_null.rkt" fallback-symbol)
+         (only-in "../_null.rkt" fallback-symbol nullability no)
          (only-in "truth.rkt" probe)
          racket/stxparam)
 
@@ -49,13 +49,13 @@
            ; (id a ...) must come before (id . rest) because
            ; the latter matches the former, but not vice-versa.
            [(id a ooo)
-            (syntax-parameterize ([self (TODO #'(quote id))]
-                                  [arglist (TODO #'(list a ooo))])
+            (syntax-parameterize ([self (bind:: #'(quote id))]
+                                  [arglist (bind:: #'(list a ooo))])
               body)]
            ...
            [(id . args)
-            (syntax-parameterize ([self (TODO #'(quote id))]
-                                  [arglist (TODO #'args)])
+            (syntax-parameterize ([self (bind:: #'(quote id))]
+                                  [arglist (bind:: #'args)])
               body)]
            ...
            )))]))
@@ -68,7 +68,7 @@
      (quasisyntax/loc stx
        (define-bodies2 dispatcher-id
          #,@(matchup #'(a ...))))]
-    [else (error "TODO bfakjl4523")]))
+    [else (error "assert fail: define-bodies")]))
 
 
 (define-bodies retval-dispatcher
@@ -83,8 +83,7 @@
                            [else #f])]
                 [tokens (->Bit tokens)])
             (if as-name
-                ; TODO should leave as-name unchanged, but Morsel doesn't render symbols for now
-                (list tokens " as " (~a as-name))
+                (list tokens " as " as-name)
                 tokens)))]
   [(group-by)
    (make2 self
@@ -101,8 +100,6 @@
    (make2 self)]
   [(subquery)
    (make2 self #:reduce (parens tokens))]
-  [(bit)
-   (make2 'scalar)]
 
   ; == SQL Functions ==
   [(count)
@@ -119,7 +116,6 @@
   [(coalesce)
    (make2 'scalar
           #:reduce (list "coalesce" (parens (interpose ", " tokens))))]
-  ; TODO still need `case-when` and `case` but they are probably macros, not procs
 
   ; == "Operators" ==
   [(and or)
@@ -131,9 +127,12 @@
   [(= <> < <= > >=)
    (make2 'bool
           #:reduce (reduce-comparison self tokens))]
-  [(like not-like is is-not)
+  [(like not-like)
    (make2 'bool
           #:reduce (reduce-operation self tokens))]
+  [(is is-not)
+   (make2 'bool
+          #:reduce (reduce-is/is-not self tokens))]
   [(+ - * /)
    (make2 'scalar
           #:reduce (parens (interpose (format " ~a " self) tokens)))]
@@ -188,42 +187,91 @@
      (~a sym)]
     [(like) "like"]
     [(not-like) "not like"]
-    [(is) "is"]
-    [(is-not) "is not"]
     [else (error "unknown op:" sym)]))
 
 (define (reduce-operation op tokens)
   (let ([sqlname (translate-op op)])
     (parens (insert-ands sqlname tokens))))
 
+(define (reduce-is/is-not op tokens)
+  (define (get-fallback-sym token)
+    (if (equal? no (nullability token))
+        #f
+        '/minval))
+  (define-values
+    (join-str constant-str)
+    (case op
+      [(is)
+       (values " is " "1=1")]
+      [(is-not)
+       (values " is not " "1<>1")]
+      [else (error "expected 'is or 'is-not but got" op)]))
+  (match tokens
+    ; Note: SQL Server (at least) is finicky in that "null is foo" is not
+    ; allowed, so we generate "foo is null" instead.
+    ; It also doesn't allow "foo is bar" so if neither argument is null we
+    ; generate an equivalent "=" or "<>" comparison, with fallbacks if needed.
+    [(list 'null 'null)
+     ; For maximum portability, generate "1=1" or "1<>1"
+     (parens constant-str)]
+    [(list a 'null)
+     (parens (list a join-str "null"))]
+    [(list 'null a)
+     (parens (list a join-str "null"))]
+    ; If neither token is dbnull, we do an = comparison in which null
+    ; equals itself and nothing else. In other words, if we have
+    #;(like a b)
+    ; then it is equivalent to
+    #;(= (?? a /minval) (?? b /minval))
+    ; assuming neither a nor b is 'null.
+    [(list a b)
+     (let ([reduction
+            (reduce-comparison2 '= a b
+                                (get-fallback-sym a)
+                                (get-fallback-sym b))])
+       (if (equal? op 'is-not)
+           (parens (list "not " reduction))
+           reduction))]
+    [else
+     (error "is/is-not expected exactly two arguments")]))
+
 (define (reduce-comparison op tokens)
+  (let*-values ([(lhs rhs /lhs /rhs)
+                 (match tokens
+                   [(list lhs rhs)
+                    (let ([/lhs (fallback-symbol lhs)]
+                          [/rhs (fallback-symbol rhs)])
+                      (values lhs rhs /lhs /rhs))]
+                   [else
+                    (error "comparison expected exactly two arguments" op)])])
+    (reduce-comparison2 op lhs rhs /lhs /rhs)))
+
+(define (reduce-comparison2 op lhs rhs /lhs /rhs)
+  ; op: symbol?   (eg '<=)
+  ; lhs: token
+  ; rhs: token
+  ; /lhs: (or/c #f symbol?)   (eg '/minval)
+  ; /rhs: (or/c #f symbol?)   (eg '/minval)
+  (define base-reduction (reduce-operation op (list lhs rhs)))
   ; See truth.rkt for a more complete description of a "probe result".
   ; Basically, there are 3 booleans representing: lhs, rhs, and lhs+rhs.
   ; This gives us 2^3 = 8 possibilities, but 1 of them is never used by our truth table.
   ; We need to translate the other 7 into SQL.
-  (let ([base-reduction (reduce-operation op tokens)])
-    (let*-values ([(lhs rhs /lhs /rhs probe-result)
-                   (match tokens
-                     [(list lhs rhs)
-                      (let ([/lhs (fallback-symbol lhs)]
-                            [/rhs (fallback-symbol rhs)])
-                        (values lhs rhs /lhs /rhs
-                                (probe op /lhs /rhs)))]
-                     [else (values #f #f #f #f #f)])])
-      (cond
-        [(and /lhs /rhs)
-         (reduce-probe2 probe-result lhs rhs base-reduction)]
-        [/lhs
-         (reduce-probe1 probe-result lhs base-reduction)]
-        [/rhs
-         (match probe-result
-           ; Swap the first two elements, because reduce-probe1 assumes that the
-           ; lhs was the one with the fallback
-           [(list a b c)
-            (reduce-probe1 (list b a c)
-                           rhs base-reduction)])]
-        [else
-         base-reduction]))))
+  (define probe-result (probe op /lhs /rhs))
+  (cond
+    [(and /lhs /rhs)
+     (reduce-probe2 probe-result lhs rhs base-reduction)]
+    [/lhs
+     (reduce-probe1 probe-result lhs base-reduction)]
+    [/rhs
+     (match probe-result
+       ; Swap the first two elements, because reduce-probe1 assumes that the
+       ; lhs was the one with the fallback
+       [(list a b c)
+        (reduce-probe1 (list b a c)
+                       rhs base-reduction)])]
+    [else
+     base-reduction]))
 
 (define (reduce-probe2 probe-result lhs rhs base-reduction)
   ; Reduce a probe result when both the lhs and rhs had fallbacks.

@@ -279,7 +279,7 @@ create table Product (
   , MakeFlag text not null
   , FinishedGoodsFlag text not null
   , Color text null
-  , SafetyStockLevel text not null
+  , SafetyStockLevel integer not null
   , ReorderPoint text not null
   , StandardCost text not null
   , ListPrice text not null
@@ -454,8 +454,8 @@ create table SalesOrderDetail (
   , OrderQty text not null
   , ProductID integer_id not null
   , SpecialOfferID integer_id not null
-  , UnitPrice text not null
-  , UnitPriceDiscount text not null
+  , UnitPrice real not null
+  , UnitPriceDiscount real not null
   , LineTotal text not null
   , rowguid text not null
   , ModifiedDate text not null

@@ -1,7 +1,7 @@
 #lang racket
 
 (provide make tokens parens insert-ands interpose ->Bit ->Bool
-         (for-syntax TODO matchup))
+         (for-syntax bind:: matchup))
 
 (require "fragment.rkt"
          "../_types.rkt"
@@ -23,8 +23,7 @@
                 (parens "foo")))
 
 
-; TODO this must be built in somewhere
-(define-for-syntax (TODO id-stx)
+(define-for-syntax (bind:: id-stx)
   (lambda (x)
     (syntax-case x ()
       [(f stuff ...)
@@ -46,7 +45,7 @@
        (make id kind content
              #:reduce-proc
              (λ (tokes)
-               (syntax-parameterize ([tokens (TODO #'tokes)])
+               (syntax-parameterize ([tokens (bind:: #'tokes)])
                  reduce-body))))]
     [(_ :id :kind :content #:reduce-proc :reducer)
      (syntax/loc stx
@@ -106,7 +105,7 @@
   (match tokens
     [(list a)
      #:when (Bit? a)
-     (list a" = 1")]
+     (list a" <> 0")]
     [else tokens]))
 
 
