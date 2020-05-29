@@ -241,6 +241,8 @@
                 (join-on (.= (ProductID detailsG)
                              (ProductID this))))]
          #:property
+         [ProductCategoryID
+          (ProductCategoryID (ProductSubcategory this))]
          [ProductName
           (Name this)]
          [SubcategoryName

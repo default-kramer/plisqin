@@ -282,7 +282,7 @@ create table Product (
   , SafetyStockLevel integer not null
   , ReorderPoint text not null
   , StandardCost text not null
-  , ListPrice text not null
+  , ListPrice real not null
   , Size text null
   , SizeUnitMeasureCode text null
   , WeightUnitMeasureCode text null
@@ -342,7 +342,7 @@ create table ProductListPriceHistory (
   ProductID integer_id not null
   , StartDate text not null
   , EndDate text not null
-  , ListPrice text not null
+  , ListPrice real not null
   , ModifiedDate text not null
 );
 
