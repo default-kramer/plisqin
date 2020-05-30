@@ -155,8 +155,6 @@ The following procedure returns a grouped join:
 When a grouped join is passed into an aggregate, the aggregate recognizes the
 grouped join and performs the aggregation over that group.
 This is called @tech{grouped join aggregation}; here is an example:
-@margin-note{TODO fix this bug! The min and max tokens are being deduplicated,
- probably because they look equal prior to reduction.}
 @margin-note{
  According to my normal naming convention, @(racket group-of-products) would
  be named @(racket productsG) for brevity. The longer name is for clarity.}
@@ -169,10 +167,7 @@ This is called @tech{grouped join aggregation}; here is an example:
            (Products-by-Category cat))
          (select (count group-of-products))
          (select (min (ListPrice group-of-products)))
-         (select (max (ListPrice group-of-products)))
-         (select (%%aggregate "min("(ListPrice group-of-products)")"))
-         (select (%%aggregate "max("(ListPrice group-of-products)")"))
-         )))
+         (select (max (ListPrice group-of-products))))))
 
 Notice that @tech{grouped join aggregation} gives us better composability than
 @tech{traditional aggregation} thanks to separation of concerns.

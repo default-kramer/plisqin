@@ -446,3 +446,28 @@ inner join Y y
   and y.status = 'complete'
 HEREDOC
   ))
+
+(test
+ ; Regression: `min` and `max` used to be considered equal and would get
+ ; deduplicated incorrectly
+ (check-sql
+  (from x 'X
+        (join y 'Y
+              (group-by (scalar y".YID"))
+              (join-on (scalar y".YID")" = "(scalar x".YID")))
+        (select (min (scalar y".ListPrice")))
+        (select (max (scalar y".ListPrice"))))
+  #<<HEREDOC
+select y.__INJECT1
+  , y.__INJECT2
+from X x
+inner join (
+  select y.YID as __INJECT0
+    , min(y.ListPrice) as __INJECT1
+    , max(y.ListPrice) as __INJECT2
+  from Y y
+  group by y.YID
+) y
+   on y.__INJECT0 = x.YID
+HEREDOC
+  ))
