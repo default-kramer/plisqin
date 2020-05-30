@@ -422,3 +422,27 @@ left join Z z
    on z.bar = y.bar
 HEREDOC
   ))
+
+(test
+ (define (Y x)
+   (join y 'Y
+         #:to x
+         (join-on y".YID = "x".YID")))
+ (define (append j)
+   (join y j
+         ; When appending, we *could* allow the caller to omit the #:to.
+         ; But I don't think that provides a lot of value.
+         ; If a user wants this, they can easily make their own macro.
+         #:to j
+         (join-on y".status = 'complete'")))
+ (check-sql
+  (from x 'X
+        (select (append (Y x))".foo"))
+  #<<HEREDOC
+select y.foo
+from X x
+inner join Y y
+   on y.YID = x.YID
+  and y.status = 'complete'
+HEREDOC
+  ))

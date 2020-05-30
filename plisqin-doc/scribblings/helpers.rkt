@@ -21,7 +21,8 @@
 (define (make-eval)
   (let ([eval (make-base-eval)])
     (interaction-eval #:eval eval
-                      (require racket/match)
+                      (require racket/match
+                               racket/contract)
                       (require (only-in racket string-join))
                       (require (prefix-in aw: plisqin-examples/adventure-works)
                                (prefix-in db: db)
