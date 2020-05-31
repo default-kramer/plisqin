@@ -150,7 +150,6 @@ The following procedure returns a grouped join:
           (group-by (ProductCategoryID p))
           (join-on (.= (?? (ProductCategoryID p) /void)
                        (ProductCategoryID cat))))))
-@(void "TODO remove the fallback and run 'Scribble HTML' to see a bad error message. Need to fix!")
 
 When a grouped join is passed into an aggregate, the aggregate recognizes the
 grouped join and performs the aggregation over that group.

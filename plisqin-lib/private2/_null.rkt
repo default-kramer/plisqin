@@ -8,7 +8,7 @@
   ; try to use nulltrack<%> instead
   (provide gen:custom-nullability))
 
-(require (only-in "_core.rkt" tuple? join? get-join-type)
+(require (only-in "_core.rkt" tuple? join? get-join-type safe-write)
          racket/generic)
 
 (struct opaque-val (str)
@@ -139,7 +139,8 @@
 (define (err-msg-no-fallbacks
          proc-name continuation-marks
          nullability bad-index bad-value)
-  (let ([msg (format #<<HEREDOC
+  (let ([msg (safe-write
+              (format #<<HEREDOC
 ~a: contract violation
   expected: a token that is non-nullable
   given: a token with nullability: ~a
@@ -149,13 +150,14 @@
     override the inferred nullability wherever the token is created.
   argument value: ~e
 HEREDOC
-                     proc-name nullability (add1 bad-index) nullability bad-value)])
+                      proc-name nullability (add1 bad-index) nullability bad-value))])
     (raise (exn:fail:contract msg continuation-marks))))
 
 (define (err-msg-with-fallbacks
          proc-name continuation-marks
          fallbacks nullability bad-index bad-value)
-  (let ([msg (format #<<HEREDOC
+  (let ([msg (safe-write
+              (format #<<HEREDOC
 ~a: contract violation
   expected: a token that is non-nullable or has an acceptable fallback
   given: a token with nullability: ~a
@@ -168,8 +170,8 @@ HEREDOC
     override the inferred nullability wherever the token is created.
   argument value: ~e
 HEREDOC
-                     proc-name nullability (add1 bad-index) fallbacks nullability
-                     nullability bad-value)])
+                      proc-name nullability (add1 bad-index) fallbacks nullability
+                      nullability bad-value))])
     (raise (exn:fail:contract msg continuation-marks))))
 
 
