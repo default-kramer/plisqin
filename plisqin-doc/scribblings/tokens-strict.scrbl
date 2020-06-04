@@ -32,15 +32,12 @@
      }]
    [(group-by)
     @nested{
-     TODO link to a "groups and aggregates" section, to be written.
-
      Adds a grouping key to the result set.
-     See example on @(racket having).
+     See example on @(racket having) or read the @(secref "Aggregates")
+     section for more complete details.
      }]
    [(having)
     @nested{
-     TODO link to a "groups and aggregates" section, to be written.
-
      Can only be used when @(racket group-by) clauses are also present.
      Eliminates rows from the result set that do not satisfy the given condition.
      @(repl-query

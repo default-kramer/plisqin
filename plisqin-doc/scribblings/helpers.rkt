@@ -26,7 +26,7 @@
                       (require (only-in racket string-join))
                       (require (prefix-in aw: plisqin-examples/adventure-works)
                                (prefix-in db: db)
-                               ; TODO figure out what, if any, prefix we want:
+                               ; figure out what, if any, prefix we want:
                                plisqin-examples/adventure-works/schema
                                plisqin)
                       (define-syntax-rule (code:hilite x) x)

@@ -604,7 +604,8 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
  Represents a string type in your database such as "char(10)" or "varchar(max)".
 }
 @deftype[Subquery?]{
- TODO
+ Represents a subquery.
+ Returned by @(racket subquery) and @(racket %%subquery).
 }
 @deftype[Clause?]{
  The supertype of all clauses.
