@@ -153,4 +153,7 @@
  "expected: a token that is non-nullable or has an acceptable fallback"
  "given: a token with nullability: yes"
  "likely argument position: 1"
- "argument value: (scalar (join subcat/0 \"ProductSubcategory\" #:to #<tuple: \"Product\">")
+ ;"argument value: (scalar (join subcat/0 \"ProductSubcategory\" #:to #<tuple: \"Product\">"
+ ; OOPS for some reason `raco test` prints cycle information like #0#=<tuple>
+ ; which I don't want. DrRacket is fine though... strange.
+ "argument value: (scalar (join" "ProductSubcategory" "#:to #<tuple: \"Product\">")
