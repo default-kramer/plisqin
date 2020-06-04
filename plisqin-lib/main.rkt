@@ -1,4 +1,4 @@
-#lang racket/base
+#lang racket
 
 (module+ test
   (require rackunit))
@@ -37,8 +37,15 @@
 (require "./private2/_statement.rkt")
 (provide define-statement compile-statements)
 
+(require (only-in "./private2/sql/frag-types.rkt" unsafe-content?))
+(provide unsafe-content?)
+
 (require "./private2/_core.rkt")
-(provide to-sql query? join?)
+; Adding contracts makes doc-coverage consider them different from Morsel's
+; identifiers, so it will alert if they are undocumented.
+(provide (contract-out [to-sql (-> unsafe-content? string?)]
+                       [query? (-> any/c any/c)]
+                       [join?  (-> any/c any/c)]))
 
 (require "./private2/sql/special-clauses.rkt")
 (provide limit offset distinct join-type)
