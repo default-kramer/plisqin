@@ -36,7 +36,7 @@
 
     ; equal<%>
     (define/override (equal-content)
-      (list kind content type as-name))
+      (list kind id content type as-name))
 
     ; printable<%>
     (define/public (custom-print port mode)

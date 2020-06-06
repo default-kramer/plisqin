@@ -4,6 +4,8 @@
          docgen/strict)
 
 (require scribble/manual
+         (for-label (prefix-in strict: plisqin-lib/strict)
+                    (prefix-in strict: plisqin-lib/strict/operators))
          "tokens-helpers.rkt"
          "tokens-strict.scrbl")
 
@@ -28,7 +30,7 @@
                    ;clauses
                    [select where group-by having order-by join-on]
                    ; aggregates
-                   [count avg min max sum]
+                   [avg min max sum count]
                    ; misc
                    [exists subquery coalesce round]
                    ; date math
@@ -91,18 +93,22 @@
            ))]))
 
 (define-docgen docgen/unsafe
-  example-get-content unsafe-ctx unsafe-table
+  get-unsafe-content unsafe-ctx unsafe-table
   plisqin-lib/unsafe plisqin-lib/unsafe/operators)
 
 (define-docgen docgen/strict
   get-strict-content strict-ctx strict-table
   plisqin-lib/strict plisqin-lib/strict/operators)
 
-; This eventually belongs in another file, when I get around to writing the documentation.
-(def-content-provider (example-get-content id)
-  [(select where)
-   @nested{This is just a demonstration of how I could write custom content
-    in a different file and hook it into the skeleton.
+@(define-syntax (strict-link stx)
+   (syntax-case stx ()
+     [(_ id)
+      (let* ([str (format "~a" (syntax-e #'id))]
+             [datum (string->symbol (format "strict:~a" str))])
+        (with-syntax ([strict-id datum]
+                      [str str])
+          #'(racketlink strict-id (racketplainfont str))))]))
 
-    This is the documentation for @(racket id).}]
-  [else ""])
+(def-content-provider (get-unsafe-content id)
+  [else @nested{
+    @tech{Unsafe} variant of @(strict-link id).}])

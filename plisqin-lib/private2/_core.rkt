@@ -3,16 +3,13 @@
 ; This file is just a small insulation layer that
 ; provides bindings from Morsel that we want to use directly.
 (provide tuple? get-join-type gen:queryable get-queryable
-         ; Adding contracts makes doc-coverage consider them different from Morsel's
-         ; identifiers, so it will alert if they are undocumented.
-         (contract-out [to-sql (-> any/c string?)] ; TODO tighten this contract
-                       [query? (-> any/c any/c)]
-                       [join?  (-> any/c any/c)])
+         query? join? to-sql safe-write
          )
 
 (require morsel-lib
          morsel-lib/sql
-         ; TODO fix this:
+         ; TODO fix these:
+         (only-in morsel-lib/private/essence/from safe-write)
          (only-in morsel-lib/private/sql/clauses get-join-type))
 
 ; The following submodules expose bindings that should only be used in one small place,

@@ -11,7 +11,7 @@
 (module+ test
   (require rackunit))
 
-; TODO maybe tighten this up and add it to Morsel
+; maybe tighten this up and add it to Morsel
 (define (parens x)
   (match x
     [(list "(" a ")")

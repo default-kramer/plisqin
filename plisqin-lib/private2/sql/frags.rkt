@@ -53,8 +53,8 @@
     (begin
       ; Almost everything accepts two arguments. The comparisons typically
       ; require exactly two, so that is how many we will use
-      (let* ([result (frag-id '(1 "2") '(three four))]
-             [expected (format "(~a '(1 \"2\") '(three four))" 'frag-id)]
+      (let* ([result (frag-id 'one "two")]
+             [expected (format "(~a 'one \"two\")" 'frag-id)]
              [actual (format "~v" result)])
         (check-pred fragment? result)
         (check-equal? expected actual))

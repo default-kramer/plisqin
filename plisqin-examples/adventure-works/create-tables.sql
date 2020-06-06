@@ -282,7 +282,7 @@ create table Product (
   , SafetyStockLevel integer not null
   , ReorderPoint text not null
   , StandardCost text not null
-  , ListPrice text not null
+  , ListPrice real not null
   , Size text null
   , SizeUnitMeasureCode text null
   , WeightUnitMeasureCode text null
@@ -342,7 +342,7 @@ create table ProductListPriceHistory (
   ProductID integer_id not null
   , StartDate text not null
   , EndDate text not null
-  , ListPrice text not null
+  , ListPrice real not null
   , ModifiedDate text not null
 );
 
@@ -590,13 +590,13 @@ create table ShoppingCartItem (
 create table SpecialOffer (
   SpecialOfferID integer_id not null
   , Description text not null
-  , DiscountPct text not null
+  , DiscountPct real not null
   , Type text not null
   , Category text not null
   , StartDate text not null
   , EndDate text not null
-  , MinQty text not null
-  , MaxQty text not null
+  , MinQty real not null
+  , MaxQty real null
   , rowguid text not null
   , ModifiedDate text not null
 );

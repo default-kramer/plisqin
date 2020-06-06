@@ -4,7 +4,9 @@
 ; The dispatchers are used to weave type checking into the fragment constructors.
 ; The tables are used by Scribble to generate documentation
 (provide type-dispatcher/unsafe type-dispatcher/strict
-         unsafe-table strict-table)
+         unsafe-table strict-table
+         unsafe-content?
+         )
 
 (require "weave.rkt"
          "../_types.rkt"
@@ -50,60 +52,69 @@
              [else #f]))))]
     [else (error "assert fail def-typetable")]))
 
-(define content? any/c) ; TODO
+(define (unsafe-content? x)
+  (or (Token? x)
+      (query? x)
+      (join? x)
+      (instance? x)
+      (interval? x)
+      (string? x)
+      (number? x)
+      (symbol? x)
+      ((listof unsafe-content?) x)))
 
 (def-typetable type-dispatcher/unsafe unsafe-table
   [(select)
    (token-constructor
-    [any/c ...+ -> Select?])]
+    [unsafe-content? ...+ -> Select?])]
   [(where)
    (token-constructor
-    [any/c ...+ -> Where?])]
+    [unsafe-content? ...+ -> Where?])]
   [(group-by)
    (token-constructor
-    [any/c ...+ -> GroupBy?])]
+    [unsafe-content? ...+ -> GroupBy?])]
   [(having)
    (token-constructor
-    [any/c ...+ -> Having?])]
+    [unsafe-content? ...+ -> Having?])]
   [(order-by)
    (token-constructor
-    [any/c ...+ -> OrderBy?])]
+    [unsafe-content? ...+ -> OrderBy?])]
   [(join-on)
    (token-constructor
-    [any/c ...+ -> JoinOn?])]
+    [unsafe-content? ...+ -> JoinOn?])]
   [(sql)
    (token-constructor
-    [any/c ...+ -> Token?])]
+    [unsafe-content? ...+ -> Token?])]
   [(scalar aggregate min max
            + - * /)
    (token-constructor
-    [any/c ...+ -> Scalar?])]
+    [unsafe-content? ...+ -> Scalar?])]
   [(coalesce)
    (token-constructor
-    [any/c any/c ...+ -> Scalar?])]
+    [unsafe-content? unsafe-content? ...+ -> Scalar?])]
   [(exists and or not
            = <> < <= > >=
            like not-like)
    (token-constructor
-    [any/c ...+ -> Bool?])]
+    [unsafe-content? ...+ -> Bool?])]
   [(is is-not)
    (token-constructor
-    [any/c any/c -> Bool?])]
+    [unsafe-content? unsafe-content? -> Bool?])]
   [(round)
    (token-constructor
-    [any/c ...+ -> Number?])]
+    [unsafe-content? ...+ -> Number?])]
   [(subquery)
    (token-constructor
-    [any/c ...+ -> Subquery?])]
+    [unsafe-content? ...+ -> Subquery?])]
   [(count avg sum)
    (token-constructor
-    [any/c ...+ -> Number?])]
+    [unsafe-content? ...+ -> Number?])]
   [(years months days hours minutes seconds)
    (token-constructor
-    [any/c -> interval?])]
+    [unsafe-content? -> interval?])]
   [(date+ date-)
    (token-constructor
-    [any/c interval? ...+ -> Datetime?])]
+    [unsafe-content? interval? ...+ -> Datetime?])]
   )
 
 (def-typetable type-dispatcher/strict strict-table

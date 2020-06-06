@@ -1,6 +1,7 @@
 #lang racket
 
 (require plisqin
+         plisqin-examples/adventure-works/schema
          rackunit)
 
 (define this-file
@@ -133,3 +134,26 @@
                    "expected: a token that is non-nullable"
                    "given: a token with nullability: maybe"
                    "argument value: (sql #<tuple: 'A> \".foo\")")
+
+
+; Regression: this was giving the generic "infinite loop averted" message
+; instead of the nullability violation
+(define/contract (Products-by-Category cat)
+  (-> (instanceof ProductCategory) (instanceof Product))
+  (join p Product #:to cat
+        (join-type 'left)
+        (group-by (ProductCategoryID p))
+        (join-on (.= (ProductCategoryID p)
+                     (ProductCategoryID cat)))))
+(check-exn+message
+ (to-sql
+  (from cat ProductCategory
+        (select (count (Products-by-Category cat)))))
+ "=: contract violation"
+ "expected: a token that is non-nullable or has an acceptable fallback"
+ "given: a token with nullability: yes"
+ "likely argument position: 1"
+ ;"argument value: (scalar (join subcat/0 \"ProductSubcategory\" #:to #<tuple: \"Product\">"
+ ; OOPS for some reason `raco test` prints cycle information like #0#=<tuple>
+ ; which I don't want. DrRacket is fine though... strange.
+ "argument value: (scalar (join" "ProductSubcategory" "#:to" "#<tuple: \"Product\">")

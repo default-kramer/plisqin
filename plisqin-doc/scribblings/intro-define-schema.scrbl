@@ -419,11 +419,8 @@ We recall from the previous task that the SalesOrderDetail table points to
 the Product table.
 From the other direction, we can say that each Product has a group of
 SalesOrderDetail records -- the records whose ProductID matches the Product.
-We build the @(racket detailsG) grouped join and perform aggregations over it
-to solve this task.
-
-@margin-note{
- TODO: Grouped joins and aggregates deserve their own section. Link to it here.}
+We build the @(racket detailsG) @tech{grouped join} and perform aggregations
+over it to solve this task.
 @(void
   ; Missing Feature: The as-name of (LineTotal detailsG)) is 'LineTotal.
   ; We could infer the as-name of (sum (LineTotal detailsG))) to be 'sum_LineTotal
@@ -687,11 +684,10 @@ We could modify it to accept a time window of sales to consider as follows:
           (order-by 'desc (sum (LineTotal detailsG))))))
 
 @(repl-query
-  ; TODO should have a %%datetime proc available here
   (aw:show-table
    (sales-report
-    #:start-date (>> (%%sql "'2012-01-01'") #:cast Datetime? #:null no)
-    #:end-date (>> (%%sql "'2013-01-01'") #:cast Datetime? #:null no)
+    #:start-date (>> (val "2012-01-01") #:cast Datetime?)
+    #:end-date (>> (val "2013-01-01") #:cast Datetime?)
     (from subcat ProductSubcategory
           (select (SubcategoryName subcat))
           (select (CategoryName subcat))))))

@@ -296,8 +296,7 @@
  your code probably has no need to ever use this option.
 }
 
-@defproc[(to-sql [x any/c]) string?]{
- TODO need to tighten up this contract.
+@defproc[(to-sql [x unsafe-content?]) string?]{
  @(repl
    (displayln
     (to-sql
@@ -311,6 +310,17 @@
    (eval:check (interval? (days 2)) #t))
 
  See also the date math examples at @(racket date+).
+}
+
+@defproc[(unsafe-content? [x any/c]) any/c]{
+ Used as a contract by the @tech{unsafe} variant to fail fast when given values
+ that definitely cannot be rendered @(racket to-sql).
+ A value that is @(racket unsafe-content?) can probably be rendered to SQL,
+ but this is not guaranteed.
+
+ Equivalent to
+ @(racket (or/c Token? query? join? instance? interval?
+                string? number? symbol? (listof unsafe-content?)))
 }
 
 @section[#:tag "reference:nullability"]{Nullability}
@@ -604,7 +614,8 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
  Represents a string type in your database such as "char(10)" or "varchar(max)".
 }
 @deftype[Subquery?]{
- TODO
+ Represents a subquery.
+ Returned by @(racket subquery) and @(racket %%subquery).
 }
 @deftype[Clause?]{
  The supertype of all clauses.
