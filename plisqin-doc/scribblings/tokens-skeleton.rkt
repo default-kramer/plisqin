@@ -28,7 +28,7 @@
                    ;clauses
                    [select where group-by having order-by join-on]
                    ; aggregates
-                   [count avg min max sum]
+                   [avg min max sum count]
                    ; misc
                    [exists subquery coalesce round]
                    ; date math

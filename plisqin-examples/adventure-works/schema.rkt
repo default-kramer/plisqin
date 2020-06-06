@@ -240,6 +240,16 @@
                 (group-by (ProductID detailsG))
                 (join-on (.= (ProductID detailsG)
                              (ProductID this))))]
+         [SpecialOffersG
+          (join offer SpecialOffer
+                (join-type 'left)
+                ; this is a plural join:
+                (join sop SpecialOfferProduct
+                      (join-on (.= (SpecialOfferID sop)
+                                   (SpecialOfferID offer))))
+                (group-by (ProductID sop))
+                (join-on (.= (ProductID sop)
+                             (ProductID this))))]
          #:property
          [ProductCategoryID
           (ProductCategoryID (ProductSubcategory this))]

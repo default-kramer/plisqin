@@ -85,45 +85,145 @@
      }]
    [(count)
     @nested{
-     When given an @(racket instance?), counts the number of rows in that instance.
-     The following query shows how many Products are red:
-     @(repl-query
-       (aw:show-table
-        (from p Product
-              (where (.= (?? (Color p) /void)
-                         (val "Red")))
-              (select (count p)))))
+     When given an @(racket instance?), counts how many rows are in each group.
+     An example of this can be seen on @(racket avg).
 
-     The given @(racket instance?) may be a grouped join.
-     The following query shows how many SalesOrderDetail records exist
-     for each Product:
-     @(repl-query
-       (aw:show-table
-        (from p Product
-              (join detailsG SalesOrderDetail
-                    (group-by (ProductID detailsG))
-                    (join-on (.= (ProductID detailsG)
-                                 (ProductID p))))
-              (select (ProductName p))
-              (select (>> (count detailsG) #:as 'TimesSold))
-              (order-by 'desc (count detailsG))
-              (limit 5))))
+     When given a @(racket Scalar?), counts how many non-dbnull values
+     are in each group.
+     When the scalar is preceded by @(racket 'distinct), counts how many
+     unique non-dbnull values are in each group.
 
-     When given a @(racket Scalar?), counts how many non-null values are present.
-     Adding the @(racket 'distinct) option counts how many unique
-     non-null values are present.
      @margin-note{
       In this example, @(racket (count (ProductID p))) is equivalent to
       @(racket (count p)) because the ProductID is non-nullable.}
      @(repl-query
        (aw:show-table
         (from p Product
-              (select (>> (count (ProductID p))
+              (select (>> (count p)
                           #:as 'Num_Products))
+              (select (>> (count (ProductID p))
+                          #:as 'Num_Product_IDs))
               (select (>> (count (ProductSubcategoryID p))
                           #:as 'Num_Products_With_Subcategories))
               (select (>> (count 'distinct (ProductSubcategoryID p))
                           #:as 'Num_Unique_Subcategories)))))
+     }]
+   [(avg)
+    @nested{
+     Produces the average of the given expression, relative to each group.
+     The following example uses @tech{traditional aggregation}, but every
+     aggregate in Plisqin also works with @tech{grouped join aggregation}.
+     Read @(secref "Aggregates") for complete understanding.
+     @(repl-query
+       (aw:show-table
+        (from p Product
+              (group-by (Color p))
+              (select (Color p))
+              (select (count p))
+              (select (avg (ListPrice p)))
+              (select (min (ListPrice p)))
+              (select (max (ListPrice p)))
+              (select (sum (ListPrice p))))))
+     }]
+   [(min)
+    @nested{
+     Like @(racket avg), but produces the minimum value.
+     See example on @(racket avg).
+     }]
+   [(max)
+    @nested{
+     Like @(racket avg), but produces the maximum value.
+     See example on @(racket avg).
+     }]
+   [(sum)
+    @nested{
+     Like @(racket avg), but produces the sum.
+     See example on @(racket avg).
+     }]
+   [(exists)
+    @nested{
+     Produces true when the given argument has any rows, false otherwise.
+     The following where clause filters out Products which do not have any
+     corresponding rows in the SalesOrderDetail table.
+     @(repl-query
+       (aw:show-table
+        (from prd Product
+              (limit 5)
+              (select (ProductName prd))
+              (select (ProductNumber prd))
+              (where (exists (from dtl SalesOrderDetail
+                                   (where (.= (ProductID dtl)
+                                              (ProductID prd)))))))))
+     }]
+   [(subquery)
+    @nested{
+     Represents a subquery.
+
+     This @tech{strict} variant is really only useful for blocking the
+     appending behavior of @(racket from).
+     That is, if @(racket q) is a @(racket query?), then
+     @(racket (from x q ....)) will append more clauses to @(racket q).
+     If you want to treat @(racket q) as a subquery instead, you need to wrap
+     it: @(racket (from x (subquery q) ....))
+
+     The @tech{unsafe} variant, @(racket %%subquery), is probably more useful.
+     A common pattern is to create a subquery with exactly one row, as follows:
+     @(repl-query
+       (aw:show-table
+        (from x (%%subquery "select 1 as one")
+              (select (val "hello"))
+              (select (val "world")))))
+     }]
+   [(coalesce)
+    @nested{
+     Produces the first non-dbnull value from the given arguments.
+     If the @tech{nullability} of any argument is @(racket no), then the
+     nullability of the returned token is also @(racket no).
+
+     The following example uses @(racket coalesce) to define @(racket maxDiscount)
+     as "the maximum DiscountPct from the group of Special Offers, or zero when
+     there are no Special Offers (and the maximum is dbnull)."
+     @(repl-query
+       (aw:show-table
+        (from p Product
+              (%%where (ProductID p)" in (514, 680, 707, 725)")
+              (select (ProductName p))
+              (select (ListPrice p))
+              (join offersG (SpecialOffersG p))
+              (define maxDiscount
+                (coalesce (max (DiscountPct offersG))
+                          (val 0)))
+              (select (>> maxDiscount #:as 'BestDiscount))
+              (select (>> (.* (ListPrice p)
+                              (.- (val 1) maxDiscount))
+                          #:as 'BestPrice)))))
+
+     If you do not use @(racket coalesce), dbnull will propogate through the
+     expressions built using @(racket maxDiscount):
+     @(repl-query
+       (aw:show-table
+        (from p Product
+              (%%where (ProductID p)" in (514, 680, 707, 725)")
+              (select (ProductName p))
+              (select (ListPrice p))
+              (join offersG (SpecialOffersG p))
+              (define maxDiscount
+                (max (DiscountPct offersG)))
+              (select (>> maxDiscount #:as 'BestDiscount))
+              (select (>> (.* (ListPrice p)
+                              (.- (val 1) maxDiscount))
+                          #:as 'BestPrice)))))
+     }]
+   [(round)
+    @nested{
+     The first argument is a @(racket Number?) to be rounded.
+     The second argument specifies how many decimal digits should be retained;
+     this defaults to zero.
+     @(repl-query
+       (aw:show-table
+        (from x (%%subquery "select 1 as one")
+              (select (round (val 12.3456)))
+              (select (round (val 12.3456) 2)))))
      }]
    [(date+)
     @nested{
@@ -281,4 +381,5 @@
               (select (.* pcid (val 10)))
               (select (./ pcid (val 2))))))
      }]
-   [else "~~ TODO ~~"])
+   [else
+    (error "get-strict-content has no answer for:" 'id)])
