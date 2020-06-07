@@ -1,6 +1,6 @@
 #lang racket
 
-(provide nullchecker nulltrack<%> nulltrack?
+(provide nullchecker nullchecker/tail nulltrack<%> nulltrack?
          nullability nullability? yes no maybe
          fallback fallback? /void /minval /maxval /any fallback-symbol)
 
@@ -182,11 +182,7 @@ HEREDOC
    #:accept /void /unit /any
    ; Choose one:
    #:permit-null #:deny-null
-   ; Optional, TODO:
-   #:over (match arglist
-            [(list 'asc rest ...) rest]
-            [(list 'desc rest ...) rest]
-            [else arglist]))
+   )
 (define-syntax (nullchecker stx)
   (syntax-case stx ()
     [(nullchecker x rest ...)
@@ -199,3 +195,33 @@ HEREDOC
                   #:deny-null)
      #'(make-deny-nullchecker fallback ...)]
     [else (error "nullchecker can't parse:" stx)]))
+
+
+(define (drop-leading-args decorated result arglist continuation-marks proc-name)
+  (cond
+    [(number? result)
+     (begin
+       ; Here is where we could record the offset for better error messages,
+       ; instead of saying "likely argument position"
+       (decorated (list-tail arglist result) continuation-marks proc-name))]
+    [else
+     (error "drop-leading-args: invalid result:" result)]))
+
+; This is used to decorate an existing nullchecker by dropping part of the
+; arglist before passing it through to the decorated nullchecker. For example
+#;(nullchecker/tail
+   base-nullchecker
+   #:matching ([(list 'asc rest ...) 1]
+               [(list 'desc rest ...) 1]
+               [else 0]))
+; would check if the arglist matches the 'asc or 'desc pattern and if it does
+; it will drop 1 argument from the arglist before passing on to base-nullchecker.
+(define-syntax (nullchecker/tail stx)
+  (syntax-case stx ()
+    [(_ decorated #:matching (match-clause ...))
+     (syntax/loc stx
+       (lambda (arglist continuation-marks proc-name)
+         (let ([result (match arglist
+                         match-clause
+                         ...)])
+           (drop-leading-args decorated result arglist continuation-marks proc-name))))]))

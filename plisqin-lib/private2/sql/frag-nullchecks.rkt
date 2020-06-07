@@ -42,12 +42,14 @@
 
 (def-nulltable null-dispatcher/unsafe scribble-nulltable/unsafe
   [(select where group-by having join-on
-           scalar aggregate subquery sql round
+           scalar aggregate sql round
            ; We could allow 'distinct for sum and avg, but let's not for now
            avg min max sum
            and or not
            + - * /)
    (nullchecker #:permit-null)]
+  [(subquery)
+   always-maybe]
   [(exists)
    never-null]
   [(coalesce)
@@ -61,35 +63,31 @@
    ; We guarantee to produce a non-null Bool? for all inputs
    never-null]
   [(count)
-   (nullchecker
-    #:permit-null
-    ; TODO #:over
-    #;(match arglist
-        [(list 'distinct rest ...) rest]
-        [else arglist]))]
+   (nullchecker/tail
+    (nullchecker #:permit-null)
+    #:matching ([(cons 'distinct rest) 1]
+                [else 0]))]
   [(order-by)
-   (nullchecker
-    #:permit-null
-    ; TODO #:over
-    #;(match arglist
-        [(list 'asc rest ...) rest]
-        [(list 'desc rest ...) rest]
-        [else arglist]))]
-  ; Even in unsafe, intervals should never be null.
-  [(years months days hours minutes seconds)
-   (nullchecker #:deny-null)]
-  [(date+ date-)
+   (nullchecker/tail
+    (nullchecker #:permit-null)
+    #:matching ([(cons 'asc rest) 1]
+                [(cons 'desc rest) 1]
+                [else 0]))]
+  ; The nullability of intervals and date math works just like the normal
+  ; arithmetic operators and nullable numbers
+  [(years months days hours minutes seconds
+          date+ date-)
    (nullchecker #:permit-null)]
   )
 
 (def-nulltable null-dispatcher/strict scribble-nulltable/strict
   [(select group-by
-           subquery round
-           ; TODO these definitely need something
+           round
            avg min max sum
            + - * /)
-   (nullchecker
-    #:permit-null)]
+   (nullchecker #:permit-null)]
+  [(subquery)
+   always-maybe]
   [(exists)
    never-null]
   [(coalesce)
@@ -109,31 +107,27 @@
    ; We guarantee to produce a non-null Bool? for all inputs
    never-null]
   [(count)
-   (nullchecker
-    #:permit-null
-    ; TODO #:over
-    #;(match arglist
-        [(list 'distinct rest ...) rest]
-        [else arglist]))]
+   (nullchecker/tail
+    (nullchecker #:permit-null)
+    #:matching ([(cons 'distinct rest) 1]
+                [else 0]))]
   [(order-by)
-   (nullchecker
-    #:permit-null
-    ; TODO #:over
-    #;(match arglist
-        [(list 'asc rest ...) rest]
-        [(list 'desc rest ...) rest]
-        [else arglist]))]
-  ; Intervals should never be null.
-  [(years months days hours minutes seconds)
-   (nullchecker #:deny-null)]
-  ; We know the intervals will be non-null, but if the Datetime? is null that's
-  ; fine, we accept and propogate it as normal.
-  [(date+ date-)
+   (nullchecker/tail
+    (nullchecker #:permit-null)
+    #:matching ([(cons 'asc rest) 1]
+                [(cons 'desc rest) 1]
+                [else 0]))]
+  ; The nullability of intervals and date math works just like the normal
+  ; arithmetic operators and nullable numbers
+  [(years months days hours minutes seconds
+          date+ date-)
    (nullchecker #:permit-null)]
   )
 
 ; A nullchecker ignores the input and always returns "not null"
 (define (never-null . ignored-args) no)
+
+(define (always-maybe . ignored-args) maybe)
 
 (define (coalesce-nullchecker arglist . more-stuff)
   (define (check lst accum)
