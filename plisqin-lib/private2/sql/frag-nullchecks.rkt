@@ -43,7 +43,7 @@
 (def-nulltable null-dispatcher/unsafe scribble-nulltable/unsafe
   [(select where group-by having join-on
            scalar aggregate subquery sql round
-           ; TODO do the other aggregates (besides count) also work with 'distinct
+           ; We could allow 'distinct for sum and avg, but let's not for now
            avg min max sum
            and or not
            + - * /)

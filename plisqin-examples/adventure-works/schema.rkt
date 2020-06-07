@@ -236,7 +236,7 @@
          #:has-group
          [DetailsG
           (join detailsG SalesOrderDetail
-                (join-type 'left) ; TODO should this be done by #:has-group?
+                (join-type 'left)
                 (group-by (ProductID detailsG))
                 (join-on (.= (ProductID detailsG)
                              (ProductID this))))]
