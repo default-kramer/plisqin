@@ -1,30 +1,64 @@
 #lang racket
 
 (require plisqin
-         rackunit)
+         rackunit
+         (for-syntax syntax/parse))
 
 (define-syntax (check-nullability stx)
-  (syntax-case stx ()
+  (define (get-loc)
+    (cadr (syntax->list stx)))
+  (syntax-parse stx
+    [(_ [#:err expr])
+     (syntax/loc (get-loc)
+       (check-exn exn:fail:contract?
+                  (lambda () expr)))]
     [(_ [expected expr])
-     #`(let* ([e expr]
+     (quasisyntax/loc (get-loc)
+       (let* ([e expr]
               [actual (nullability e)])
-         #,(syntax/loc (cadr (syntax->list stx))
-             (check-equal? actual expected)))]))
+         #,(syntax/loc (get-loc)
+             (check-equal? actual expected))))]))
 
 (define-syntax-rule (check-nullabilities form ...)
   (begin
     (check-nullability form)
     ...))
 
-; The type Number? is the most useful when working with the strict variant
-(define :yes (>> (%%scalar "yes") #:null yes #:cast Number?))
-(define :no (>> (%%scalar "no") #:null no #:cast Number?))
-(define :maybe (>> (%%scalar "maybe") #:null maybe #:cast Number?))
+(define-syntax-rule (define-null-ctors [id n] ...)
+  (begin
+    (define-syntax (id stx)
+      (syntax-parse stx
+        [(_ type)
+         #'(>> (%%scalar 'id) #:null n #:cast type)]
+        [x:id
+         ; Number? is the most useful type when working with the strict variant
+         #'(x Number?)]))
+    ...))
 
-(define :yesDT (>> :yes #:cast Datetime?))
-(define :noDT (>> :no #:cast Datetime?))
-(define :maybeDT (>> :maybe #:cast Datetime?))
+(define-null-ctors [:yes yes] [:no no] [:maybe maybe])
 
+
+(check-nullabilities
+ ; For the strict variant only, check that all incoming booleans must be non-null
+
+ ; == where, having, join-on ==
+ [#:err (where (:maybe Bool?))]
+ [#:err (having (:maybe Bool?))]
+ [#:err (join-on (:maybe Bool?))]
+ [no (where (:no Bool?))]
+ [no (having (:no Bool?))]
+ [no (join-on (:no Bool?))]
+
+ ; == and, or, not ==
+ [#:err (.and (:maybe Bool?) (:no Bool?))]
+ [#:err (.and (:no Bool?) (:maybe Bool?))]
+ [#:err (.or (:maybe Bool?) (:no Bool?))]
+ [#:err (.or (:no Bool?) (:maybe Bool?))]
+ [#:err (.not (:maybe Bool?))]
+ [no (.and (:no Bool?) (:no Bool?))]
+ [no (.or (:no Bool?) (:no Bool?))]
+ [no (.not (:no Bool?))]
+ )
 
 (check-nullabilities
  ; Look through the documentation of plisqin-lib/{strict-or-unsafe} for anything
@@ -165,29 +199,28 @@
  [yes (seconds :yes)]
 
  ; == date+ and date- ==
- [no    (%%date+ :noDT (years :no))]
- [maybe (%%date+ :maybeDT (years :no))]
- [maybe (%%date+ :noDT (years :maybe))]
- [yes   (%%date+ :yesDT (years :no))]
- [yes   (%%date+ :noDT (years :yes))]
- [no    (date+ :noDT (years :no))]
- [maybe (date+ :maybeDT (years :no))]
- [maybe (date+ :noDT (years :maybe))]
- [yes   (date+ :yesDT (years :no))]
- [yes   (date+ :noDT (years :yes))]
- [no    (%%date- :noDT (years :no))]
- [maybe (%%date- :maybeDT (years :no))]
- [maybe (%%date- :noDT (years :maybe))]
- [yes   (%%date- :yesDT (years :no))]
- [yes   (%%date- :noDT (years :yes))]
- [no    (date- :noDT (years :no))]
- [maybe (date- :maybeDT (years :no))]
- [maybe (date- :noDT (years :maybe))]
- [yes   (date- :yesDT (years :no))]
- [yes   (date- :noDT (years :yes))]
+ [no    (%%date+ (:no Datetime?) (years :no))]
+ [maybe (%%date+ (:maybe Datetime?) (years :no))]
+ [maybe (%%date+ (:no Datetime?) (years :maybe))]
+ [yes   (%%date+ (:yes Datetime?) (years :no))]
+ [yes   (%%date+ (:no Datetime?) (years :yes))]
+ [no    (date+ (:no Datetime?) (years :no))]
+ [maybe (date+ (:maybe Datetime?) (years :no))]
+ [maybe (date+ (:no Datetime?) (years :maybe))]
+ [yes   (date+ (:yes Datetime?) (years :no))]
+ [yes   (date+ (:no Datetime?) (years :yes))]
+ [no    (%%date- (:no Datetime?) (years :no))]
+ [maybe (%%date- (:maybe Datetime?) (years :no))]
+ [maybe (%%date- (:no Datetime?) (years :maybe))]
+ [yes   (%%date- (:yes Datetime?) (years :no))]
+ [yes   (%%date- (:no Datetime?) (years :yes))]
+ [no    (date- (:no Datetime?) (years :no))]
+ [maybe (date- (:maybe Datetime?) (years :no))]
+ [maybe (date- (:no Datetime?) (years :maybe))]
+ [yes   (date- (:yes Datetime?) (years :no))]
+ [yes   (date- (:no Datetime?) (years :yes))]
 
- ; TODO test the rest of plisqin-lib/{variant}/operators
-
+ ; The standard comparison operators will be tested separately, but
  ; == is and is-not ==
  ; always produce a non-null boolean
  [no (%%is 'null 'null)]
@@ -207,3 +240,22 @@
  [no (.is-not :yes 'null)]
  [no (.is-not :yes :yes)]
  )
+
+; Only the strict comparisons have interesting null check behavior:
+; 1) They raise an error when the resulting boolean would be null.
+; 2) They accept fallbacks.
+(define-syntax-rule (test-comparisons cmp-id ...)
+  (check-nullabilities
+   [no (cmp-id :no :no)]
+   ...
+   [#:err (cmp-id :no :maybe)]
+   ...
+   [#:err (cmp-id :maybe :no)]
+   ...
+   [no (cmp-id :no (?? :maybe /void))]
+   ...
+   [no (cmp-id (?? :maybe /void) :no)]
+   ...
+   ))
+
+(test-comparisons .= .<> .< .<= .> .>= .like .not-like)
