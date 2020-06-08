@@ -26,6 +26,12 @@ If you are very familiar with SQL, you might prefer the former;
 if not, you will probably prefer the latter.
 Eventually you will find both mental models useful.
 
+Also: @(itemlist
+        @item{Plisqin is a @seclink["research-language"]{research language.}})
+
+As far as I know, my ideal query language has not yet been developed.
+Plisqin is a step in the right direction.
+
 @section{Show Me Some Code Already!}
 If you insist.
 @(racketblock

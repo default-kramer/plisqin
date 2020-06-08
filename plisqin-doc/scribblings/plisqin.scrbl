@@ -10,3 +10,4 @@
 @(include-section "nullability.scrbl")
 @(include-section "refactoring-recipes.scrbl")
 @(include-section "reference.scrbl")
+@(include-section "research-language.scrbl")
