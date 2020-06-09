@@ -15,17 +15,24 @@
 
 
 @title[#:tag "using-define-schema"]{Using define-schema}
+For this walkthrough, you are a new employee at AdventureWorks.
+AdventureWorks is a fictional company that sells bicycles and related products.
+The company has a mature database, but the SQL that has been written so far
+is scattered all over the place, making it difficult to find and reuse.
+
+Your boss is going to ask you for a series of reports.
+As you produce these reports, you will capture certain facts about this
+database using @(racket define-schema), making it easier for yourself and
+other programmers to find and reuse them.
+You will also learn how Plisqin offers opportunities for code reuse that
+are simply impossible using plain SQL.
+
 @section{Teaser}
-@margin-note{
- TODO: need some link or quick explanation of the Adventure Works
- sample database.}
-We are about to walk through how to use @(racket define-schema) to partially
-recreate the definitions exported by the
-@(racket plisqin-examples/adventure-works/schema) module.
-But first, here is a preview of how the finished definitions can be used.
-Imagine that I need to write a query to find the top 3 best-selling Products
+Here is a preview of what you will be able to do by the end of this walkthrough.
+Imagine that your boss asks to find the top 3 best-selling Products
 of all-time, showing Product Name, Category Name, and Total Sales.
-Because the schema already contains the definitions I need, it is very easy:
+Thanks to the reusable definitions you have already captured using
+@(racket define-schema), it is this easy:
 @(repl-query
   (aw:show-table
    (from p Product
@@ -42,8 +49,8 @@ it is actually pretty formulaic.
 
 @section{Getting Started}
 @(define aw-schema @tech{aw-schema.rkt})
-Start a new file using #lang racket.
-Save it as @deftech{aw-schema.rkt}, short for "Adventure Works schema".
+Start a new file using @racketplainfont{#lang racket}.
+Save it as @deftech{aw-schema.rkt}, short for "AdventureWorks schema".
 Add the the following code to this file:
 @(racketblock
   (require plisqin
@@ -51,40 +58,37 @@ Add the the following code to this file:
 
 You should now have access to the @(racket aw:show-table) procedure from your
 REPL. This allows you to execute a query against the SQLite database.
-Try executing the following raw SQL:
+To make sure everything is set up correctly, try asking SQLite what time it is:
 @(repl-query
-  (aw:show-table
-   "select name from sqlite_master where name like 'Business%'"))
-@(repl-query
-  (aw:show-table
-   "pragma table_info(BusinessEntity)"))
+  (aw:show-table "select datetime('now')"))
 
 @(define initial-url
    "https://github.com/default-kramer/plisqin/blob/morselize/plisqin-doc/scribblings/adventure-works-checkpoints/1.rkt#L8")
-@(load-checkpoint! "1.rkt")
 
-You might imagine that we could use "sqlite_master" and "pragma table_info"
-to generate definitions for all the tables and columns in the database.
-You would need to do that in a real project, but that is not very interesting.
-We are much more interested the new definitions we will be adding.
-So we will take a shortcut -- copy and paste the @(racket (define-schema ....))
+@margin-note{
+ If you really want to know how to automatically generate this, see
+ @(secref "schema-generation").}
+OK, the first thing we need to add to our schema definition is the
+table and column information.
+There are ways to automatically inspect the database and generate the initial
+schema definition, but that is not what we are interested in right now.
+You can just copy and paste the @(racket (define-schema ....))
 from @link[initial-url]{this file} into your @aw-schema file.
-This creates definitions for all the tables and columns.
-The following query should now work on your REPL
+
+@(load-checkpoint! "1.rkt")
+Save, Run, and the following query should now work on your REPL:
 @(repl-query
   (aw:show-table
    (from pc ProductCategory
          (select (Name pc)))))
 
-@margin-note{
- TODO I suspect I can speed up define-schema significantly.}
 Now that @tech{aw-schema.rkt} is somewhat large, DrRacket may
 take a long time to run it. For this reason, I recommend that you add
 @(racket (provide (all-defined-out))) to your @aw-schema file and
 @(racket require) it from another file to avoid this delay whenever possible.
-You may also want to disable debugging in DrRacket.
+Disabling debugging in DrRacket will also speed things up a lot.
 
-There are some other REPL tricks you should learn before proceeding.
+There are a few REPL tricks you should learn before proceeding.
 The first identifier we passed into @(racket define-schema) was
 @(racket adventure-works-schema). This procedure is designed to be used at
 the REPL as a manual alternative to autocomplete.
@@ -108,15 +112,8 @@ The output of this will be long, so here is the command only:
 
 @section{The Tasks}
 @(define task subsection)
-In this situation, you are a new employee at Adventure Works.
-They may have bits of SQL here and there, but it can be hard to find and most
-of it is not reusable at all.
-Your boss is going to ask you for a series of reports.
-You will explore the database, create a query, and capture certain facts about
-this database into @(racket define-schema) so that it is easy for you and other
-programmer to find and reuse them.
-
-Each subsection will correspond to one task, a request from your boss. You will
+Your boss is going to assign you some tasks.
+For each task, you will
 @(itemlist
   #:style 'ordered
   @item{Create a query.}
@@ -134,8 +131,10 @@ This is fine. You can use the Recap to make sure you are in sync.
 @task{Task 1: Subcategories & Categories}
 @bossquote{I want to see a list of Subcategories with the Category that they belong to.}
 
-We need to write a query.
-The first step, as always, is to determine which table we need to query.
+@margin-note{Remember you can use @(racket (adventure-works-schema 'tables))
+ to list all the tables.}
+We need to create a query.
+The first step is to determine which table we need to query.
 The @(racket ProductSubcategory) table looks promising.
 Let's see what it contains:
 @(repl-query
@@ -144,10 +143,18 @@ Let's see what it contains:
          (limit 5))))
 
 This is a good start.
-Our boss didn't say exactly what columns he wants to see, but he did say
-to include "the Category". It looks like ProductCategoryID is a foreign key.
-Based on the name, we conclude that it points to the @(racket ProductCategory) table.
-It makes sense that a Subcategory would belong to a single Category.
+Your boss didn't say exactly which columns he wants to see, but he did say
+to include "the Category".
+It looks like ProductCategoryID is a foreign key.
+(Any column that ends in "ID" is probably a primary key or foreign key.)
+We can check if any other tables have a ProductCategoryID as follows:
+@(repl
+  (adventure-works-schema '(ProductCategoryID _)))
+
+Based on the names, we conclude that ProductCategoryID is the primary key
+of the ProductCategory table.
+And we conclude that each ProductSubcategory record points to a single
+ProductCategory record via the ProductCategoryID column.
 We need to add a join to our query:
 @(racketblock
   (from subcat ProductSubcategory
@@ -157,7 +164,7 @@ We need to add a join to our query:
                            (ProductCategoryID subcat))))))
 
 You can run that query, but it will produce the same result set.
-Even though we have added a join, this query does not contain any @(racket select)
+Even though we added a join, the query does not contain any @(racket select)
 clauses, so it just shows the primary table by default.
 (The primary table is @(racket ProductSubcategory) here.)
 Let's add some @(racket select) clauses to control which columns get displayed:
@@ -171,7 +178,13 @@ Let's add some @(racket select) clauses to control which columns get displayed:
          (select (Name subcat))
          (select (Name cat)))))
 
-That's better, but we can see that @(racket Name) is not a very good name.
+Now the query seems to be returning the correct data.
+We saw the "Mountain Bikes" subcategory earlier, but now we also see that it
+belongs to the "Bikes" category.
+One obvious problem is that both columns are shown as "Name".
+We will immediately fix that during refactoring.
+
+@subsubsub*section{Refactoring}
 Use the @(secref "ds:rename") recipe twice to create
 the following equivalent query:
 @(racketblock
@@ -722,3 +735,29 @@ Next use the @(secref "join->inline") recipe, and finally use the
 @(secref "scalar->schema") recipe to define
 @(racketblock
   (OrderDate SalesOrderDetail))
+
+@section[#:tag "schema-generation"]{
+ Appendix A: Generating the Initial Schema Definition}
+Extracting table and column information for use with @(racket define-schema)
+is currently an ad-hoc process.
+Plisqin may make this easier in the future.
+But it is already pretty easy if you are using SQL Server or PostgreSQL.
+
+@(define gen-schema-url
+   (string-append "https://github.com/default-kramer/plisqin/blob/master/"
+                  "plisqin-doc/scribblings/adventure-works-checkpoints/gen-schema.sql"))
+The AdventureWorks database is originally for SQL Server;
+Plisqin provides a port of this database to SQLite.
+So to generate the initial AdventureWorks schema, I ran
+@hyperlink[gen-schema-url]{this query} against the SQL Server original.
+This produces Racket code that just needs some simple text massaging.
+
+If you have no choice but to use SQLite, you would probably have to write
+a small program with some loops that uses "sqlite_master" and "pragma table_info".
+But the following queries show that the data is available:
+@(repl-query
+  (aw:show-table
+   "select type, name from sqlite_master where name like 'Business%'"))
+@(repl-query
+  (aw:show-table
+   "pragma table_info(BusinessEntity)"))

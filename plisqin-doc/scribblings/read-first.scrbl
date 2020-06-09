@@ -32,8 +32,14 @@ Also: @(itemlist
 As far as I know, my ideal query language has not yet been developed.
 Plisqin is a step in the right direction.
 
-@section{Show Me Some Code Already!}
-If you insist.
+@section{Installation}
+@(itemlist
+  #:style 'ordered
+  @item{Intall Racket. If you've never used Racket before, follow
+ @hyperlink["https://docs.racket-lang.org/quick/index.html"]{these instructions}
+ to install Racket and learn the basics}
+  @item{From your shell, run @racketplainfont{raco pkg install plisqin}}
+  @item{Using @racketplainfont{#lang racket}, verify that the following code works:})
 @(racketblock
   (require plisqin
            (prefix-in aw: plisqin-examples/adventure-works)
