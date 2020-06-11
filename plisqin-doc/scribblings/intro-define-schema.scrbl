@@ -8,10 +8,23 @@
           (for-syntax racket/base)
           (for-label "standard-label.rkt"))
 
-@(define-syntax-rule (bossquote stuff ...)
-   (tabular #:row-properties '(left right)
-            (list (list (italic stuff ...))
-                  (list @nested{-- your boss}))))
+@(begin
+   (define-syntax-rule (bossquote stuff ...)
+     (tabular #:row-properties '(left right)
+              (list (list (italic stuff ...))
+                    (list @nested{-- your boss}))))
+
+   (def-green-ids repl-query
+     [CATEGORYNAME           CategoryName]
+     [DETAILSG               DetailsG]
+     [HASSALES?              HasSales?]
+     [PRODUCT                Product]
+     [PRODUCTCATEGORY        ProductCategory]
+     [PRODUCTNAME            ProductName]
+     [PRODUCTSUBCATEGORY     ProductSubcategory]
+     [PRODUCTSUBCATEGORYID   ProductSubcategoryID]
+     [SUBCATEGORYNAME        SubcategoryName])
+   )
 
 
 @title[#:tag "using-define-schema"]{Using define-schema}
@@ -193,15 +206,15 @@ the following equivalent query:
         (join cat ProductCategory
               (join-on (.= (ProductCategoryID cat)
                            (ProductCategoryID subcat))))
-        (select (code:hilite (SubcategoryName subcat)))
-        (select (code:hilite (CategoryName cat)))))
+        (select (SUBCATEGORYNAME subcat))
+        (select (CATEGORYNAME cat))))
 
 That looks good. But we are not done refactoring.
 Use the @(secref "join1->schema") recipe to create the following equivalent query:
 @(racketblock
   (from subcat ProductSubcategory
         (limit 5)
-        (code:hilite (join cat (ProductCategory subcat)))
+        (join cat (PRODUCTCATEGORY subcat))
         (select (SubcategoryName subcat))
         (select (CategoryName cat))))
 
@@ -210,19 +223,19 @@ Use the @(secref "join->inline") recipe to create the following equivalent query
 @(racketblock
   (from subcat ProductSubcategory
         (limit 5)
-        (code:hilite (code:comment "the join has been moved inline"))
+        #,(code:strike (join cat (code:hilite (ProductCategory subcat))))
         (select (SubcategoryName subcat))
-        (select (code:hilite (CategoryName (ProductCategory subcat))))))
+        (select (CategoryName (code:hilite (ProductCategory subcat))))))
 
 But we are still not done refactoring.
-Use the @(secref "scalar->schema") recipe to create the following equivalent query:
+Use the @(secref "scalar-flattening") recipe to create the following equivalent query:
 @(load-checkpoint! "2.rkt")
 @(repl-query
   (aw:show-table
    (from subcat ProductSubcategory
          (limit 5)
          (select (SubcategoryName subcat))
-         (select (code:hilite (CategoryName subcat))))))
+         (select (CATEGORYNAME subcat)))))
 
 And now we are done!
 
@@ -309,7 +322,7 @@ Use the @(secref "join1->schema") recipe to create the following equivalent quer
 @(racketblock
   (from prd Product
         (limit 5)
-        (code:hilite (join subcat (ProductSubcategory prd)))
+        (join subcat (PRODUCTSUBCATEGORY prd))
         (select (Name prd))
         (select (ProductNumber prd))
         (select (SubcategoryName subcat))
@@ -319,20 +332,21 @@ Use the @(secref "join->inline") recipe to create the following equivalent query
 @(racketblock
   (from prd Product
         (limit 5)
-        (code:hilite (code:comment "the join has been moved inline"))
+        #,(code:strike (join subcat (code:hilite (ProductSubcategory prd))))
         (select (Name prd))
         (select (ProductNumber prd))
-        (select (code:hilite (SubcategoryName (ProductSubcategory prd))))
-        (select (code:hilite (CategoryName (ProductSubcategory prd))))))
+        (select (SubcategoryName (code:hilite (ProductSubcategory prd))))
+        (select (CategoryName (code:hilite (ProductSubcategory prd))))))
 
-Use the @(secref "scalar->schema") recipe twice to create the following equivalent query:
+Use the @(secref "scalar-flattening") recipe twice to create the following
+equivalent query:
 @(racketblock
   (from prd Product
         (limit 5)
         (select (Name prd))
         (select (ProductNumber prd))
-        (select (code:hilite (SubcategoryName prd)))
-        (select (code:hilite (CategoryName prd)))))
+        (select (SUBCATEGORYNAME prd))
+        (select (CATEGORYNAME prd))))
 
 Use the @(secref "ds:rename") recipe to create the following equivalent query:
 @(load-checkpoint! "3.rkt")
@@ -340,7 +354,7 @@ Use the @(secref "ds:rename") recipe to create the following equivalent query:
   (aw:show-table
    (from prd Product
          (limit 5)
-         (select (code:hilite (ProductName prd)))
+         (select (PRODUCTNAME prd))
          (select (ProductNumber prd))
          (select (SubcategoryName prd))
          (select (CategoryName prd)))))
@@ -401,7 +415,7 @@ Use the @(secref "scalar->schema") recipe to create the following equivalent que
          (select (ProductNumber prd))
          (select (SubcategoryName prd))
          (select (CategoryName prd))
-         (where (code:hilite (HasSales? prd))))))
+         (where (HASSALES? prd)))))
 
 And now we are done!
 
@@ -467,15 +481,16 @@ Use the @(secref "joinG->schema") recipe to create the following equivalent quer
          (limit 5)
          (select (ProductNumber prd))
          (select (SubcategoryName prd))
-         (join detailsG (code:hilite (DetailsG prd)))
+         (join detailsG (DETAILSG prd))
          (select (>> (round (sum (LineTotal detailsG)) 2)
                      #:as 'TotalSales))
          (select (>> (sum (OrderQty detailsG))
                      #:as 'TotalQtySold))
          (order-by 'desc (sum (LineTotal detailsG))))))
 
-You might want to go further with the refactoring and use the
-@(secref "scalar->schema") recipe to define @(racket (TotalSales Product))
+You might want to go further with the refactoring by using the
+@(secref "join->inline") recipe to move @(racket detailsG) inline, then using the
+@(secref "scalar-flattening") recipe to define @(racket (TotalSales Product))
 and @(racket (TotalQtySold Product)).
 This might be a good idea, and you are welcome to do so.
 But I am going to stop here for now.
@@ -519,7 +534,7 @@ Use the @(secref "join1->schema") recipe to create the following equivalent quer
         (select (SubcategoryName subcat))
         (select (CategoryName subcat))
         (join detailsG SalesOrderDetail
-              (code:hilite (join prd (Product detailsG)))
+              (join prd (PRODUCT detailsG))
               (group-by (ProductSubcategoryID prd))
               (join-on (.= (ProductSubcategoryID prd)
                            (ProductSubcategoryID subcat))))
@@ -536,9 +551,9 @@ Use the @(secref "join->inline") recipe to create the following equivalent query
         (select (SubcategoryName subcat))
         (select (CategoryName subcat))
         (join detailsG SalesOrderDetail
-              (code:hilite (code:comment "the join is moved inline"))
-              (group-by (code:hilite (ProductSubcategoryID (Product detailsG))))
-              (join-on (.= (code:hilite (ProductSubcategoryID (Product detailsG)))
+              #,(code:strike (join prd (code:hilite (Product detailsG))))
+              (group-by (ProductSubcategoryID (code:hilite (Product detailsG))))
+              (join-on (.= (ProductSubcategoryID (code:hilite (Product detailsG)))
                            (ProductSubcategoryID subcat))))
         (select (>> (round (sum (LineTotal detailsG)) 2)
                     #:as 'TotalSales))
@@ -546,15 +561,15 @@ Use the @(secref "join->inline") recipe to create the following equivalent query
                     #:as 'TotalQtySold))
         (order-by 'desc (sum (LineTotal detailsG)))))
 
-Use the @(secref "scalar->schema") recipe to create the following equivalent query:
+Use the @(secref "scalar-flattening") recipe to create the following equivalent query:
 @(racketblock
   (from subcat ProductSubcategory
         (limit 5)
         (select (SubcategoryName subcat))
         (select (CategoryName subcat))
         (join detailsG SalesOrderDetail
-              (group-by (code:hilite (ProductSubcategoryID detailsG)))
-              (join-on (.= (code:hilite (ProductSubcategoryID detailsG))
+              (group-by (PRODUCTSUBCATEGORYID detailsG))
+              (join-on (.= (PRODUCTSUBCATEGORYID detailsG)
                            (ProductSubcategoryID subcat))))
         (select (>> (round (sum (LineTotal detailsG)) 2)
                     #:as 'TotalSales))
@@ -570,7 +585,7 @@ Use the @(secref "joinG->schema") recipe to create the following equivalent quer
          (limit 5)
          (select (SubcategoryName subcat))
          (select (CategoryName subcat))
-         (join detailsG (code:hilite (DetailsG subcat)))
+         (join detailsG (DETAILSG subcat))
          (select (>> (round (sum (LineTotal detailsG)) 2)
                      #:as 'TotalSales))
          (select (>> (sum (OrderQty detailsG))
@@ -706,8 +721,9 @@ We could modify it to accept a time window of sales to consider as follows:
           (select (CategoryName subcat))))))
 
 @subsubsection[#:tag "ec3"]{Extra Credit}
-Apply the appropriate refactoring recipies so that @(racket sales-report)
-can be rewritten as follows:
+Apply the appropriate refactoring recipies so that @(racket OrderDate) is
+defined for @(racket SalesOrderDetail).
+This allows you to refactor @(racket sales-report) as follows:
 @(racketblock
   (define (sales-report some-query
                         #:start-date [start-date #f]
@@ -732,7 +748,7 @@ Hint: First use the @(secref "join1->schema") recipe to define
   (SalesOrderHeader SalesOrderDetail))
 
 Next use the @(secref "join->inline") recipe, and finally use the
-@(secref "scalar->schema") recipe to define
+@(secref "scalar-flattening") recipe to define
 @(racketblock
   (OrderDate SalesOrderDetail))
 
