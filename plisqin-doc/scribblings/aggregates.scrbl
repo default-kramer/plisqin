@@ -183,8 +183,10 @@ Each @(racket select) is fully legal here.
 This means that grouped join aggregation is usually easier to use if you
 are using a database that does not allow quasi-legal selects.
 
-Finally, notice how @tech{grouped join aggregation} is useful in our quest for
-@tech{relational nirvana} because it allows us to create a procedure like this:
+Finally, notice how @tech{grouped join aggregation} allows us to define an
+aggregate expression as a function of a single argument.
+The caller of this function sees @(racket MinListPrice) as just another
+property of the @(racket ProductCategory) table:
 @(racketblock
   (define/contract (MinListPrice cat)
     (-> (instanceof ProductCategory) Number?)

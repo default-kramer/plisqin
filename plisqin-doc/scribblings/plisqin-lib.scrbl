@@ -13,7 +13,7 @@
          #:grammar
          [(statement (define (proc-id proc-arg ...) proc-body ...)
                      (define val-id val-expr)
-                     (join join-stuff ...)
+                     (join join-id join-stuff ...)
                      clause-expr)]
          #:contracts ([queryable-expr (or/c symbol?
                                             query?
@@ -21,7 +21,69 @@
                                             trusted-queryable?)]
                       [clause-expr (or/c void? QueryClause?
                                          (listof (or/c void? QueryClause?)))])]{
- TODO
+ Creates a @(racket query?).
+ A query consists of a queryable, a list of joins, and a list of clauses.
+
+ The queryable identifies the thing that is being queried -- usually a database
+ table or view, sometimes a subquery, @bold{never} a @(racket query?).
+ When @(racket queryable-expr) is not a @(racket query?), the value of
+ @(racket queryable-expr) becomes this query's queryable.
+ When @(racket queryable-expr) is a @(racket query?), this query inherits
+ its queryable from the existing query.
+ It also inherits that query's list of joins and list of clauses; an example
+ of this will come later.
+
+ The @(racket instance-id) is bound as an @(racket instance?) within each
+ @(racket statement). More specifically, it is bound as an
+ @(racket instanceof) the queryable.
+
+ The @(racket define) subforms bind @(racket proc-id) or @(racket val-id)
+ within each @(racket statement) that follows the definition.
+
+ The @(racket join) subform binds @(racket join-id) as an @(racket instance?)
+ within each @(racket statement) that follows the join.
+ It also immediately adds the join to this query, guaranteeing that the join
+ will appear in the generated SQL even if the @(racket join-id) is never used
+ anywhere else.
+
+ A @(racket clause-expr) that is @(racket void?) is discarded.
+
+ A @(racket clause-expr) that is a @(racket list?) is handled the same as if
+ each item were an individual @(racket clause-expr).
+ That is, the following queries are equal:
+ @(repl
+   (define q1
+     (from x 'X
+           (%%select x".one")
+           (%%select x".two")))
+   (define q2
+     (from x 'X
+           (list (%%select x".one")
+                 (void)
+                 (%%select x".two"))))
+   (eval:check (equal? q1 q2) #t))
+
+ See also the documentation on @(racket QueryClause?).
+
+ @subsubsub*section{Appendable Queries}
+ When @(racket queryable-expr) is a @(racket query?), this query inherits
+ the queryable, list of joins, and list of clauses from the existing query.
+ Further joins and clauses are appended to these lists.
+ The following example demonstrates appending:
+ @(repl
+   (define total
+     (from x 'X
+           (join y 'Y)
+           (%%select x".one")
+           (%%select y".two")))
+   (define first-half
+     (from x 'X
+           (%%select x".one")))
+   (define both-halves
+     (from x first-half
+           (join y 'Y)
+           (%%select y".two")))
+   (eval:check (equal? total both-halves) #t))
 }
 
 @defform[#:literals (define join)
@@ -101,11 +163,11 @@
  "where the Age of @italic{the Person} is at least 21":
  @(racketblock
    (from p Person
+         (code:comment "Now `p` is an `instance?` and an `(instanceof Person)`")
          (where (>= (Age p)
                     (val 21)))))
 
- Additionally, every @(racket join?) is also an instance!
- TODO link to a refactoring recipe that demonstrates why this is awesome.
+ Additionally, every @(racket join?) is also an instance.
 }
 
 @defproc[(instanceof [queryable any/c]) procedure?]{
@@ -622,9 +684,22 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
 }
 @deftype[JoinClause?]{
  The supertype of all clauses that can be used inside @(racket join).
+ When used as a contract, it is equivalent to
+ @(racket (or/c QueryClause? JoinOn?)).
 }
 @deftype[QueryClause?]{
  The supertype of all clauses that can be used inside @(racket from).
+ @(repl
+   (eval:check (andmap QueryClause?
+                       (list (%%where 1)
+                             (%%group-by 1)
+                             (%%having 1)
+                             (%%order-by 1)
+                             (%%select 1)
+                             (limit 1)
+                             (offset 1)
+                             (distinct #t)))
+               #t))
 }
 @(define-syntax-rule (def-clauses [id ctor] ...)
    (begin
