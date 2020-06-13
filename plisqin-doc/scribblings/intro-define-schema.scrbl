@@ -24,6 +24,14 @@
      [PRODUCTSUBCATEGORY     ProductSubcategory]
      [PRODUCTSUBCATEGORYID   ProductSubcategoryID]
      [SUBCATEGORYNAME        SubcategoryName])
+
+   (define-syntax-rule (recap x ...)
+     @nested{
+ @subsubsub*section{Refactoring Recap}
+ While refactoring our query, we made the following enhancements to our schema.
+ You can try the following on your REPL and verify that no error is raised.
+ @(repl #:no-result x ...)
+ })
    )
 
 
@@ -239,18 +247,16 @@ Use the @(secref "scalar-flattening") recipe to create the following equivalent 
 
 And now we are done!
 
-@subsubsub*section{Refactoring Recap}
-While refactoring our query, we made the following enhancements to our schema.
-@(racketblock
-  (SubcategoryName ProductSubcategory)
-  (CategoryName ProductCategory)
-  (ProductCategory ProductSubcategory)
-  (CategoryName ProductSubcategory))
+@(recap (SubcategoryName ProductSubcategory)
+        (CategoryName ProductCategory)
+        (ProductCategory ProductSubcategory)
+        (CategoryName ProductSubcategory))
 
 @task{Task 2: Products & Subcategories & Categories}
 @bossquote{Show me a list of Products with Subcategory and Category names.}
 
-The first task, as always, is to determine which table we need to query.
+We need to create a query.
+The first step is to determine the table we need to query.
 The @(racket Product) table looks promising.
 Let's see what it contains:
 @(repl-query
@@ -258,9 +264,11 @@ Let's see what it contains:
    (from prd Product
          (limit 5))))
 
-OK, it looks like there is a join from Product to ProductSubcategory using the
-ProductSubcategoryID column. But at least some of the records have a null value.
-So this should be a left join to avoid eliminating Products from the result set:
+It looks like ProductSubcategoryID is a foreign key to the ProductSubcategory table.
+But at least some of the records have dbnull for their ProductSubcategoryID.
+This means that not every Product belongs to a ProductSubcategory.
+We create a join and use @(racket (join-type 'left)) to avoid eliminating
+these Products from the result set:
 @(racketblock
   (from prd Product
         (limit 5)
@@ -269,7 +277,7 @@ So this should be a left join to avoid eliminating Products from the result set:
               (join-on (.= (ProductSubcategoryID subcat)
                            (ProductSubcategoryID prd))))))
 
-And now let's add some select clauses:
+Now we need to add some select clauses:
 @margin-note{The code @(racket (?? expr /void)) says that "if expr is null, it
  should not be considered equal to anything."
  You can read more about this at @(secref "Nullability").}
@@ -317,7 +325,8 @@ That investment pays off now, because our current query has an instance of
          (select (CategoryName subcat)))))
 
 This query looks good!
-That means it's refactoring time.
+
+@subsubsub*section{Refactoring}
 Use the @(secref "join1->schema") recipe to create the following equivalent query:
 @(racketblock
   (from prd Product
@@ -361,14 +370,10 @@ Use the @(secref "ds:rename") recipe to create the following equivalent query:
 
 And now we are done!
 
-@subsubsub*section{Refactoring Recap}
-While refactoring our query, we made the following enhancements to our schema.
-You can try the following on your REPL and verify that no error is raised.
-@(repl
-  (void (list (ProductSubcategory Product)
-              (SubcategoryName Product)
-              (CategoryName Product)
-              (ProductName Product))))
+@(recap (ProductSubcategory Product)
+        (SubcategoryName Product)
+        (CategoryName Product)
+        (ProductName Product))
 
 @task{Task 3: Products with Non-Zero Sales}
 @bossquote{Show me a list of Products that have non-zero sales,
@@ -404,7 +409,8 @@ With that in mind, we can write this query:
                                          (ProductID prd)))))))))
 
 This query looks good!
-It's time to refactor.
+
+@subsubsub*section{Refactoring}
 Use the @(secref "scalar->schema") recipe to create the following equivalent query:
 @(load-checkpoint! "4.rkt")
 @(repl-query
@@ -419,10 +425,7 @@ Use the @(secref "scalar->schema") recipe to create the following equivalent que
 
 And now we are done!
 
-@subsubsub*section{Refactoring Recap}
-While refactoring our query, we made the following enhancements to our schema.
-@(racketblock
-  (HasSales? Product))
+@(recap (HasSales? Product))
 
 Notice the encapsulation that @(racket (HasSales? Product)) provides.
 Today it is implemented using @(racket exists), but in the future we might
@@ -439,6 +442,16 @@ simple column access would require updating all the call sites.
  Sort by total revenue. Include total quantity sold and subcategory.})
 @task4-quote
 
+So far, each query prior to refactoring has been similar to how you would
+write the query using plain SQL.
+This time, the initial query will use @tech{grouped join aggregation},
+a technique that is unlike anything in SQL.
+You don't need to understand this right now in order to perform the refactoring,
+but if you are curious, the @(secref "Aggregates") section should be next on
+your reading list.
+
+We need to create a query.
+The first step is to determine the table we need to query.
 This query will be of the Product table.
 But in order to get "total revenue" and "total quantity sold", we will need
 to use some aggregations.
@@ -472,7 +485,9 @@ over it to solve this task.
                      #:as 'TotalQtySold))
          (order-by 'desc (sum (LineTotal detailsG))))))
 
-Now it is time to refactor.
+This query looks good!
+
+@subsubsub*section{Refactoring}
 Use the @(secref "joinG->schema") recipe to create the following equivalent query:
 @(load-checkpoint! "5.rkt")
 @(repl-query
@@ -490,15 +505,12 @@ Use the @(secref "joinG->schema") recipe to create the following equivalent quer
 
 You might want to go further with the refactoring by using the
 @(secref "join->inline") recipe to move @(racket detailsG) inline, then using the
-@(secref "scalar-flattening") recipe to define @(racket (TotalSales Product))
+@(secref "scalar->schema") recipe to define @(racket (TotalSales Product))
 and @(racket (TotalQtySold Product)).
 This might be a good idea, and you are welcome to do so.
 But I am going to stop here for now.
 
-@subsubsub*section{Refactoring Recap}
-While refactoring our query, we made the following enhancements to our schema.
-@(racketblock
-  (DetailsG Product))
+@(recap (DetailsG Product))
 
 @task{Task 5: Sales by Subcategory}
 @(define task5-quote
@@ -506,7 +518,15 @@ While refactoring our query, we made the following enhancements to our schema.
  Sort by total revenue. Include total quantity sold and category name.})
 @task5-quote
 
-Initial revision
+This task is very similar to the previous task.
+We need to create a query.
+This query will be of the ProductSubcategory table.
+In order to get "total revenue" and "total quantity sold", we will use
+@tech{grouped join aggregation} over the SalesOrderDetail table just as we
+did in the previous task.
+Again, you don't need to fully understand grouped join aggregation at this time.
+You can take the initial query on faith; just make sure that the refactoring
+makes sense to you.
 @(repl-query
   (aw:show-table
    (from subcat ProductSubcategory
@@ -527,6 +547,9 @@ Initial revision
                      #:as 'TotalQtySold))
          (order-by 'desc (sum (LineTotal detailsG))))))
 
+This query looks good!
+
+@subsubsub*section{Refactoring}
 Use the @(secref "join1->schema") recipe to create the following equivalent query:
 @(racketblock
   (from subcat ProductSubcategory
@@ -534,9 +557,10 @@ Use the @(secref "join1->schema") recipe to create the following equivalent quer
         (select (SubcategoryName subcat))
         (select (CategoryName subcat))
         (join detailsG SalesOrderDetail
+              (join-type 'left)
               (join prd (PRODUCT detailsG))
               (group-by (ProductSubcategoryID prd))
-              (join-on (.= (ProductSubcategoryID prd)
+              (join-on (.= (?? (ProductSubcategoryID prd) /void)
                            (ProductSubcategoryID subcat))))
         (select (>> (round (sum (LineTotal detailsG)) 2)
                     #:as 'TotalSales))
@@ -551,9 +575,10 @@ Use the @(secref "join->inline") recipe to create the following equivalent query
         (select (SubcategoryName subcat))
         (select (CategoryName subcat))
         (join detailsG SalesOrderDetail
+              (join-type 'left)
               #,(code:strike (join prd (code:hilite (Product detailsG))))
               (group-by (ProductSubcategoryID (code:hilite (Product detailsG))))
-              (join-on (.= (ProductSubcategoryID (code:hilite (Product detailsG)))
+              (join-on (.= (?? (ProductSubcategoryID (code:hilite (Product detailsG))) /void)
                            (ProductSubcategoryID subcat))))
         (select (>> (round (sum (LineTotal detailsG)) 2)
                     #:as 'TotalSales))
@@ -568,8 +593,9 @@ Use the @(secref "scalar-flattening") recipe to create the following equivalent 
         (select (SubcategoryName subcat))
         (select (CategoryName subcat))
         (join detailsG SalesOrderDetail
+              (join-type 'left)
               (group-by (PRODUCTSUBCATEGORYID detailsG))
-              (join-on (.= (PRODUCTSUBCATEGORYID detailsG)
+              (join-on (.= (?? (PRODUCTSUBCATEGORYID detailsG) /void)
                            (ProductSubcategoryID subcat))))
         (select (>> (round (sum (LineTotal detailsG)) 2)
                     #:as 'TotalSales))
@@ -598,12 +624,9 @@ like @(racket (TotalSales ProductSubcategory)) and
 This might be a good idea, and you are welcome to do so.
 But I am going to stop here for now.
 
-@subsubsub*section{Refactoring Recap}
-While refactoring our query, we made the following enhancements to our schema.
-@(racketblock
-  (Product SalesOrderDetail)
-  (ProductSubcategoryID SalesOrderDetail)
-  (DetailsG ProductSubcategory))
+@(recap (Product SalesOrderDetail)
+        (ProductSubcategoryID SalesOrderDetail)
+        (DetailsG ProductSubcategory))
 
 @task{Task 6: Sales by Anything}
 Let's look at the previous two tasks.
@@ -641,14 +664,36 @@ Let's look at where we left the previous two tasks:
 
 Notice that the last few clauses of both queries are identical.
 We could easily remove this duplication using a macro, but we can also use a regular
-procedure if we recognize that queries are appendable [TODO link here?].
-We will make a procedure @(racket sales-report) which accepts a query and appends some
-more clauses to the end of it:
+procedure if we recognize that queries are appendable.
+By "appendable" I mean that a query has a list of clauses, and you can easily
+add more clauses to an existing query.
+The following example demonstrates this.
+@(repl
+  (define original
+    (from p Product
+          (select (ProductNumber p))
+          (select (ProductName p))
+          (select (SubcategoryName p))
+          (select (CategoryName p))))
+  (define first-half
+    (from p Product
+          (select (ProductNumber p))
+          (select (ProductName p))))
+  (define both-halves
+    (code:comment "This appends two more clauses to `first-half`")
+    (from x first-half
+          (select (SubcategoryName x))
+          (select (CategoryName x))))
+  (eval:check (equal? original both-halves) #t))
+
+With this pattern in mind, we can make a procedure @(racket sales-report) which
+accepts a query and appends some clauses to it.
+We will append the clauses that were common to the two previous tasks:
 @(examples
   #:eval my-eval
   #:no-result
-  (define (sales-report some-query)
-    (from x some-query
+  (define (sales-report first-half)
+    (from x first-half
           (limit 5)
           (join detailsG (DetailsG x))
           (select (>> (round (sum (LineTotal detailsG)) 2)
@@ -657,7 +702,8 @@ more clauses to the end of it:
                       #:as 'TotalQtySold))
           (order-by 'desc (sum (LineTotal detailsG))))))
 
-Now we can use this procedure to reimplement the Sales by Product report:
+Now we can use this procedure to reimplement the Sales by Product report.
+We just have to pass in the @(racket first-half) as follows:
 @(repl-query
   (aw:show-table
    (sales-report (from prd Product
@@ -673,15 +719,11 @@ We can do the same thing for the Sales by Subcategory report:
 
 Interesting! The @(racket sales-report) procedure accepts a query of any table
 for which @(racket DetailsG) is defined!
-It appends some more clauses and returns the result.
+It appends some more clauses to create a larger query.
 
 @subsubsection[#:tag "ec1"]{Extra Credit}
 Extra Credit: Extend the definition of DetailsG so that it is defined for Category, SalesPerson, and Territory.
-Try plugging those tables into the generalized sales report.
-
-@subsubsection[#:tag "ec2"]{Extra Credit}
-Extra Credit: Instead of using appendable queries, implement the generalized sales report
-as a procedure that returns a list of the relevant clauses.
+Try using @(racket sales-report) with these tables.
 
 @task{Task 7: Sales by Anything with Date Range}
 What else could we do with the @(racket sales-report)?
@@ -690,12 +732,15 @@ We could modify it to accept a time window of sales to consider as follows:
 @(examples
   #:eval my-eval
   #:no-result
-  (define (sales-report some-query
+  (define (sales-report first-half
                         #:start-date [start-date #f]
                         #:end-date [end-date #f])
-    (from x some-query
+    (from x first-half
           (limit 5)
           (join detailsG (DetailsG x)
+                (code:comment "Like queries, joins are also appendable.")
+                (code:comment "The following clauses are appended to the join")
+                (code:comment "that (DetailsG x) returned:")
                 (join soh SalesOrderHeader
                       (join-on (.= (SalesOrderID soh)
                                    (SalesOrderID detailsG))))
