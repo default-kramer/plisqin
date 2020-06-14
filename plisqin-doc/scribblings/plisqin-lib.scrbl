@@ -40,7 +40,7 @@
  The @(racket define) subforms bind @(racket proc-id) or @(racket val-id)
  within each @(racket statement) that follows the definition.
 
- The @(racket join) subform binds @(racket join-id) as an @(racket instance?)
+ The @(racket join) subform binds @(racket join-id) as a @(racket join?)
  within each @(racket statement) that follows the join.
  It also immediately adds the join to this query, guaranteeing that the join
  will appear in the generated SQL even if the @(racket join-id) is never used
@@ -226,7 +226,67 @@
 }
 
 @defproc[(join-type [type (or/c #f 'inner 'left)]) JoinType?]{
- TODO
+ A clause that can be used in a join to specify what should happen if the
+ join does not find any matching records.
+ An @(racket 'inner) join will filter out any rows for which this join
+ did not match.
+ A @(racket 'left) join will not filter any rows from the result set,
+ but any attempts to access a column via this join will produce dbnull.
+
+ If a join has multiple @(racket join-type) clauses, the last one overrides
+ all the previous ones.
+
+ @subsubsub*section{Left Join Propogation}
+ The default @(racket join-type) is @(racket #f), which means that
+ left joins should be propogated.
+ That is, this join may be considered a left join if any of its
+ @(racket join-on) clauses contain a join that is considered left.
+ Otherwise this join will be considered an inner join.
+
+ This is necessary because an @(racket instance?) might be a left join.
+ The following procedure accepts @(racket subcat) which must be an
+ @(racket (instanceof ProductSubcategory)).
+ When @(racket subcat) is a left join (or when it is considered a left join),
+ the returned join will also be considered left.
+ Otherwise the returned join will be considered inner.
+ @(racketblock
+   (define/contract (get-category subcat)
+     (-> (instanceof ProductSubcategory)
+         (and/c join?
+                (instanceof ProductCategory)))
+     (join pc ProductCategory #:to subcat
+           (join-on (.= (ProductCategoryID pc)
+                        (?? (ProductCategoryID subcat) /void)))))
+   (from p Product
+         (code:comment "The Product:ProductSubcategory relationship is inherently optional.")
+         (code:comment "That is, some Products truly do not have Subcategories.")
+         (join subcat ProductSubcategory
+               (join-type 'left)
+               (join-on (.= (ProductSubcategoryID subcat)
+                            (?? (ProductSubcategoryID p) /void))))
+         (code:comment "The ProductSubcategory:ProductCategory relationship is not")
+         (code:comment "inherently optional, but the left-ness of `subcat` propogates")
+         (code:comment "to the return value of (get-category subcat)")
+         (join cat (get-category subcat))
+         ....))
+
+ @subsubsub*section{Best Practices}
+ @bold{Reusable joins (those that are returned by procedures) should never
+  remove rows from the result set.}
+ Otherwise the call site of the reusable join might accidentally remove rows
+ without intending to.
+ Accidentally removing rows from the result set is a more difficult mistake to
+ notice than the alternative, which is having some dbnulls propogate to the
+ final result set (if the @tech{strict} nullchecking doesn't catch it first.)
+
+ @bold{Reusable joins should never use the @(racket 'inner) join type,}
+ even when they represent a non-optional relationship.
+ In the previous example, @(racket get-subcategory) represents the
+ ProductSubcategory:ProductCategory relationship which is not optional;
+ specifically, every ProductSubcategory has exactly 1 ProductCategory.
+ But @(racket get-subcategory) still uses the the default join type
+ of @(racket #f) instead of @(racket 'inner), because its @(racket subcat)
+ argument might be a left join.
 }
 
 @defform[#:literals(table)
@@ -270,7 +330,32 @@
           [nullability nullability?]
           [/fallback fallback?])]{
  Returns a copy of the given @(racket token) with the specified modifications.
- TODO needs more detail.
+
+ The @(racket #:cast) option assigns a new type:
+ @(repl
+   (Bool? (>> (%%sql "foo = bar") #:cast Bool?)))
+
+ The @(racket #:as) option assigns a new "as-name", which is recognized by
+ @(racket select) and specifies how the column of the result set should be named.
+ @(repl-query
+   (aw:show-table
+    (from p Product
+          (limit 1)
+          (select (>> (val "Hello!") #:as 'Greeting)))))
+
+ Future versions of Plisqin may introduce "as-name propogation" in which
+ certain token constructions preserve the as-name of a child token.
+ For example, @(racket (coalesce foo (val 0))) might inherit the as-name
+ of @(racket foo).
+
+ The @(racket #:null) option assigns a new @tech{nullability}.
+ @(repl
+   (let ([raw (%%sql "foo")])
+     (list (nullability raw)
+           (nullability (>> raw #:null no)))))
+
+ The @(racket #:fallback) option assigns a new @tech{fallback}.
+ It is more common to use @(racket ??) to assign fallbacks.
 }
 
 @defform[(define-statement (id arg ...) body ...+)
@@ -685,7 +770,7 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
 @deftype[JoinClause?]{
  The supertype of all clauses that can be used inside @(racket join).
  When used as a contract, it is equivalent to
- @(racket (or/c QueryClause? JoinOn?)).
+ @(racket (or/c QueryClause? JoinOn? JoinType?)).
 }
 @deftype[QueryClause?]{
  The supertype of all clauses that can be used inside @(racket from).
