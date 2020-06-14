@@ -9,17 +9,29 @@
          "./private2/_types.rkt"
          "./private2/_null.rkt")
 
-; TODO revisit this. Should support Bit? and Datetime? somehow.
-(define/contract (val x)
-  (-> (or/c number? string?) Scalar?)
-  (cond
-    [(number? x)
-     (>> (scalar x) #:cast Number? #:null no)]
-    [(string? x)
-     ; TODO do \r and \n need to be escaped also?
-     ; Also, we should probably do escaping during reduction
-     (let* ([x (string-replace x "'" "''")]
-            [x (format "'~a'" x)])
-       (>> (scalar x) #:cast String? #:null no))]
-    [else
-     (error "assert fail")]))
+(define/contract (val x [given-type #f])
+  (->* [(or/c boolean? number? string?)]
+       [(or/c #f type?)]
+       Scalar?)
+  (define type
+    (or given-type
+        (cond
+          [(boolean? x) Bool?]
+          [(number? x) Number?]
+          [(string? x) String?]
+          [else (error "assert fail")])))
+  (define frag
+    (cond
+      [(boolean? x)
+       (if x
+           (sql "(1=1)")
+           (sql "(1=0)"))]
+      [(number? x)
+       (scalar x)]
+      [(string? x)
+       (let* ([x (string-replace x "'" "''")]
+              [x (format "'~a'" x)])
+         (scalar x))]
+      [else
+       (error "assert fail")]))
+  (>> frag #:cast type #:null no))

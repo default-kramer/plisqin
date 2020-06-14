@@ -759,8 +759,8 @@ We could modify it to accept a time window of sales to consider as follows:
 @(repl-query
   (aw:show-table
    (sales-report
-    #:start-date (>> (val "2012-01-01") #:cast Datetime?)
-    #:end-date (>> (val "2013-01-01") #:cast Datetime?)
+    #:start-date (val "2012-01-01" Datetime?)
+    #:end-date (val "2013-01-01" Datetime?)
     (from subcat ProductSubcategory
           (select (SubcategoryName subcat))
           (select (CategoryName subcat))))))

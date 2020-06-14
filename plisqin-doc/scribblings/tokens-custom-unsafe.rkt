@@ -63,10 +63,20 @@
  Constructs an arbitrary fragment of SQL with no special behavior.})
 
    (define (doc-val)
-     @defproc*[([(val [x string?]) String?]
-                [(val [x number?]) Number?])]{
+     @defproc[(val [x (or/c number? string? boolean?)]
+                   [type (or/c #f type?) #f])
+              Token?]{
  Converts a Racket value into a @(racket Token?).
  The token's @tech{nullability} is always @(racket no).
+ If @(racket type) is @(racket #f), it is inferred as follows:
+ @(repl
+   (eval:check (Number? (%%val 42)) #t)
+   (eval:check (String? (%%val "hello world")) #t)
+   (eval:check (Bool? (%%val #t)) #t))
+
+ If @(racket type) is not @(racket #f), the return value will be cast to it:
+ @(repl
+   (eval:check (Datetime? (%%val "1999-12-31" Datetime?)) #t))
  })
    (define (doc-??)
      @defform[#:kind "procedure" (?? token-1 [token-N ...+] [/fallback])

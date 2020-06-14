@@ -9,13 +9,14 @@
 
 (define-syntax (val stx)
   (syntax-case stx ()
-    [(name x)
+    [(name x more ...)
      (let ([c (syntax-e #'x)])
        (cond
          [(or (string? c)
+              (boolean? c)
               (number? c))
           (syntax/loc stx
-            (%%val x))]
+            (%%val x more ...))]
          [else
           (syntax/loc stx
-            (raise-argument-error 'name "a literal (string or numeric)" x))]))]))
+            (raise-argument-error 'name "a literal (string, numeric, or boolean)" x))]))]))
