@@ -1,6 +1,8 @@
 #lang racket
 
-(provide to-table)
+(provide to-table
+         PStrike PGreen
+         )
 
 (require db
          scribble/manual
@@ -83,3 +85,10 @@
          #:column-properties (map cdr col-info)
          (list* (map car col-info)
                 (get-rows result)))))))))
+
+
+; These are not related to to-table, but it's convenient to put them here
+(define PStrike
+  (make-style "PStrike" P-props))
+(define PGreen
+  (make-style "PGreen" P-props))

@@ -63,7 +63,7 @@
       ; Test that (frag-id "foo") is `maybe` nullable.
       ; Also test annotation and inference.
       ; Skip some that have special handling.
-      (when (r:not (member 'frag-id '(exists coalesce is is-not)))
+      (when (r:not (member 'frag-id '(subquery exists coalesce is is-not)))
         (let* ([default (frag-id "foo")]
                [annotated (>> default #:null no)]
                [inferred (frag-id annotated)])

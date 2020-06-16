@@ -1,14 +1,28 @@
 #lang scribble/manual
 
 @(begin
-   (require (for-label "standard-label.rkt"))
+   (require (for-label "standard-label.rkt")
+            "helpers.rkt")
    (define-syntax-rule (recipe stuff ...)
      (subsection stuff ...))
+   (def-green-ids repl-query
+     [TEAM Team]
+     [CURRENTTEAM CurrentTeam]
+     [TEAMNAME TeamName]
+     [PLAYERSG PlayersG]
+     [SHOOTINGPERCENTAGE ShootingPercentage])
    )
 
 @(define stuff (italic (racket stuff ...)))
 
 @title{Refactoring Recipes}
+This section is not meant to be read straight through,
+unless you are very studious.
+
+A green identifier like @(racket TEAM) indicates something that is being
+added to @(racket define-schema).
+A red highlight like @(racket (code:hilite (foo (bar x)))) is used to help you
+follow a piece of code as it gets relocated, possibly with small adjustments.
 
 @section{Elemental Recipes}
 @recipe[#:tag "join->ex"]{Join -> Expression}
@@ -18,15 +32,15 @@ be relocated in future refactorings.
   (code:comment "original version:")
   (from x TableX
         ....
-        (join y TableY
-              ....)
+        (code:hilite (join y TableY
+                           ....))
         ....)
   (code:comment "refactored version:")
   (from x TableX
         ....
         (define y
-          (join y TableY #:to x
-                ....))
+          (code:hilite (join y TableY #:to x
+                             ....)))
         ....))
 
 The refactored code is bigger! Is this a step in the wrong direction?
@@ -42,63 +56,58 @@ In this recipe, we extract any expression into a procedure.
 Unless you are brand new to Racket, you have done this before.
 @(racketblock
   (code:comment "original version:")
-  (from p 'Player
-        (select (ShotsTaken p))
-        (select (ShotsMade p))
-        (select (>> (code:hilite (./ (ShotsMade p)
-                                     (ShotsTaken p)))
-                    #:as 'ShootingPercentage))
-        (order-by (code:hilite (./ (ShotsMade p)
-                                   (ShotsTaken p)))))
+  (from x TableX
+        ....
+        (select (code:hilite (foo (bar x)
+                                  (baz x))))
+        ....)
   (code:comment "refactored version:")
-  (define (ShootingPercentage p)
-    (./ (ShotsMade p)
-        (ShotsTaken p)))
-  (from p 'Player
-        (select (ShotsTaken p))
-        (select (ShotsMade p))
-        (select (>> (code:hilite (ShootingPercentage p))
-                    #:as 'ShootingPercentage))
-        (order-by (code:hilite (ShootingPercentage p)))))
+  (define (NEW-PROC x)
+    (code:hilite (foo (bar x)
+                      (baz x))))
+  (from x TableX
+        ....
+        (select (NEW-PROC x))
+        ....))
 
-Assuming that @(racket (ShotsTaken p)) and @(racket (ShotsMade p)) both
-return @(racket Number?)s, we could add the following contract:
+If we assume that @(racket foo) returns a @(racket Number?), you can add
+a contract to @(racket NEW-PROC) as follows:
 @(racketblock
-  (define/contract (ShootingPercentage p)
-    (-> (instanceof 'Player) Number?)
-    (./ (ShotsMade p)
-        (ShotsTaken p))))
+  (define/contract (NEW-PROC x)
+    (-> (instanceof TableX) Number?)
+    (code:hilite (foo (bar x)
+                      (baz x)))))
 
 Here is one more example. This time the expression is a join.
 Remember that you might have to use the @(secref "join->ex") recipe first if
 your join does not have the @(racket #:to) argument specified.
 @(racketblock
   (code:comment "original version:")
-  (from player 'Player
+  (from x TableX
         ....
-        (define team
-          (join team 'Team #:to player
-                (join-on (.= (TeamID team)
-                             (TeamID player)))))
+        (define y
+          (code:hilite (join y TableY #:to x
+                             (join-on (.= (YID y)
+                                          (YID x))))))
         ....)
   (code:comment "refactored version:")
-  (define/contract (Team-of-Player p)
-    (-> (instanceof 'Player) (instanceof 'Team))
-    (join team 'Team #:to player
-          (join-on (.= (TeamID team)
-                       (TeamID p)))))
-  (from player 'Player
+  (define/contract (Y-given-X x)
+    (-> (instanceof TableX) (instanceof TableY))
+    (code:hilite (join y TableY #:to x
+                       (join-on (.= (YID y)
+                                    (YID x))))))
+  (from x TableX
         ....
-        (define t (Team-of-Player player))
+        (define y (Y-given-X x))
         ....))
 
 @recipe[#:tag "proc->schema"]{Procedure -> define-schema}
 If you are using @(racket define-schema) and you have a procedure like this
 @(racketblock
-  (define/contract (NAME-ME x)
+  (define/contract (NEW-PROC x)
     (-> (instanceof TableX) any/c)
-    (any-expression x
-                    ....)))
+    (code:hilite (foo (bar x)
+                      (baz x)))))
 
 It is a candidate for being moved into @(racket define-schema) assuming that:
 @(itemlist
@@ -117,37 +126,56 @@ procedure returns. Choose from:
   @item{@(racket #:has-one) if the return value is a singular simple join.
  "Singular" means that adding the join to a query of TableX will not increase
  the number of rows that will be returned in the result set.
- "Simple" means that all of the join's clauses are @(racket join-on) clauses.})
+ "Simple" means that each of the join's clauses is either a
+ @(racket join-on) or @(racket join-type) clause.})
 
-If you were unable to choose a keyword, then @(racket NAME-ME) probably does not
+If you were unable to choose a keyword, then @(racket NEW-PROC) probably does not
 belong inside @(racket define-schema), but you can keep it as a separate procedure.
-Let's just pretend that @(racket (any-expression x ....)) is a @(racket Scalar?),
-so we choose the @(racket #:property) keyword.
-We add that expression into @(racket define-schema) as follows.
-Note that we replace @(racket x), the single argument, with @(racket this).
+Let's just pretend that @(racket (code:hilite (foo ....))) returns a
+@(racket Scalar?), so we choose the @(racket #:property) keyword.
+We add that expression into @(racket define-schema) and replace the single
+argument (which was @(racket x)) with @(racket this) as follows:
 @(racketblock
   (define-schema my-schema
     ....
     (table TableX
            ....
            #:property
-           [NAME-ME
-            (any-expression this
-                            ....)]
+           [NEW-PROC
+            (code:hilite (foo (bar this)
+                              (baz this)))]
            ....)
     ....))
 
-Finally, if the expression was actually a join, you will have something like
-the following code. You can omit the @(racket #:to this) if you want, because
+Finally, if @(racket (code:hilite (foo ....))) was actually a join, you will
+have something like the following code.
+You can omit the @(racket #:to this) if you want, because
 @(racket define-schema) will automatically add it for you.
 @(racketblock
-  [NAME-ME
-   (join y TableY #:to this
-         clauses ....)])
+  [NEW-PROC
+   (code:hilite (join y TableY #:to this
+                      clauses ....))])
 
-@subsubsection{Left Joins}
-TODO explain why you probably want to make sure that nothing in
-@(racket define-schema) can eliminate rows from the result set.
+@subsubsub*section{A Note on Left Joins}
+I recommend that every join you add to @(racket define-schema) should never
+remove rows from the result set.
+For example, perhaps a Player @(racket #:has-one) Team, but this relationship
+is optional (that is, a Player might have no current Team).
+In this case, the join should have @(racket (join-type 'left)) so that callers
+who use this join do not accidentally filter out Players who have no current Team.
+If a caller really wants to convert a @(racket 'left) join into an
+@(racket 'inner) join, they can do so as follows:
+@(racketblock
+  (from p Player
+        (code:comment "(Team p) returns a 'left join ...")
+        (join t (Team p)
+              (code:comment "... but we can override that here:")
+              (join-type 'inner))
+        ....))
+
+Note that almost every @(racket #:has-group) relationship should be a left
+join, because a group containing zero members is considered a failed join
+and will result in rows being filtered from the result set.
 
 @recipe[#:tag "join<->define"]{Join <-> Define}
 This recipe allows you to convert a join to a definition and back.
@@ -179,232 +207,364 @@ These recipes use one or more of the Elemental Recipes.
 
 @recipe[#:tag "join1->schema"]{Singular Join -> Schema Definition}
 This recipe moves a singular join into @(racket define-schema).
-If we start with the following code
+
+@bold{Caution:} In this example, the single-argument procedure @(racket TEAM)
+happens to share its name with the existing table @(racket (code:hilite Team)).
+This name-sharing is very common with singular joins, but not required.
+
 @(racketblock
-  (from x TableX
+  (code:comment "current code:")
+  (from p Player
         ....
-        (code:hilite (join y TableY
-                           ....))
+        (code:hilite (join t Team
+                           (join-on (.= (TeamID t)
+                                        (TeamID p)))))
+        ....)
+  (code:comment "desired code:")
+  (from p Player
+        ....
+        (join t (TEAM p))
         ....))
 
-First we use the @(secref "join->ex") recipe to produce code like this:
+First we use the @(secref "join->ex") recipe as follows:
 @(racketblock
-  (from x TableX
+  (from p Player
         ....
-        (code:hilite [define y
-                      (join y TableY #:to x
-                            ....)])
+        (define t
+          (code:hilite (join t Team #:to p
+                             (join-on (.= (TeamID t)
+                                          (TeamID p))))))
         ....))
 
-Next we use the @(secref "ex->proc") recipe to produce code like this:
+Next we use the @(secref "ex->proc") recipe as follows:
 @(racketblock
-  (define/contract (NAME-ME x)
-    (-> (instanceof TableX) (instanceof TableY))
-    (join y TableY #:to x
-          ....))
-  (from x TableX
+  (define/contract (NEW-PROC p)
+    (-> (instanceof Player) (instanceof Team))
+    (code:hilite (join t Team #:to p
+                       (join-on (.= (TeamID t)
+                                    (TeamID p))))))
+  (from p Player
         ....
-        (code:hilite (define y (NAME-ME x)))
+        (define t (NEW-PROC p))
         ....))
 
-Next we use the @(secref "proc->schema") recipe to move @(racket NAME-ME)
-into our schema definition. We also immediately rename it.
-Note that @(racket GetTableY) is usually named @(racket TableY); the names
-differ in this example for educational reasons only:
+Next we use the @(secref "proc->schema") recipe to move @(racket NEW-PROC)
+into our schema definition. We also immediately rename it to @(racket TEAM).
 @(racketblock
   (define-schema
     ....
-    (table TableX
+    (table Player
            ....
            #:has-one
-           [GetTableY
-            (join y TableY
-                  ....)]
+           [TEAM
+            (code:hilite (join t Team
+                               (join-on (.= (TeamID t)
+                                            (TeamID this)))))]
            ....)
     ....)
-  (from x TableX
+  (from p Player
         ....
-        (code:hilite (define y (GetTableY x)))
+        (define t (TEAM p))
         ....))
 
 Finally we use the @(secref "join<->define") recipe to make sure we are
 equivalent to our starting position:
 @(racketblock
-  (from x TableX
+  (from p Player
         ....
-        (code:hilite (join y (GetTableY x)))
+        (join t (TEAM p))
+        ....))
+
+@subsubsub*section{Singular Join Naming}
+As mentioned above, the single-argument procedure @(racket TEAM) shares its
+name with the table @(racket (code:hilite Team)).
+But this does not have to be the case.
+You could, for example, name the procedure @(racket CURRENTTEAM) instead.
+Then the refactored code would look like this:
+@(racketblock
+  (define-schema
+    ....
+    (table Player
+           ....
+           #:has-one
+           [CURRENTTEAM
+            (code:hilite(join t Team
+                              (join-on (.= (TeamID t)
+                                           (TeamID this)))))]
+           ....)
+    ....)
+  (from p Player
+        ....
+        (join t (CURRENTTEAM p))
         ....))
 
 @recipe[#:tag "joinG->schema"]{Grouped Join -> Schema Definition}
 This recipe moves a grouped join into @(racket define-schema).
-If we start with the following code
 @(racketblock
-  (from x TableX
+  (code:comment "current code:")
+  (from t Team
         ....
-        (code:hilite (join y TableY
-                           ....))
+        (code:hilite (join playersG Player
+                           (group-by (TeamID playersG))
+                           (join-on (.= (TeamID playersG)
+                                        (TeamID t)))))
+        ....)
+  (code:comment "desired code:")
+  (from t Team
+        ....
+        (join playersG (PLAYERSG t))
         ....))
 
 First we use the @(secref "join->ex") recipe to produce code like this:
 @(racketblock
-  (from x TableX
+  (from t Team
         ....
-        (code:hilite [define y
-                      (join y TableY #:to x
-                            ....)])
+        (define playersG
+          (code:hilite (join playersG Player #:to t
+                             (group-by (TeamID playersG))
+                             (join-on (.= (TeamID playersG)
+                                          (TeamID t))))))
         ....))
 
 Next we use the @(secref "ex->proc") recipe to produce code like this:
 @(racketblock
-  (define/contract (NAME-ME x)
-    (-> (instanceof TableX) (instanceof TableY))
-    (join y TableY #:to x
-          ....))
-  (from x TableX
+  (define/contract (NEW-PROC t)
+    (-> (instanceof Team) (instanceof Player))
+    (code:hilite (join playersG Player #:to t
+                       (group-by (TeamID playersG))
+                       (join-on (.= (TeamID playersG)
+                                    (TeamID t))))))
+  (from t Team
         ....
-        (code:hilite (define y (NAME-ME x)))
+        (define playersG (NEW-PROC t))
         ....))
 
-Next we use the @(secref "proc->schema") recipe to move @(racket NAME-ME)
-into our schema definition. We also immediately rename it.
+Next we use the @(secref "proc->schema") recipe to move @(racket NEW-PROC)
+into our schema definition. We also immediately rename it to @(racket PLAYERSG).
 My personal convention is that the name of a grouped join ends with "G".
 @(racketblock
   (define-schema
     ....
-    (table TableX
+    (table Team
            ....
            #:has-group
-           [YTablesG
-            (join y TableY
-                  ....)]
+           [PLAYERSG
+            (code:hilite (join playersG Player
+                               (group-by (TeamID playersG))
+                               (join-on (.= (TeamID playersG)
+                                            (TeamID this)))))]
            ....)
     ....)
-  (from x TableX
+  (from t Team
         ....
-        (code:hilite (define y (YTablesG x)))
+        (define playersG (PLAYERSG t))
         ....))
 
 Finally we use the @(secref "join<->define") recipe to make sure we are
 equivalent to our starting position:
 @(racketblock
-  (from x TableX
+  (from t Team
         ....
-        (code:hilite (join y (YTablesG x)))
+        (join playersG (PLAYERSG t))
         ....))
+
+And this recipe is complete.
 
 @recipe[#:tag "scalar->schema"]{Scalar -> Schema Definition}
-Start with the following code and assume that @(racket SomeScalar)
-returns a @(racket Scalar?):
+This recipe moves a scalar into @(racket define-schema).
 @(racketblock
-  (from x TableX
+  (code:comment "current code:")
+  (from p Player
         ....
-        (select (code:hilite (SomeScalar .... x)))
+        (select (code:hilite (./ (ShotsMade p)
+                                 (ShotsTaken p))))
+        ....)
+  (code:comment "desired code:")
+  (from p Player
+        ....
+        (select (SHOOTINGPERCENTAGE p))
         ....))
 
-First use the @(secref "ex->proc") recipe as follows:
+First we use the @(secref "ex->proc") recipe as follows:
 @(racketblock
-  (define/contract (TEMP-NAME x)
-    (-> (instanceof TableX) Scalar?)
-    (SomeScalar .... x))
-  (from x TableX
+  (define/contract (NEW-PROC p)
+    (-> (instanceof Player) Scalar?)
+    (code:hilite (./ (ShotsMade p)
+                     (ShotsTaken p))))
+  (from p Player
         ....
-        (select (code:hilite (TEMP-NAME x)))
+        (select (NEW-PROC p))
         ....))
 
-Next use the @(secref "proc->schema") recipe to move @(racket TEMP-NAME)
-into our schema definition. We also immediately rename it.
+Finally we use the @(secref "proc->schema") recipe to move @(racket NEW-PROC)
+into our schema definition.
+We also immediately rename it to @(racket SHOOTINGPERCENTAGE).
 @(racketblock
   (define-schema
     ....
-    (table TableX
+    (table Player
            ....
            #:property
-           [NewName
-            (SomeScalar .... this)]
+           [SHOOTINGPERCENTAGE
+            (code:hilite (./ (ShotsMade this)
+                             (ShotsTaken this)))]
            ....)
     ....)
-  (from x TableX
+  (from p Player
         ....
-        (select (code:hilite (NewName x)))
+        (select (SHOOTINGPERCENTAGE p))
         ....))
+
+And this recipe is complete.
+
+@recipe[#:tag "scalar-flattening"]{Scalar Flattening}
+This recipe is a special case of the @(secref "scalar->schema") recipe.
+This recipe says that if @(racket (code:hilite (TeamName (Team p)))) is
+already defined, we can easily add a new property @(racket (TEAMNAME p))
+which will be equal to the original expression.
+@(racketblock
+  (code:comment "current code:")
+  (from p Player
+        ....
+        (select (code:hilite (TeamName (Team p))))
+        ....)
+  (code:comment "desired code:")
+  (from p Player
+        ....
+        (select (TEAMNAME p))
+        ....))
+
+First we use the @(secref "ex->proc") recipe as follows:
+@(racketblock
+  (define/contract (NEW-PROC p)
+    (-> (instanceof Player) Scalar?)
+    (code:hilite (TeamName (Team p))))
+  (from p Player
+        ....
+        (select (NEW-PROC p))
+        ....))
+
+Finally we use the @(secref "proc->schema") recipe to move @(racket NEW-PROC)
+into our schema definition.
+We also immediately rename it to @(racket TEAMNAME).
+@(racketblock
+  (define-schema
+    ....
+    (table Player
+           ....
+           #:property
+           [TEAMNAME
+            (code:hilite (TeamName (Team this)))]
+           ....)
+    ....)
+  (from p Player
+        ....
+        (select (TEAMNAME p))
+        ....))
+
+And this recipe is complete.
 
 @recipe[#:tag "join->inline"]{Inline Join}
 This recipe moves a join inline.
 This is mostly used to set up further refactoring.
-Starting with code like this:
+It does not add anything to @(racket define-schema).
 @(racketblock
-  (from x TableX
+  (code:comment "current code:")
+  (from p Player
         ....
-        (join y (TableY x))
+        (join t (code:hilite (Team p)))
         ....
-        (some-expression y ....)
+        (select (TeamName t))
+        ....)
+  (code:comment "desired code:")
+  (from p Player
+        ....
+        (code:comment "this code gets removed:")
+        #,(code:strike (join t (code:hilite (Team p))))
+        ....
+        (select (TeamName (code:hilite (Team p))))
         ....))
 
 We first use the @(secref "join<->define") recipe as follows:
 @(racketblock
-  (from x TableX
+  (from p Player
         ....
-        (define y (TableY x))
+        (define t (code:hilite (Team p)))
         ....
-        (some-expression y ....)
+        (select (TeamName t))
         ....))
 
-Now we just use normal refactoring techniques to replace @(racket y) with its
+Now we just use normal refactoring techniques to replace @(racket t) with its
 definition as follows:
 @(racketblock
-  (from x TableX
+  (from p Player
         ....
-        (some-expression (TableY x) ....)
+        (code:comment "this code is removed:")
+        #,(code:strike (define t (code:hilite (Team p))))
+        ....
+        (select (TeamName (code:hilite (Team p))))
         ....))
 
 And this recipe is complete.
 They key point is that if we proceed to use the @(secref "ex->proc") recipe
-on @(racket (some-expression ....)), the resulting procedure will no longer
-demand an @(racket (instanceof TableY)) and it will demand an
-@(racket (instanceof TableX)).
+on @(racket (TeamName (Team p))), the resulting procedure will now accept one
+argument which is an @(racket (instanceof Player)).
+In the original version, it would have wanted an @(racket (instanceof Team)).
 
 @recipe[#:tag "ds:rename"]{Name Clarification}
-In this recipe, we simply create a more descriptive name for a procedure.
+This recipe creates a more descriptive name for a procedure.
 This recipe assumes we are using @(racket define-schema).
-
-Imagine we start with the following code:
 @(racketblock
-  (from p Product
-        (select (code:hilite (Name p)))))
+  (code:comment "current code:")
+  (from t Team
+        ....
+        (select (code:hilite (Name t)))
+        ....)
+  (code:comment "desired code:")
+  (from t Team
+        ....
+        (select (TEAMNAME t))
+        ....))
 
-We want to create @(racket ProductName) as an alias for @(racket Name) when
-the argument is an @(racket (instanceof Product)).
+We want to create @(racket TeamName) as an alias for @(racket Name) when
+the argument is an @(racket (instanceof Team)).
 First we use the @(secref "ex->proc") recipe to get the following code:
 @(racketblock
-  (define/contract (NAME-ME p)
-    (-> (instanceof Product) String?)
-    (Name p))
-  (from p Product
-        (select (code:hilite (NAME-ME p)))))
+  (define/contract (NEW-PROC t)
+    (-> (instanceof Team) Scalar?)
+    (code:hilite (Name t)))
+  (from t Team
+        ....
+        (select (NEW-PROC t))
+        ....))
 
-Finally we use the @(secref "proc->schema") recipe to move @(racket NAME-ME) into
-our schema definition. We also immediately rename it to @(racket ProductName).
+Finally we use the @(secref "proc->schema") recipe to move @(racket NEW-PROC)
+into our schema definition.
+We also immediately rename it to @(racket TEAMNAME).
 @(racketblock
   (define-schema
     ....
-    (table Product
+    (table Team
            ....
            #:property
-           [ProductName
-            (Name this)]
+           [TEAMNAME
+            (code:hilite (Name this))]
            ....)
     ....)
-  (from p Product
-        (select (code:hilite (ProductName p)))))
+  (from t Team
+        ....
+        (select (TEAMNAME t))
+        ....))
 
 And we are done.
+
 Note that @(racket define-schema) automatically sets the @(racket #:as) name of
 each @(racket #:property), as if you had written the following:
 @(racketblock
   #:property
-  [ProductName
-   (>> (Name this)
-       #:as 'ProductName)])
+  [TEAMNAME
+   (>> (code:hilite (Name this))
+       #:as 'TEAMNAME)])
 
 Be aware of this to avoid breaking any existing call sites that depend on the
 original name appearing in the result set.

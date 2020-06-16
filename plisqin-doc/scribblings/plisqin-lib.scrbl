@@ -13,7 +13,7 @@
          #:grammar
          [(statement (define (proc-id proc-arg ...) proc-body ...)
                      (define val-id val-expr)
-                     (join join-stuff ...)
+                     (join join-id join-stuff ...)
                      clause-expr)]
          #:contracts ([queryable-expr (or/c symbol?
                                             query?
@@ -21,7 +21,69 @@
                                             trusted-queryable?)]
                       [clause-expr (or/c void? QueryClause?
                                          (listof (or/c void? QueryClause?)))])]{
- TODO
+ Creates a @(racket query?).
+ A query consists of a queryable, a list of joins, and a list of clauses.
+
+ The queryable identifies the thing that is being queried -- usually a database
+ table or view, sometimes a subquery, @bold{never} a @(racket query?).
+ When @(racket queryable-expr) is not a @(racket query?), the value of
+ @(racket queryable-expr) becomes this query's queryable.
+ When @(racket queryable-expr) is a @(racket query?), this query inherits
+ its queryable from the existing query.
+ It also inherits that query's list of joins and list of clauses; an example
+ of this will come later.
+
+ The @(racket instance-id) is bound as an @(racket instance?) within each
+ @(racket statement). More specifically, it is bound as an
+ @(racket instanceof) the queryable.
+
+ The @(racket define) subforms bind @(racket proc-id) or @(racket val-id)
+ within each @(racket statement) that follows the definition.
+
+ The @(racket join) subform binds @(racket join-id) as a @(racket join?)
+ within each @(racket statement) that follows the join.
+ It also immediately adds the join to this query, guaranteeing that the join
+ will appear in the generated SQL even if the @(racket join-id) is never used
+ anywhere else.
+
+ A @(racket clause-expr) that is @(racket void?) is discarded.
+
+ A @(racket clause-expr) that is a @(racket list?) is handled the same as if
+ each item were an individual @(racket clause-expr).
+ That is, the following queries are equal:
+ @(repl
+   (define q1
+     (from x 'X
+           (%%select x".one")
+           (%%select x".two")))
+   (define q2
+     (from x 'X
+           (list (%%select x".one")
+                 (void)
+                 (%%select x".two"))))
+   (eval:check (equal? q1 q2) #t))
+
+ See also the documentation on @(racket QueryClause?).
+
+ @subsubsub*section{Appendable Queries}
+ When @(racket queryable-expr) is a @(racket query?), this query inherits
+ the queryable, list of joins, and list of clauses from the existing query.
+ Further joins and clauses are appended to these lists.
+ The following example demonstrates appending:
+ @(repl
+   (define total
+     (from x 'X
+           (join y 'Y)
+           (%%select x".one")
+           (%%select y".two")))
+   (define first-half
+     (from x 'X
+           (%%select x".one")))
+   (define both-halves
+     (from x first-half
+           (join y 'Y)
+           (%%select y".two")))
+   (eval:check (equal? total both-halves) #t))
 }
 
 @defform[#:literals (define join)
@@ -101,11 +163,11 @@
  "where the Age of @italic{the Person} is at least 21":
  @(racketblock
    (from p Person
+         (code:comment "Now `p` is an `instance?` and an `(instanceof Person)`")
          (where (>= (Age p)
                     (val 21)))))
 
- Additionally, every @(racket join?) is also an instance!
- TODO link to a refactoring recipe that demonstrates why this is awesome.
+ Additionally, every @(racket join?) is also an instance.
 }
 
 @defproc[(instanceof [queryable any/c]) procedure?]{
@@ -164,7 +226,67 @@
 }
 
 @defproc[(join-type [type (or/c #f 'inner 'left)]) JoinType?]{
- TODO
+ A clause that can be used in a join to specify what should happen if the
+ join does not find any matching records.
+ An @(racket 'inner) join will filter out any rows for which this join
+ did not match.
+ A @(racket 'left) join will not filter any rows from the result set,
+ but any attempts to access a column via this join will produce dbnull.
+
+ If a join has multiple @(racket join-type) clauses, the last one overrides
+ all the previous ones.
+
+ @subsubsub*section{Left Join Propogation}
+ The default @(racket join-type) is @(racket #f), which means that
+ left joins should be propogated.
+ That is, this join may be considered a left join if any of its
+ @(racket join-on) clauses contain a join that is considered left.
+ Otherwise this join will be considered an inner join.
+
+ This is necessary because an @(racket instance?) might be a left join.
+ The following procedure accepts @(racket subcat) which must be an
+ @(racket (instanceof ProductSubcategory)).
+ When @(racket subcat) is a left join (or when it is considered a left join),
+ the returned join will also be considered left.
+ Otherwise the returned join will be considered inner.
+ @(racketblock
+   (define/contract (get-category subcat)
+     (-> (instanceof ProductSubcategory)
+         (and/c join?
+                (instanceof ProductCategory)))
+     (join pc ProductCategory #:to subcat
+           (join-on (.= (ProductCategoryID pc)
+                        (?? (ProductCategoryID subcat) /void)))))
+   (from p Product
+         (code:comment "The Product:ProductSubcategory relationship is inherently optional.")
+         (code:comment "That is, some Products truly do not have Subcategories.")
+         (join subcat ProductSubcategory
+               (join-type 'left)
+               (join-on (.= (ProductSubcategoryID subcat)
+                            (?? (ProductSubcategoryID p) /void))))
+         (code:comment "The ProductSubcategory:ProductCategory relationship is not")
+         (code:comment "inherently optional, but the left-ness of `subcat` propogates")
+         (code:comment "to the return value of (get-category subcat)")
+         (join cat (get-category subcat))
+         ....))
+
+ @subsubsub*section{Best Practices}
+ @bold{Reusable joins (those that are returned by procedures) should never
+  remove rows from the result set.}
+ Otherwise the call site of the reusable join might accidentally remove rows
+ without intending to.
+ Accidentally removing rows from the result set is a more difficult mistake to
+ notice than the alternative, which is having some dbnulls propogate to the
+ final result set (if the @tech{strict} nullchecking doesn't catch it first.)
+
+ @bold{Reusable joins should never use the @(racket 'inner) join type,}
+ even when they represent a non-optional relationship.
+ In the previous example, @(racket get-subcategory) represents the
+ ProductSubcategory:ProductCategory relationship which is not optional;
+ specifically, every ProductSubcategory has exactly 1 ProductCategory.
+ But @(racket get-subcategory) still uses the the default join type
+ of @(racket #f) instead of @(racket 'inner), because its @(racket subcat)
+ argument might be a left join.
 }
 
 @defform[#:literals(table)
@@ -208,7 +330,32 @@
           [nullability nullability?]
           [/fallback fallback?])]{
  Returns a copy of the given @(racket token) with the specified modifications.
- TODO needs more detail.
+
+ The @(racket #:cast) option assigns a new type:
+ @(repl
+   (Bool? (>> (%%sql "foo = bar") #:cast Bool?)))
+
+ The @(racket #:as) option assigns a new "as-name", which is recognized by
+ @(racket select) and specifies how the column of the result set should be named.
+ @(repl-query
+   (aw:show-table
+    (from p Product
+          (limit 1)
+          (select (>> (val "Hello!") #:as 'Greeting)))))
+
+ Future versions of Plisqin may introduce "as-name propogation" in which
+ certain token constructions preserve the as-name of a child token.
+ For example, @(racket (coalesce foo (val 0))) might inherit the as-name
+ of @(racket foo).
+
+ The @(racket #:null) option assigns a new @tech{nullability}.
+ @(repl
+   (let ([raw (%%sql "foo")])
+     (list (nullability raw)
+           (nullability (>> raw #:null no)))))
+
+ The @(racket #:fallback) option assigns a new @tech{fallback}.
+ It is more common to use @(racket ??) to assign fallbacks.
 }
 
 @defform[(define-statement (id arg ...) body ...+)
@@ -328,63 +475,20 @@
                @defthing[/minval fallback?]
                @defthing[/maxval fallback?]
                @defthing[/any fallback?])]{
- A fallback can be attached to any token using @(racket ??).
- It represents how the token behaves in comparisons when it is null.
- For example, @(racket (?? foo /minval)) can be read as "foo, or the minimum
- value when foo is null."
- The following hypothetical example includes Products with a null Price.
- The where clause can be read "where Price (or the minimum
- value when Price is null) is less than 50":
- @(racketblock
-   (from p Product
-         (where (.< (?? (Price p) /minval)
-                    (val 50)))))
-
- The meaning of each fallback is as follows.
- @(itemlist
-   @item{@(racket /minval) represents an artificial value that is less than
-  every value that your database can hold. It is equal only to itself.}
-   @item{@(racket /maxval) represents an artificial value that is greater than
-  every value that your database can hold. It is equal only to itself.}
-   @item{@(racket /any) represents a set of values that includes @(racket /minval),
-  @(racket /maxval), and every value that your database can hold.}
-   @item{@(racket /void) represents an empty set of values.
-  This guarantees that the comparison will be false when the fallback is used.})
-
- When a fallback represents "a set of values", the comparison will be true if any value
- from the set could make the comparison true.
-
- Because @(racket /void) represents an empty set, comparing it against anything
- always produces false.
- This is true even when comparing @(racket /void) against @(racket /any).
- The comparison says "We've tried nothing and we're all out of ideas."
-
- Because @(racket /any) represents such a large set, comparing it against something
- other than @(racket /void) often (but not always) produces true.
- Some examples:
- @(itemlist
-   @item{@(racket /any) is considered equal to 40 because it contains 40.}
-   @item{@(racket /any) is considered not equal to 40 because it contains
-  many values which are not equal to 40, such as 42.}
-   @item{@(racket /any) is considered less than "aardvark" because it contains
-  many values which are less than "aardvark", such as "aaa" and @(racket /minval).}
-   @item{@(racket /any) is considered equal to @(racket /minval) because it contains
-  @(racket /minval).}
-   @item{@(racket /any) is @bold{not} considered less than @(racket /minval) because
-  there are no values which are less than @(racket /minval).})
-
- TODO link to the complete truth table.
-
- TODO mention that @(racket .not) doesn't know anything about fallbacks.
+ A @tech{fallback}.
+ Fallbacks are recognized by the comparison operators to disambiguate what
+ should happen if dbnull is encountered.
+ See @(secref "fallback-meanings") specifically,
+ and @(secref "Nullability") more generally.
 }
 
 @defproc[(fallback? [x any/c]) any/c]{
- Predicate that recognizes fallbacks.
+ Predicate that recognizes @tech{fallbacks}.
  @(repl (eval:check (fallback? /void) #t))
 }
 
 @defproc[(fallback [x any/c]) (or/c #f fallback?)]{
- Returns the fallback of @(racket x) or @(racket #f) if none exists.
+ Returns the @tech{fallback} of @(racket x) or @(racket #f) if none exists.
  @(repl
    (define my-token (%%sql "foo"))
    (eval:check (fallback my-token) #f)
@@ -622,9 +726,22 @@ For example, @(racket Scalar?) is a supertype of @(racket Number?).
 }
 @deftype[JoinClause?]{
  The supertype of all clauses that can be used inside @(racket join).
+ When used as a contract, it is equivalent to
+ @(racket (or/c QueryClause? JoinOn? JoinType?)).
 }
 @deftype[QueryClause?]{
  The supertype of all clauses that can be used inside @(racket from).
+ @(repl
+   (eval:check (andmap QueryClause?
+                       (list (%%where 1)
+                             (%%group-by 1)
+                             (%%having 1)
+                             (%%order-by 1)
+                             (%%select 1)
+                             (limit 1)
+                             (offset 1)
+                             (distinct #t)))
+               #t))
 }
 @(define-syntax-rule (def-clauses [id ctor] ...)
    (begin

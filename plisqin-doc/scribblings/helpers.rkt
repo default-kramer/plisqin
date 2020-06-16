@@ -3,10 +3,13 @@
 (provide my-eval reset-eval! make-eval
          show-sql check-sql check-sql2
          to-table
-         load-checkpoint! show-results repl repl-query
+         load-checkpoint! repl repl-query
+         def-green-ids code:strike
          )
 
 (require scribble/manual
+         (only-in scribble/racket make-element-id-transformer)
+         racket/stxparam
          racket/require
          (subtract-in scribble/eval scribble/example)
          scribble/example
@@ -66,15 +69,21 @@
               (require ,(string->symbol cp-path))
               (current-dialect (sqlite)))))
 
+; This should be a procedure that works on a datum that replaces
+; for example 'PRODUCTID with 'ProductID
+(define-syntax-parameter undo-green-ids
+  (lambda anything #'identity))
+
 (define-syntax (show-results stx)
   (syntax-case stx ()
-    [(_ query-datum)
+    [(_ orig-datum)
      (quasisyntax/loc stx
-       (show-results2 query-datum
-                      (λ (ex)
-                        #,(quasisyntax/loc stx
-                            (error 'show-results "eval failed\n~a\n~a"
-                                   query-datum (exn->string ex))))))]))
+       (let ([query-datum (#%app undo-green-ids orig-datum)])
+         (show-results2 query-datum
+                        (λ (ex)
+                          #,(quasisyntax/loc stx
+                              (error 'show-results "eval failed\n~a\n~a"
+                                     query-datum (exn->string ex)))))))]))
 
 (define (show-results2 query-datum error-proc)
   ; Use `my-eval` to get the sql from the query-datum.
@@ -111,3 +120,30 @@
           (racketinput show-table-form)
           #,(quasisyntax/loc stx
               (show-results '#,query-datum))))]))
+
+(define-syntax-rule (code:strike form)
+  (elem #:style PStrike (racket form)))
+
+; The idea is that the caller should pass in `repl-query` which will modify
+; the binding so that it is aware of the green IDs and can reverse them before
+; trying to eval the code.
+(define-syntax (def-green-ids stx)
+  (syntax-case stx ()
+    [(_ repl-query-new [ID id] ...)
+     (with-syntax ([ooo (quote-syntax ...)])
+       #'(begin
+           (define-syntax ID
+             (make-element-id-transformer
+              (lambda anything #'(elem #:style PGreen (racket id)))))
+           ...
+           (define (ugi datum)
+             (case datum
+               [(ID) 'id]
+               ...
+               [else (if (pair? datum)
+                         (cons (ugi (car datum))
+                               (ugi (cdr datum)))
+                         datum)]))
+           (define-syntax-rule (repl-query-new stuff ooo)
+             (syntax-parameterize ([undo-green-ids (lambda anything #'ugi)])
+               (repl-query stuff ooo)))))]))

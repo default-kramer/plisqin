@@ -233,7 +233,7 @@
        (aw:show-table
         (from x (%%subquery "select 1 as one")
               (define feb-01
-                (>> (%%sql "'2019-02-01'") #:cast Datetime?))
+                (val "2019-02-01" Datetime?))
               (select (date+ feb-01 (months 1) (days 29)))
               (select (date+ feb-01 (days 29) (months 1))))))
 

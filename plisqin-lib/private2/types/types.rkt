@@ -31,7 +31,8 @@
 ;        eg (select x:Bool) -> (select (case-when [x 1] [else 0]))
 ;
 ; For now, fragment-kind of 'scalar means injectable.
-; TODO it would probably be better to make it a method like (send x injectable?)
+; (It would probably be better to make it a method like (send x injectable?)
+;  and there are other reasons to get rid of fragment-kind in Morsel.)
 ; Every Bit should have kind 'scalar.
 ; If a DB supports true boolean columns, those should have type Bool and kind 'scalar.
 ; Every other Bool should have kind 'bool, because we don't want to try to

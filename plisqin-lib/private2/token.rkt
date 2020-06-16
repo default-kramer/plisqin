@@ -13,7 +13,7 @@
 
 (define token%
   (class* object% (sql-token<%> typed<%> nulltrack<%> equal<%> never-quote<%>)
-    (init-field [type Token?]        ; (or/c #f type?) TODO - should probably not allow #f, use Token? instead
+    (init-field [type Token?]       ; type?
                 [as-name #f]        ; perhaps (or/c #f symbol? string? Token?)
                 [nullability maybe] ; nullability?
                 [fallback #f]       ; (or/c #f fallback?)

@@ -43,3 +43,10 @@
 .PSql .stt {
 	font-size: 0.9rem;
 }
+
+.PGreen {
+	background-color: #ddffdd;
+}
+.PStrike {
+	text-decoration: line-through;
+}

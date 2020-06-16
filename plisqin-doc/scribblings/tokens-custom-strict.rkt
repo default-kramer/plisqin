@@ -12,10 +12,12 @@
              (doc-??)))
 
    (define (doc-val)
-     @defform[(val x)]{
- A variant of @(racket (%%val x)).
+     @defform[(val x [type])]{
+ Here @(racket [type]) denotes an optional argument, not literal brackets.
+
+ A variant of @(racket (%%val x [type])).
  This variant protects against SQL injection by requiring @(racket x) to be a
- literal string or literal number.
+ literal string, number, or boolean.
  @(examples #:eval my-eval
             (val "a string literal")
             (eval:error (let ([not-a-string-literal "hi"])

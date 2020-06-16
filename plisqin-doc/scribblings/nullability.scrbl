@@ -44,10 +44,8 @@ correct nullability, as in the following example:
                                (val 1)))
               yes))
 
-TODO document the nullcheck behavior of each token constructor.
-Teach people how to read it here.
-Also mention using >> to override the nullability.
-Or maybe do that after the 3VL stuff.
+If Plisqin does not or cannot determine the correct nullability, you can
+use @(racket >>) to override it.
 
 @section{Avoiding Three-Valued Logic}
 In SQL, a boolean expression may have three values: true, false and unknown.
@@ -86,19 +84,13 @@ In fact, all the strict comparison operators want non-nullable tokens.
 This is because comparing dbnull to anything produces the unknown boolean value,
 which the strict variant of Plisqin has promised to eradicate.
 We can confirm that the nullability of the first argument is @(racket yes):
-@margin-note{TODO maybe put a footnote explaining why TotalQtySold is nullable.
- It is nullable because it is derived from the Product's group of SalesOrderDetails,
- and that group might have no records. Meaning it is a left join that might fail.
- We could make it non-nullable by coalescing it with zero, but it seems better to defer
- that to the caller. Some callers might want to know the difference between "some records
- that summed to zero" and "no records".}
 @(repl
   (eval:check (nullability (TotalQtySold Product))
               yes))
 
 So in order to perform this comparison, we will use a @deftech{fallback}.
 A fallback is a value that can be attached to any token.
-The fallback tells Plisqin how dbnull should be handled.
+The fallback tells the comparison operators how dbnull should be handled.
 In the following example, we attach the @(racket /minval) fallback using @(racket ??):
 @(racketblock
   (from p Product
@@ -133,10 +125,74 @@ boolean expressions that might contain the unknown value.
 We used the @(racket /minval) fallback to make our intention explicit.
 This avoided the mistake of accidentally filtering out records where TotalQtySold is null.
 
-@subsection{More Fallbacks}
-TODO explain the other fallbacks.
+@subsection[#:tag "fallback-meanings"]{Fallback Meanings}
+The meaning of each fallback is as follows:
+@(itemlist
+  @item{@(racket /minval) represents a set containing exactly one value.
+ This value is an artificial value that is less than every value
+ that your database can hold. It is equal only to itself.}
+  @item{@(racket /maxval) represents a set containing exactly one value.
+ This value an artificial value that is greater than every value
+ that your database can hold. It is equal only to itself.}
+  @item{@(racket /void) represents an empty set of values.
+ Comparing @(racket /void) against anything produces false.}
+  @item{@(racket /any) represents a set of values that includes every value
+ your database can hold, plus @(racket /minval) and @(racket /maxval).})
+
+Notice that each fallback represents a "set of values."
+When a fallback is considered, the comparison will be true if any value from
+this "set of values" makes it true (sort of like a boolean "or" over a
+Cartesian product of comparisons).
+Because @(racket /void) represents an empty set, comparing it against anything
+always produces false.
+The comparison says "We've tried nothing and we're all out of ideas."
+This is true even when comparing @(racket /void) against @(racket /any).
+
+The comparison behavior of @(racket /minval) and @(racket /maxval) is pretty
+straightforward:
+@(itemlist
+  @item{@(racket /minval) is considered less than 40 by definition.}
+  @item{@(racket /minval) is not considered greater than 40 because it is less than 40.}
+  @item{@(racket /maxval) is considered greater than 40 by definition.}
+  @item{@(racket /maxval) is not considered less than 40 because it is greater than 40.}
+  @item{@(racket /maxval) is considered greater than infinity by definition,
+ assuming that "infinity" is a value your database can hold.}
+  @item{@(racket /minval) is not considered less than @(racket /void) because a
+ set of one value compared against a set of zero values produces zero comparisons.
+ Trivially, none of these comparisons are true.})
+
+The comparison behavior of @(racket /any) is a little more tricky.
+Because @(racket /any) represents such a large set, comparing it against
+something other than @(racket /void) often (but not always) produces true.
+Some examples:
+@(itemlist
+  @item{@(racket /any) is considered equal to 40 because it contains 40.}
+  @item{@(racket /any) is considered not-equal to 40 because it contains
+ many values which are not-equal to 40, such as 42.}
+  @item{@(racket /any) is considered less than "aardvark" because it contains
+ many values which are less than "aardvark", such as "aaa" and @(racket /minval).}
+  @item{@(racket /any) is considered equal to @(racket /minval) because it contains
+ @(racket /minval).}
+  @item{@(racket /any) is not considered less than @(racket /minval)
+ because there are no values which are less than @(racket /minval).}
+  @item{@(racket /any) is not considered less than @(racket /void)
+ because an infinite set of values compared against a set of zero values
+ produces zero comparisons. Trivially, none of these comparisons are true.})
+
+Remember that fallbacks are only considered when the primary value is dbnull.
+The following example demonstrates a useless fallback.
+Even though @(racket /minval) is less than zero, @(racket (val 42)) is never
+dbnull so the fallback is never considered and the comparison always checks
+whether 42 is less than zero.
+@(repl-query
+  (aw:show-table
+   (from cat ProductCategory
+         (where (.< (?? (val 42) /minval)
+                    (val 0))))))
 
 @subsection{Truth Table}
+@margin-note{There is no significance to writing @(racket #true) instead of
+ @(racket #t) here. It is just for the visual effect.}
 @(define-syntax (make-truth-table stx)
    #`(racketblock #,truth-table-as-stx))
 @(make-truth-table)
