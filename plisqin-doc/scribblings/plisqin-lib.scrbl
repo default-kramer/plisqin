@@ -400,11 +400,6 @@
  creates a placeholder token having type @(racket Number?) and representing
  an SQL parameter. The @(racket a) and @(racket d) parameters were assigned the
  @(racket Scalar?) type, which is the default when @(racket Type-expr) is absent.
-
- TODO what about nullability?
- We could attach @(racket /void) to each param, but that seems dangerous.
- As of now, it's fine to force the user to add the fallback at the site of the
- comparison.
 }
 
 @defform[(compile-statements #:module module-path
