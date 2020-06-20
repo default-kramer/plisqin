@@ -5,16 +5,21 @@
 ; The tables are used by Scribble to generate documentation
 (provide type-dispatcher/unsafe type-dispatcher/strict
          unsafe-table strict-table
-         unsafe-content?
+         unsafe-content? 2bool?
          )
 
 (require "weave.rkt"
          "../_types.rkt"
+         "../_null.rkt"
          "frags.helpers.rkt"
          (only-in "../_core.rkt" query? join?)
          (only-in "../from.rkt" instance?)
          "interval.rkt"
          )
+
+(define (2bool? x)
+  (and (Boolish? x)
+       (eq? no (nullability x))))
 
 (define-syntax (~def-typetable stx)
   (syntax-case stx ()
@@ -130,13 +135,13 @@
     [Scalar? -> OrderBy?])]
   [(where )
    (token-constructor
-    [Boolish? -> Where?])]
+    [2bool? -> Where?])]
   [(join-on)
    (token-constructor
-    [Boolish? -> JoinOn?])]
+    [2bool? -> JoinOn?])]
   [(having)
    (token-constructor
-    [Boolish? -> Having?])]
+    [2bool? -> Having?])]
   [(subquery)
    (token-constructor
     [query? -> Subquery?])]
@@ -169,10 +174,10 @@
     [Number? number? -> Number?])]
   [(and or)
    (token-constructor
-    [Boolish? ...+ -> Bool?])]
+    [2bool? ...+ -> Bool?])]
   [(not)
    (token-constructor
-    [Boolish? -> Bool?])]
+    [2bool? -> Bool?])]
   [(= <> < <= > >=
       like not-like) ; confirmed that like works on numbers and datetimes in SQL Server
    (token-constructor

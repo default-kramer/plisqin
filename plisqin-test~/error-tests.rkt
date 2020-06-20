@@ -31,7 +31,7 @@
 (check-exn+message (join-on (%%sql "not a bool"))
                    "join-on: contract violation"
                    "expected an argument list satisfying one of the following:"
-                   "Boolish? -> JoinOn?"
+                   "2bool? -> JoinOn?"
                    "given an argument list with the following types:"
                    "(Token?)")
 
@@ -131,9 +131,11 @@
 ; Where requires non-null, no fallbacks accepted
 (check-exn+message (from a 'A
                          (where (>> (%%sql a".foo") #:cast Bool?)))
-                   "expected: a token that is non-nullable"
-                   "given: a token with nullability: maybe"
-                   "argument value: (sql #<tuple: 'A> \".foo\")")
+                   "where: contract violation"
+                   "expected an argument list satisfying one of the following:"
+                   "2bool? -> Where?"
+                   "given an argument list with the following types:"
+                   "(Bool?)")
 
 
 ; Regression: this was giving the generic "infinite loop averted" message

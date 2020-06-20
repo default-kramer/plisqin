@@ -465,6 +465,15 @@
                 string? number? symbol? (listof unsafe-content?)))
 }
 
+@defproc[(2bool? [x any/c]) any/c
+         #:value (and (Boolish? x)
+                      (eq? no (nullability x)))]{
+ Predicate that recognizes 2-valued booleans (true and false).
+ It will not contain the unknown boolean value.
+ Used by the @tech{strict} variant to avoid 3-valued logic.
+ See @(secref "Nullability") for more information.
+}
+
 @section[#:tag "reference:nullability"]{Nullability}
 @deftogether[(@defthing[/void fallback?]
                @defthing[/minval fallback?]
