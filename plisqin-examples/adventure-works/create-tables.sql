@@ -498,12 +498,12 @@ create table SalesOrderHeaderSalesReason (
 
 create table SalesPerson (
   BusinessEntityID integer_id not null
-  , TerritoryID integer_id not null
-  , SalesQuota text not null
-  , Bonus text not null
-  , CommissionPct text not null
-  , SalesYTD text not null
-  , SalesLastYear text not null
+  , TerritoryID integer_id null
+  , SalesQuota real null
+  , Bonus real not null
+  , CommissionPct real not null
+  , SalesYTD real not null
+  , SalesLastYear real not null
   , rowguid text not null
   , ModifiedDate text not null
 );
@@ -538,10 +538,10 @@ create table SalesTerritory (
   , Name text not null
   , CountryRegionCode text not null
   , [Group] text not null
-  , SalesYTD text not null
-  , SalesLastYear text not null
-  , CostYTD text not null
-  , CostLastYear text not null
+  , SalesYTD real not null
+  , SalesLastYear real not null
+  , CostYTD real not null
+  , CostLastYear real not null
   , rowguid text not null
   , ModifiedDate text not null
 );

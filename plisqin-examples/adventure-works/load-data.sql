@@ -7,3 +7,5 @@
 .import AdventureWorks-oltp-install-script/SalesOrderHeader.csv SalesOrderHeader
 .import AdventureWorks-oltp-install-script/SpecialOffer.csv SpecialOffer
 .import AdventureWorks-oltp-install-script/SpecialOfferProduct.csv SpecialOfferProduct
+.import AdventureWorks-oltp-install-script/SalesPerson.csv SalesPerson
+.import AdventureWorks-oltp-install-script/SalesTerritory.csv SalesTerritory
