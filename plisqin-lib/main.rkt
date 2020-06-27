@@ -32,7 +32,7 @@
          fallback fallback? /void /minval /maxval /any)
 
 (require plisqin-lib/private2/define-schema)
-(provide define-schema this)
+(provide define-schema this table?)
 
 (require "./private2/_statement.rkt")
 (provide define-statement compile-statements)
