@@ -241,14 +241,13 @@ create table Person (
   BusinessEntityID integer_id not null
   , PersonType text not null
   , NameStyle text not null
-  , Title text not null
+  , Title text null
   , FirstName text not null
-  , MiddleName text not null
+  , MiddleName text null
   , LastName text not null
-  , Suffix text not null
+  , Suffix text null
   , EmailPromotion text not null
-  , AdditionalContactInfo text not null
-  , Demographics text not null
+  , AdditionalContactInfo text null
   , rowguid text not null
   , ModifiedDate text not null
 );
@@ -474,7 +473,7 @@ create table SalesOrderHeader (
   , AccountNumber text not null
   , CustomerID integer_id not null
   , SalesPersonID integer_id null
-  , TerritoryID integer_id not null
+  , TerritoryID integer_id null
   , BillToAddressID integer_id not null
   , ShipToAddressID integer_id not null
   , ShipMethodID integer_id not null

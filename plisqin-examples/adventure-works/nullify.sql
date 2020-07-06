@@ -57,7 +57,6 @@ update Person set [LastName]=null where [LastName]='';
 update Person set [Suffix]=null where [Suffix]='';
 update Person set [EmailPromotion]=null where [EmailPromotion]='';
 update Person set [AdditionalContactInfo]=null where [AdditionalContactInfo]='';
-update Person set [Demographics]=null where [Demographics]='';
 update Person set [rowguid]=null where [rowguid]='';
 update Person set [ModifiedDate]=null where [ModifiedDate]='';
 update SalesReason set [SalesReasonID]=null where [SalesReasonID]='';

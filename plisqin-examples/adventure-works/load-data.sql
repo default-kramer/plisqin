@@ -1,5 +1,6 @@
 .separator "\t"
 
+.import AdventureWorks-oltp-install-script/Person.csv Person
 .import AdventureWorks-oltp-install-script/Product.csv Product
 .import AdventureWorks-oltp-install-script/ProductCategory.csv ProductCategory
 .import AdventureWorks-oltp-install-script/ProductSubcategory.csv ProductSubcategory
