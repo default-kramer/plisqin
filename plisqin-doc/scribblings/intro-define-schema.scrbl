@@ -206,8 +206,7 @@ One obvious problem is that both columns are shown as "Name".
 We will immediately fix that during refactoring.
 
 @subsubsub*section{Refactoring}
-Use the @(secref "ds:rename") recipe twice to create
-the following equivalent query:
+Use the @(secref "ds:rename") recipe to create the following equivalent query:
 @(racketblock
   (from subcat ProductSubcategory
         (limit 5)
@@ -215,6 +214,17 @@ the following equivalent query:
               (join-on (.= (ProductCategoryID cat)
                            (ProductCategoryID subcat))))
         (select (SUBCATEGORYNAME subcat))
+        (select (Name cat))))
+
+Use the @(secref "ds:rename") recipe again to create the
+following equivalent query:
+@(racketblock
+  (from subcat ProductSubcategory
+        (limit 5)
+        (join cat ProductCategory
+              (join-on (.= (ProductCategoryID cat)
+                           (ProductCategoryID subcat))))
+        (select (SubcategoryName subcat))
         (select (CATEGORYNAME cat))))
 
 That looks good. But we are not done refactoring.
@@ -275,7 +285,7 @@ these Products from the result set:
         (join subcat ProductSubcategory
               (join-type 'left)
               (join-on (.= (ProductSubcategoryID subcat)
-                           (ProductSubcategoryID prd))))))
+                           (?? (ProductSubcategoryID prd) /void))))))
 
 Now we need to add some select clauses:
 @margin-note{The code @(racket (?? expr /void)) says that "if expr is null, it
@@ -721,10 +731,6 @@ Interesting! The @(racket sales-report) procedure accepts a query of any table
 for which @(racket DetailsG) is defined!
 It appends some more clauses to create a larger query.
 
-@subsubsection[#:tag "ec1"]{Extra Credit}
-Extra Credit: Extend the definition of DetailsG so that it is defined for Category, SalesPerson, and Territory.
-Try using @(racket sales-report) with these tables.
-
 @task{Task 7: Sales by Anything with Date Range}
 What else could we do with the @(racket sales-report)?
 Right now it is showing all-time sales.
@@ -765,7 +771,7 @@ We could modify it to accept a time window of sales to consider as follows:
           (select (SubcategoryName subcat))
           (select (CategoryName subcat))))))
 
-@subsubsection[#:tag "ec3"]{Extra Credit}
+@subsubsection[#:tag "ec3"]{Extra Credit 1}
 Apply the appropriate refactoring recipies so that @(racket OrderDate) is
 defined for @(racket SalesOrderDetail).
 This allows you to refactor @(racket sales-report) as follows:
@@ -796,6 +802,32 @@ Next use the @(secref "join->inline") recipe, and finally use the
 @(secref "scalar-flattening") recipe to define
 @(racketblock
   (OrderDate SalesOrderDetail))
+
+@subsubsection[#:tag "ec1"]{Extra Credit 2 (More Challenging)}
+Extra Credit: Extend the definition of DetailsG so that it is defined for
+the ProductCategory, SalesTerritory, and SalesPerson tables.
+Try using @(racket sales-report) with these tables.
+Here are some hints:
+
+The primary key of the ProductCategory table is ProductCategoryID,
+so you will need to group the SalesOrderDetail records by ProductCategoryID.
+You will need to join from SalesOrderDetail to Product to ProductSubcategory.
+The ProductSubcategory table has a ProductCategoryID column.
+
+The primary key of the SalesTerritory table is TerritoryID,
+so you will need to group the SalesOrderDetail records by TerritoryID.
+You will need to join from SalesOrderDetail to SalesOrderHeader.
+The SalesOrderHeader table has a TerritoryID column.
+
+The primary key of the SalesPerson table is BusinessEntityID.
+There is a foreign key from SalesOrderHeader.SalesPersonID to
+SalesPerson.BusinessEntityID.
+You probably have already defined the join from SalesOrderDetail
+to SalesOrderHeader.
+This is sufficient to solve the task, but the SalesPerson table
+does not contain much information.
+If you want to see, for example, the full name of the SalesPerson you will
+have to join to the Person table.
 
 @section[#:tag "schema-generation"]{
  Appendix A: Generating the Initial Schema Definition}
