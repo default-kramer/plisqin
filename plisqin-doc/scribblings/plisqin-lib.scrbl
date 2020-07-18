@@ -393,6 +393,20 @@
 @defidform[this]{
  For use within @(racket define-schema).
  Any other use is a syntax error.
+
+ Within define-schema, @(racket this) will always be an
+ @(racket instanceof) the table that encloses it.
+
+ @subsubsub*section[#:tag "this-is-nullable"]{this May Be Null}
+ We know that @(racket this) is always an @(racket instance?).
+ We also know that every @(racket join?) is an @(racket instance?).
+ We also know that left joins are @tech[#:key "nullability"]{nullable}.
+ Therefore, every time we use @(racket this), we should remember that it might
+ be nullable.
+ Specifically, if we are using @(racket this) within a @tech{strict} comparison,
+ we should make sure to use a @tech{fallback}.
+ If we don't, it is just a matter of time before someone passes a left join into
+ our procedure and gets an error that might surprise them.
 }
 
 @defproc[(table? [x any/c]) any/c]{
