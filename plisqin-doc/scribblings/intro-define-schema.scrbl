@@ -32,6 +32,14 @@
  You can try the following on your REPL and verify that no error is raised.
  @(repl #:no-result x ...)
  })
+
+   (define (difflink commit-str)
+     (define url
+       (format "https://github.com/default-kramer/plisqin-tutorials/commit/~a?diff=unified"
+               commit-str))
+     @link[url]{here})
+   (define (answer-key commit-str)
+     @nested{My solution for this section is @(difflink commit-str).})
    )
 
 
@@ -69,9 +77,8 @@ This may seem like "too much magic" right now, but once you learn how it works
 it is actually pretty formulaic.
 
 @section{Getting Started}
-@(define aw-schema @tech{aw-schema.rkt})
 Start a new file using @racketplainfont{#lang racket}.
-Save it as @deftech{aw-schema.rkt}, short for "AdventureWorks schema".
+Save it as aw-schema.rkt, short for "AdventureWorks schema".
 Add the the following code to this file:
 @(racketblock
   (require plisqin
@@ -84,7 +91,7 @@ To make sure everything is set up correctly, try asking SQLite what time it is:
   (aw:show-table "select datetime('now')"))
 
 @(define initial-url
-   "https://github.com/default-kramer/plisqin/blob/morselize/plisqin-doc/scribblings/adventure-works-checkpoints/1.rkt#L8")
+   "https://raw.githubusercontent.com/default-kramer/plisqin-tutorials/e844825b48137553246c64e73516d880b9068825/define-schema-answer-key/aw-schema.rkt")
 
 @margin-note{
  If you really want to know how to automatically generate this, see
@@ -93,8 +100,7 @@ OK, the first thing we need to add to our schema definition is the
 table and column information.
 There are ways to automatically inspect the database and generate the initial
 schema definition, but that is not what we are interested in right now.
-You can just copy and paste the @(racket (define-schema ....))
-from @link[initial-url]{this file} into your @aw-schema file.
+You can just use @link[initial-url]{this file} as your starting aw-schema.rkt file.
 
 @(load-checkpoint! "1.rkt")
 Save, Run, and the following query should now work on your REPL:
@@ -103,11 +109,11 @@ Save, Run, and the following query should now work on your REPL:
    (from pc ProductCategory
          (select (Name pc)))))
 
-Now that @tech{aw-schema.rkt} is somewhat large, DrRacket may
-take a long time to run it. For this reason, I recommend that you add
-@(racket (provide (all-defined-out))) to your @aw-schema file and
-@(racket require) it from another file to avoid this delay whenever possible.
-Disabling debugging in DrRacket will also speed things up a lot.
+Now that aw-schema.rkt is somewhat large, DrRacket may take a long time to run it.
+For this reason, I recommend that you @(racket require) it from another file,
+where you will do any work that does not require a change to the
+@(racket define-schema) code.
+(The answer keys that I will share with you do not follow this advice.)
 
 There are a few REPL tricks you should learn before proceeding.
 The first identifier we passed into @(racket define-schema) was
@@ -139,8 +145,9 @@ For each task, you will
   #:style 'ordered
   @item{Create a query.}
   @item{Repeatedly refactor that query.
- In this part, you will add definitions to @tech{aw-schema.rkt}.}
-  @item{Recap and verify that your refactorings were correct.}
+ In this part, you will add definitions to your aw-schema.rkt file.}
+  @item{Recap and verify that your refactorings were correct.
+ Here I will provide an answer key that you can check.}
   @item{Proceed to the next task.})
 
 During refactoring, I will link you to refactoring recipes that you will follow.
@@ -206,8 +213,7 @@ One obvious problem is that both columns are shown as "Name".
 We will immediately fix that during refactoring.
 
 @subsubsub*section{Refactoring}
-Use the @(secref "ds:rename") recipe twice to create
-the following equivalent query:
+Use the @(secref "ds:rename") recipe to create the following equivalent query:
 @(racketblock
   (from subcat ProductSubcategory
         (limit 5)
@@ -215,6 +221,17 @@ the following equivalent query:
               (join-on (.= (ProductCategoryID cat)
                            (ProductCategoryID subcat))))
         (select (SUBCATEGORYNAME subcat))
+        (select (Name cat))))
+
+Use the @(secref "ds:rename") recipe again to create the
+following equivalent query:
+@(racketblock
+  (from subcat ProductSubcategory
+        (limit 5)
+        (join cat ProductCategory
+              (join-on (.= (ProductCategoryID cat)
+                           (ProductCategoryID subcat))))
+        (select (SubcategoryName subcat))
         (select (CATEGORYNAME cat))))
 
 That looks good. But we are not done refactoring.
@@ -251,6 +268,7 @@ And now we are done!
         (CategoryName ProductCategory)
         (ProductCategory ProductSubcategory)
         (CategoryName ProductSubcategory))
+@(answer-key "08109d80b869a230ea4af824578aba2ede359ce2")
 
 @task{Task 2: Products & Subcategories & Categories}
 @bossquote{Show me a list of Products with Subcategory and Category names.}
@@ -275,7 +293,7 @@ these Products from the result set:
         (join subcat ProductSubcategory
               (join-type 'left)
               (join-on (.= (ProductSubcategoryID subcat)
-                           (ProductSubcategoryID prd))))))
+                           (?? (ProductSubcategoryID prd) /void))))))
 
 Now we need to add some select clauses:
 @margin-note{The code @(racket (?? expr /void)) says that "if expr is null, it
@@ -374,6 +392,7 @@ And now we are done!
         (SubcategoryName Product)
         (CategoryName Product)
         (ProductName Product))
+@(answer-key "d7ec8d4c6b1b93703c3e41dd67439a1f8b2d67bb")
 
 @task{Task 3: Products with Non-Zero Sales}
 @bossquote{Show me a list of Products that have non-zero sales,
@@ -426,6 +445,11 @@ Use the @(secref "scalar->schema") recipe to create the following equivalent que
 And now we are done!
 
 @(recap (HasSales? Product))
+My solution for this section is
+@(difflink "b7c958498f1d24781583e48201f0e8a9e5a1aae6").
+@bold{Warning:} You might notice a small error in my solution.
+I did not use a fallback around @(racket this), which will cause an error
+if anyone passes a left join of the Product table into @(racket HasSales?).
 
 Notice the encapsulation that @(racket (HasSales? Product)) provides.
 Today it is implemented using @(racket exists), but in the future we might
@@ -511,6 +535,7 @@ This might be a good idea, and you are welcome to do so.
 But I am going to stop here for now.
 
 @(recap (DetailsG Product))
+@(answer-key "8376dfee36a5c0411be76ca71c98082f0684295a")
 
 @task{Task 5: Sales by Subcategory}
 @(define task5-quote
@@ -627,6 +652,7 @@ But I am going to stop here for now.
 @(recap (Product SalesOrderDetail)
         (ProductSubcategoryID SalesOrderDetail)
         (DetailsG ProductSubcategory))
+@(answer-key "60fef3e0a3caca7216879097a7ffb4cfaddc7db4")
 
 @task{Task 6: Sales by Anything}
 Let's look at the previous two tasks.
@@ -721,9 +747,10 @@ Interesting! The @(racket sales-report) procedure accepts a query of any table
 for which @(racket DetailsG) is defined!
 It appends some more clauses to create a larger query.
 
-@subsubsection[#:tag "ec1"]{Extra Credit}
-Extra Credit: Extend the definition of DetailsG so that it is defined for Category, SalesPerson, and Territory.
-Try using @(racket sales-report) with these tables.
+@subsubsub*section{Refactoring Recap}
+@(answer-key "d23dbd050cf6158668828134450ca6d35c279472")
+
+We didn't add anything to our schema definition in this section.
 
 @task{Task 7: Sales by Anything with Date Range}
 What else could we do with the @(racket sales-report)?
@@ -765,7 +792,12 @@ We could modify it to accept a time window of sales to consider as follows:
           (select (SubcategoryName subcat))
           (select (CategoryName subcat))))))
 
-@subsubsection[#:tag "ec3"]{Extra Credit}
+@subsubsub*section{Recap}
+@(answer-key "27b393580f6c45f3bea881569135335dea49094c")
+
+We didn't add anything to our schema definition in this section.
+
+@subsubsection[#:tag "ec3"]{Extra Credit 1}
 Apply the appropriate refactoring recipies so that @(racket OrderDate) is
 defined for @(racket SalesOrderDetail).
 This allows you to refactor @(racket sales-report) as follows:
@@ -796,6 +828,45 @@ Next use the @(secref "join->inline") recipe, and finally use the
 @(secref "scalar-flattening") recipe to define
 @(racketblock
   (OrderDate SalesOrderDetail))
+
+@subsubsub*section{Answer Key}
+@(answer-key "d6645f18cd0eac45addeaab12e689a2d4135ff74")
+
+@subsubsection[#:tag "ec1"]{Extra Credit 2 (More Challenging)}
+Extra Credit: Extend the definition of DetailsG so that it is defined for
+the ProductCategory, SalesTerritory, and SalesPerson tables.
+Try using @(racket sales-report) with these tables.
+Here are some hints:
+
+The primary key of the ProductCategory table is ProductCategoryID,
+so you will need to group the SalesOrderDetail records by ProductCategoryID.
+You will need to join from SalesOrderDetail to Product to ProductSubcategory.
+The ProductSubcategory table has a ProductCategoryID column.
+
+The primary key of the SalesTerritory table is TerritoryID,
+so you will need to group the SalesOrderDetail records by TerritoryID.
+You will need to join from SalesOrderDetail to SalesOrderHeader.
+The SalesOrderHeader table has a TerritoryID column.
+
+The primary key of the SalesPerson table is BusinessEntityID.
+There is a foreign key from SalesOrderHeader.SalesPersonID to
+SalesPerson.BusinessEntityID.
+You probably have already defined the join from SalesOrderDetail
+to SalesOrderHeader.
+This is sufficient to solve the task, but the SalesPerson table
+does not contain much information.
+If you want to see, for example, the full name of the SalesPerson you will
+have to join to the Person table.
+
+@subsubsub*section{Answer Keys}
+Part 1: My definition of @(racket (DetailsG ProductCategory)) is
+@(difflink "04d12acd5b7740f7766dae8098af6c47667dc404").
+
+Part 2: My definition of @(racket (DetailsG SalesTerritory)) is
+@(difflink "2d401bf8a0e5f3231f758dbf80b7e981975c5266").
+
+Part 3: My definition of @(racket (DetailsG SalesPerson)) is
+@(difflink "99c76528616630a3de18b32fefec0541169f21be").
 
 @section[#:tag "schema-generation"]{
  Appendix A: Generating the Initial Schema Definition}

@@ -17,9 +17,12 @@
 ; MSSQL via ODBC (and perhaps all ODBC?) does not support indexed parameters.
 ; So we have to do some rewriting work to support it.
 (define (need-to-rewrite? dialect)
-  ; TODO investigate. I suspect this is not a function of the dialect.
+  ; I suspect this is not a function of the dialect.
   ; I suspect it is a function of `using-odbc?`.
   ; Meaning if someone is using PostgreSQL via ODBC this will not work for them.
+  ; We'll leave it like this for now, but a better approach might be to make
+  ; this an optional parameter of `compile-statements`... something like
+  ;    #:param-style (or/c 'indexed 'odbc)
   (and (not (postgres? dialect))
        (not (sqlite? dialect))))
 

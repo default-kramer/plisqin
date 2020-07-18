@@ -32,13 +32,13 @@
          fallback fallback? /void /minval /maxval /any)
 
 (require plisqin-lib/private2/define-schema)
-(provide define-schema this)
+(provide define-schema this table?)
 
 (require "./private2/_statement.rkt")
 (provide define-statement compile-statements)
 
-(require (only-in "./private2/sql/frag-types.rkt" unsafe-content?))
-(provide unsafe-content?)
+(require (only-in "./private2/sql/frag-types.rkt" unsafe-content? 2bool?))
+(provide unsafe-content? 2bool?)
 
 (require "./private2/_core.rkt")
 ; Adding contracts makes doc-coverage consider them different from Morsel's

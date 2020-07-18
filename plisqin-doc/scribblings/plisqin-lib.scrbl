@@ -16,9 +16,9 @@
                      (join join-id join-stuff ...)
                      clause-expr)]
          #:contracts ([queryable-expr (or/c symbol?
+                                            table?
                                             query?
-                                            Subquery?
-                                            trusted-queryable?)]
+                                            Subquery?)]
                       [clause-expr (or/c void? QueryClause?
                                          (listof (or/c void? QueryClause?)))])]{
  Creates a @(racket query?).
@@ -96,9 +96,9 @@
                      (join join-stuff ...)
                      clause-expr)]
          #:contracts ([queryable-expr (or/c symbol?
+                                            table?
                                             join?
-                                            Subquery?
-                                            trusted-queryable?)]
+                                            Subquery?)]
                       [link-expr instance?]
                       [clause-expr (or/c void? JoinClause?
                                          (listof (or/c void? JoinClause?)))])]{
@@ -289,33 +289,150 @@
  argument might be a left join.
 }
 
-@defform[#:literals(table)
-         (define-schema schema-id table-def ...)
+@defform[#:literals (table)
+         (define-schema schema-id table-spec ...)
          #:grammar
-         [(schema-id id
-                     #f)
-          (table-def (table table-id item-def ...))
-          (item-def (code:line #:column [id column-opt ...] ...+)
-                    (code:line #:has-one [id expr] ...+)
-                    (code:line #:has-group [id expr] ...+)
-                    (code:line #:property [id expr] ...+))
-          (column-opt (code:line #:as as-name)
-                      (code:line #:type type)
-                      (code:line #:null nullability)
-                      (code:line #:dbname dbname))]]{
- TODO write documentation.
- Also, do we already support raw column ids? Should we? Like:
+         [(table-spec (table table-id item-spec ...))
+          (item-spec (code:line #:column column-spec ...)
+                     (code:line #:property proc-spec ...)
+                     (code:line #:has-one proc-spec ...)
+                     (code:line #:has-group proc-spec ...))
+          (proc-spec (code:line [proc-id proc-body]))
+          (column-spec (code:line proc-id)
+                       (code:line [proc-id as-name* type* nullability* dbname*]))
+          (as-name* (code:line)
+                    (code:line #:as as-name))
+          (type* (code:line)
+                 (code:line #:type type))
+          (nullability* (code:line)
+                        (code:line #:null nullability))
+          (dbname* (code:line)
+                   (code:line #:dbname dbname))
+          ]]{
+ Used to encode a database schema into Racket procedures.
+ See @(secref "using-define-schema") for an extended example.
+
+ Defines each @(racket table-id) as a @(racket table?).
+ Note that each @(racket table-id) can also be used as a @(racket proc-id),
+ meaning that some tables are also procedures.
+
+ Each @(racket proc-id) is defined as a procedure that takes one argument.
+ The argument must be an @(racket instanceof) a table that encloses
+ the @(racket proc-id), otherwise a contract violation will be raised.
+ Multiple tables may enclose the same @(racket proc-id) and the procedure
+ will dispatch to the correct case based on the argument value.
+ @(repl
+   (define-schema test-schema
+     (table A
+            #:property
+            [foo (%%scalar "foo-given-A")])
+     (table B
+            #:property
+            [foo (%%scalar "foo-given-B")])
+     (table C))
+   (foo A)
+   (foo B)
+   (code:comment "foo is not defined for C")
+   (eval:error (foo C)))
+
+ Recall that each @(racket proc-id) is a procedure that takes one argument.
+ Within the corresponding @(racket proc-body), the special form @(racket this)
+ will be bound to that single argument.
+ So @(racket this) is always an @(racket instanceof) the table that encloses it.
+
+ Currently, @(racket #:property), @(racket #:has-one), and @(racket #:has-group)
+ are treated identically; they are only for code readability at this time.
+ You should use @(racket #:property) for procedures that return a @(racket Scalar?)
+ (or one of its subtypes).
+ You should use @(racket #:has-group) for procedures that return @tech{grouped joins}.
+ You should use @(racket #:has-one) for procedures that return joins such that
+ "@(racket this):joined-table" is a "many:1" or "1:1" relationship.
+ A future version of Plisqin may add warnings if it can detect that your
+ procedures are returning something other than the keyword indicates.
+
+ The @(racket #:column) definitions are different than the others.
+ They have no @(racket proc-body), so @(racket this) cannot be used.
+ The return value is something like the following:
  @(racketblock
-   #:column
-   FirstName
-   LastName
-   [UserId #:type Number?]
-   AnotherColumn)
+   (>> (%%scalar this
+                 (>> (%%sql "." dbname)
+                     #:null nullability)
+                 #:cast type
+                 #:as as-name)))
+ The default @(racket dbname) is @(racket proc-id) quoted.
+ The default @(racket type) is @(racket Scalar?).
+ The default @(racket nullability) is @(racket maybe).
+ The default @(racket as-name) is @(racket proc-id) quoted.
+
+ The @(racket schema-id) is a procedure that can be used as a REPL tool to
+ explore your schema definition.
+ Using this procedure outside of the REPL is strongly discouraged.
+ You can do three useful things with it:
+ @margin-note{This procedure works on datums, not syntax objects.
+  If you have renamed any tables or procedures (e.g. with @(racket prefix-in)),
+  you still need to use the original ids with this procedure.}
+ @(repl
+   (define-schema test-schema
+     (table A #:column x y z)
+     (table B #:column x z)
+     (table C #:column y z))
+   (code:comment "--- 1 ---")
+   (code:comment "See which procedures accept a certain table.")
+   (code:comment "If I have an (instanceof B), I can use this to")
+   (code:comment "see all the procedures which will accept it:")
+   (eval:check (test-schema '(_ B)) '(x z))
+   (code:comment "--- 2 ---")
+   (code:comment "See which tables a certain proc will accept.")
+   (code:comment "This lists the tables that `y` accepts:")
+   (eval:check (test-schema '(y _)) '(A C))
+   (code:comment "--- 3 ---")
+   (code:comment "List all the tables:")
+   (eval:check (test-schema 'tables) '(A B C)))
 }
 
 @defidform[this]{
  For use within @(racket define-schema).
  Any other use is a syntax error.
+
+ Within define-schema, @(racket this) will always be an
+ @(racket instanceof) the table that encloses it.
+
+ @subsubsub*section[#:tag "this-is-nullable"]{this May Be Null}
+ We know that @(racket this) is always an @(racket instance?).
+ We also know that every @(racket join?) is an @(racket instance?).
+ We also know that left joins are @tech[#:key "nullability"]{nullable}.
+ Therefore, every time we use @(racket this), we should remember that it might
+ be nullable.
+ Specifically, if we are using @(racket this) within a @tech{strict} comparison,
+ we should make sure to use a @tech{fallback}.
+ If we don't, it is just a matter of time before someone passes a left join into
+ our procedure and gets an error that might surprise them.
+}
+
+@defproc[(table? [x any/c]) any/c]{
+ Predicate that recognizes tables from @(racket define-schema).
+ @(repl
+   (define-schema test-schema
+     (table Tbl #:column foo))
+   (eval:check (table? Tbl) #t))
+
+ A @(racket table?) can be used an @(racket instanceof) itself.
+ This should only be used on your REPL, to explore things like
+ "if I had an instance of @(racket Tbl), what would @(racket foo) return?"
+ @(repl
+   (eval:check ((instanceof Tbl) Tbl) #t)
+   (foo Tbl))
+
+ In real queries, every instance must be created using @(racket from) or
+ @(racket join). If you try to use a table as an instance, SQL cannot be generated:
+ @(repl
+   (eval:error
+    (to-sql
+     (from t Tbl
+           (code:comment "Good - `t` is an instance created by `from`")
+           (select (foo t))
+           (code:comment "BAD! - don't use `Tbl` as an instance in real code")
+           (select (foo Tbl))))))
 }
 
 @defform[(>> token modification ...)
@@ -400,11 +517,6 @@
  creates a placeholder token having type @(racket Number?) and representing
  an SQL parameter. The @(racket a) and @(racket d) parameters were assigned the
  @(racket Scalar?) type, which is the default when @(racket Type-expr) is absent.
-
- TODO what about nullability?
- We could attach @(racket /void) to each param, but that seems dangerous.
- As of now, it's fine to force the user to add the fallback at the site of the
- comparison.
 }
 
 @defform[(compile-statements #:module module-path
@@ -468,6 +580,15 @@
  Equivalent to
  @(racket (or/c Token? query? join? instance? interval?
                 string? number? symbol? (listof unsafe-content?)))
+}
+
+@defproc[(2bool? [x any/c]) any/c
+         #:value (and (Boolish? x)
+                      (eq? no (nullability x)))]{
+ Predicate that recognizes 2-valued booleans (true and false).
+ It will not contain the unknown boolean value.
+ Used by the @tech{strict} variant to avoid 3-valued logic.
+ See @(secref "Nullability") for more information.
 }
 
 @section[#:tag "reference:nullability"]{Nullability}

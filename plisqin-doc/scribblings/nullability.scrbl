@@ -55,14 +55,28 @@ A programmer might write "x <= y" but fail to consider what should happen
 if x is null or y is null or both are null.
 
 @(load-checkpoint! "final")
-@(void "TODO deftech{strict boolean} might help here")
-The @tech{strict} version of Plisqin prevents these kinds of mistakes.
+The @tech{strict} variant of Plisqin prevents these kinds of mistakes.
 It does this in two ways:
 @(itemlist
-  @item{Anywhere that it accepts a @(racket Bool?), it demands that its nullability
- is @(racket no), meaning that it cannot contain the unknown value.}
-  @item{Anywhere that it returns a @(racket Bool?), it guarantees that its nullability
- is @(racket no), meaning that it cannot contain the unknown value.})
+  @item{It uses the @(racket 2bool?) contract to ensure that the unknown
+ boolean value will not be present in "decision making positions."
+ For example, @(racket where) requires a @(racket 2bool?) because it is deciding
+ which rows to filter from the result set and will not tolerate any ambiguity.
+ On the other hand, @(racket select) isn't making a decision, so it
+ will accept a nullable @(racket Boolish?) and just propogate any dbnulls that
+ may be present.}
+  @item{
+ @margin-note{The return value of all the comparison operators (such as
+  @(racket .<=)) could be better documented as
+  @(racket (and/c Bool? 2bool?)). This is a limitation of Plisqin's
+  documentation mechanism that could be improved.}
+ Anywhere that it returns a @(racket Bool?), it promises that the return
+ value will also be a @(racket 2bool?).
+ In order to fulfill this promise, all the comparison operators (such as
+ @(racket .<=)) require the caller to disambiguate what should happen when
+ dbnull is encountered.
+ This disambiguation is accomplished using fallbacks, which the rest of this
+ section will explain.})
 
 @subsection{An Example}
 This section uses the Adventure Works example database:

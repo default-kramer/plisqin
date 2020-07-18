@@ -147,7 +147,32 @@ argument (which was @(racket x)) with @(racket this) as follows:
            ....)
     ....))
 
-Finally, if @(racket (code:hilite (foo ....))) was actually a join, you will
+Warning: this recipe is not complete!
+Continue reading the following subsections.
+
+@subsubsub*section{On Strict Comparisons}
+If you have a @tech{strict} comparison involving @(racket this), you should
+add a @tech{fallback} if one is not already present.
+@(racketblock
+  (code:comment "Notice that `this` is used in a strict comparison...")
+  (.= (foo bar)
+      (foo this))
+  (code:comment "... and surround it with a fallback:")
+  (.= (foo bar)
+      (?? (foo this) /void)))
+
+For the purposes of the @(secref "using-define-schema") walkthrough,
+you can just always add the @(racket /void) fallback as seen above and move on.
+Or if you are not satisfied with this hand-waving, you should first read
+@(secref "Nullability") and then @(secref "this-is-nullable").
+
+Alternatively, you don't have to add the fallback now.
+If your code worked without a fallback prior to applying this recipe, it will
+still work without a fallback after applying this recipe.
+But future callers of this procedure might get an error.
+
+@subsubsub*section{On Joins}
+If the definition of @(racket NEW-PROC) returns a join, you will
 have something like the following code.
 You can omit the @(racket #:to this) if you want, because
 @(racket define-schema) will automatically add it for you.
@@ -156,7 +181,7 @@ You can omit the @(racket #:to this) if you want, because
    (code:hilite (join y TableY #:to this
                       clauses ....))])
 
-@subsubsub*section{A Note on Left Joins}
+@subsubsub*section{On Left Joins}
 I recommend that every join you add to @(racket define-schema) should never
 remove rows from the result set.
 For example, perhaps a Player @(racket #:has-one) Team, but this relationship
@@ -175,7 +200,7 @@ If a caller really wants to convert a @(racket 'left) join into an
 
 Note that almost every @(racket #:has-group) relationship should be a left
 join, because a group containing zero members is considered a failed join
-and will result in rows being filtered from the result set.
+and unless it is a left join, rows will be filtered from the result.
 
 @recipe[#:tag "join<->define"]{Join <-> Define}
 This recipe allows you to convert a join to a definition and back.
@@ -259,7 +284,7 @@ into our schema definition. We also immediately rename it to @(racket TEAM).
            [TEAM
             (code:hilite (join t Team
                                (join-on (.= (TeamID t)
-                                            (TeamID this)))))]
+                                            (?? (TeamID this) /void)))))]
            ....)
     ....)
   (from p Player
@@ -290,7 +315,7 @@ Then the refactored code would look like this:
            [CURRENTTEAM
             (code:hilite(join t Team
                               (join-on (.= (TeamID t)
-                                           (TeamID this)))))]
+                                           (?? (TeamID this) /void)))))]
            ....)
     ....)
   (from p Player
@@ -352,7 +377,7 @@ My personal convention is that the name of a grouped join ends with "G".
             (code:hilite (join playersG Player
                                (group-by (TeamID playersG))
                                (join-on (.= (TeamID playersG)
-                                            (TeamID this)))))]
+                                            (?? (TeamID this) /void)))))]
            ....)
     ....)
   (from t Team

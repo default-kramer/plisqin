@@ -1,6 +1,6 @@
 #lang racket
 
-(provide define-schema this)
+(provide define-schema this table?)
 
 (require (only-in "_core.rkt" gen:queryable get-queryable)
          (only-in "sql/fragment.rkt" fragment? >>)
@@ -16,6 +16,24 @@
 
 (define-syntax-parameter this
   (λ (stx) (raise-syntax-error 'this "used out of context (Plisqin's this)" stx)))
+
+(begin-for-syntax
+  (define-syntax-class column-spec
+    (pattern (~or* column-id:id
+                   [column-id:id (~optional (~seq #:as asname:expr))
+                                 (~optional (~seq #:type Type:expr))
+                                 (~optional (~seq #:null nullability:expr))
+                                 (~optional (~seq #:dbname dbname:expr))])))
+  (define-syntax-class proc-spec
+    (pattern [proc-id:id body:expr]))
+  (define-splicing-syntax-class item-spec
+    (pattern (~or* (~seq #:column col:column-spec ...)
+                   (~seq #:property item:proc-spec ...)
+                   (~seq #:has-one item:proc-spec ...)
+                   (~seq #:has-group item:proc-spec ...))))
+  (define-syntax-class table-spec
+    #:datum-literals (table)
+    (pattern (table table-id:id item:item-spec ...))))
 
 (struct table (proc name) #:transparent
   #:property prop:procedure 0
@@ -33,22 +51,19 @@
 
 (define-syntax (handle-column stx)
   (syntax-parse stx
-    [(_ [id:id (~optional (~seq #:as asname))
-               (~optional (~seq #:type Type))
-               (~optional (~seq #:null nullability))
-               (~optional (~seq #:dbname dbname))])
+    [(_ col:column-spec)
      (quasisyntax/loc stx
        (>> (%%scalar this
                      ; The nullability of the entire expression will be inferred from
                      ; whatever `this` is plus this fragment:
-                     (>> (%%sql (~? (~@ "." dbname)
-                                    (~@ "." 'id)))
-                         (~? (~@ #:null nullability)
+                     (>> (%%sql (~? (~@ "." col.dbname)
+                                    (~@ "." 'col.column-id)))
+                         (~? (~@ #:null col.nullability)
                              (~@))))
-           (~? (~@ #:cast Type)
+           (~? (~@ #:cast col.Type)
                (~@))
-           (~? (~@ #:as asname)
-               (~@ #:as 'id))))]))
+           (~? (~@ #:as col.asname)
+               (~@ #:as 'col.column-id))))]))
 
 (define-syntax (handle-property stx)
   (syntax-parse stx
@@ -101,17 +116,18 @@
   ; func-id : identifier?
   (define (add-table dict func-id)
     (let ([key (syntax-e func-id)])
-      (meta-datum-collector (cons `(,(syntax->datum func-id) => #:table)
+      (meta-datum-collector (cons `(#:table ,(syntax->datum func-id))
                                   (meta-datum-collector)))
       (dict-set dict key (:func func-id (list) #t))))
 
   ; This is a first pass that just collects all the table-ids.
   (define (find-tables dict stx)
-    (syntax-case stx ()
-      [((table id stuff ...) rest ...)
+    (syntax-parse stx
+      [(id:id rest ...)
        (find-tables (add-table dict #'id)
                     #'(rest ...))]
-      [() dict]))
+      [() dict]
+      [else (error "Plisqin assert fail: find-tables")]))
 
   ; func-id : identifier?
   ; cond-id : identifier?
@@ -127,9 +143,7 @@
            [func (struct-copy :func func
                               [conds (cons (:cond cond-id body)
                                            (:func-conds func))])])
-      (meta-datum-collector (cons (list (syntax->datum #`(#,func-id #,cond-id))
-                                        '=>
-                                        (syntax->datum orig-body))
+      (meta-datum-collector (cons `(#:cond ,(syntax->datum #`(#,func-id #,cond-id)))
                                   (meta-datum-collector)))
       (dict-set dict key func)))
 
@@ -143,6 +157,8 @@
   (define (parse1 dict stx)
     (syntax-case stx ()
       [()
+       dict]
+      [(table id)
        dict]
       [(table id clause ...)
        (parse2 dict #'id #'(clause ...))]))
@@ -186,24 +202,22 @@
        (raise-syntax-error 'define-schema "something went wrong..." stx)]))
   )
 
-; Creates a procedure that searches the meta-datums for '(ProcSym x) and returns x.
+; Creates a procedure that searches the meta-datums for '(#:cond (ProcSym x)) and returns x.
 (define (proc-matcher ProcSym)
   (λ (form)
-    ; form is something like '((f x) => body)
-    (match (car form)
-      [(list a b)
-       #:when (equal? a ProcSym)
-       b]
+    (match form
+      [(list #:cond (list f x))
+       #:when (equal? f ProcSym)
+       x]
       [else #f])))
 
-; Creates a procedure that searches the meta-datums for '(x TableSym) and returns x.
+; Creates a procedure that searches the meta-datums for '(#:cond (f TableSym)) and returns f.
 (define (table-matcher TableSym)
   (λ (form)
-    ; form is something like '((f x) => body)
-    (match (car form)
-      [(list a b)
-       #:when (equal? b TableSym)
-       a]
+    (match form
+      [(list #:cond (list f x))
+       #:when (equal? x TableSym)
+       f]
       [else #f])))
 
 ; Applies the result of `proc-matcher` or `table-matcher`
@@ -213,7 +227,7 @@
 (define (get-tables meta-datums)
   (let* ([tables (map (λ (form)
                         (match form
-                          [(list Table '=> '#:table)
+                          [(list #:table Table)
                            Table]
                           [else #f]))
                       meta-datums)]
@@ -223,7 +237,7 @@
 (define (make-schema-function meta-datums)
   (lambda (pattern)
     (match pattern
-      ['(_ _) meta-datums]
+      [(list '_ '_) meta-datums]
       ['tables
        (get-tables meta-datums)]
       [(list '_ TableSym)
@@ -232,14 +246,15 @@
        (search meta-datums (proc-matcher ProcSym))]
       [else (error "invalid pattern:" pattern)])))
 
-; TODO need to use syntax-parse
-(define-syntax (define-schema stx)
+; stx : the original (define-schema ....) syntax object
+; table-ids : a syntax object like (T1 T2 ...) for each table id
+(define-for-syntax (*define-schema stx table-ids)
   (syntax-case stx ()
     [(_ schema-id clause ...)
      (let-values ([(lst tables meta-datums)
                    (parameterize ([meta-datum-collector (list)])
                      ; collect into association list
-                     (let* ([lst (find-tables (list) #'(clause ...))]
+                     (let* ([lst (find-tables (list) table-ids)]
                             ; make `tables` a list of symbols, one for each table
                             [tables (map car lst)]
                             [tables (sort tables symbol<?)]
@@ -290,6 +305,13 @@
                                    (:func-conds func)))))))])
          new-stx))]))
 
+(define-syntax (define-schema stx)
+  ; This just layers syntax-parse over *define-schema
+  (syntax-parse stx
+    [(_ meta-proc-id:id t:table-spec ...)
+     (let ([result (*define-schema stx #'(t.table-id ...))])
+       result)]))
+
 
 (module+ test
   (require rackunit
@@ -310,10 +332,13 @@
            #:property
            [Carrot2
             (Carrot this)]
-           ))
+           )
+    ; make sure this is allowed:
+    (table EmptyTable)
+    )
 
   (check-equal? ($$ 'tables)
-                '(A B))
+                '(A B EmptyTable))
   (check-equal? ($$ '(_ A))
                 '(Bar Foo))
   (check-equal? ($$ '(_ B))
