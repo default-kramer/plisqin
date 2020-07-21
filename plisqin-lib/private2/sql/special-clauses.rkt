@@ -20,18 +20,18 @@
     (init-field prop val name)
     (super-new)
 
-    (define/override (change #:cast [type type]
-                             #:as [as-name as-name]
-                             #:null [nullability nullability]
-                             #:fallback [fallback fallback])
+    (define/override (change #:cast [:type type]
+                             #:as [:as-name as-name]
+                             #:null [:nullability nullability]
+                             #:fallback [:fallback fallback])
       (new clause%
            [prop prop]
            [val val]
            [name name]
-           [type type]
-           [as-name as-name]
-           [nullability nullability]
-           [fallback fallback]))
+           [type (or :type type)]
+           [as-name (or :as-name as-name)]
+           [nullability (or :nullability nullability)]
+           [fallback (or :fallback fallback)]))
 
     ; clause<%>
     (define/public (apply content)

@@ -1,6 +1,7 @@
 #lang racket
 
-(provide token% >>)
+(provide token%
+         (contract-out [>> contract:>>]))
 
 (require "_null.rkt"
          "_types.rkt"
@@ -21,6 +22,10 @@
     (super-new)
 
     (abstract change)
+    ; #f means "do not change"; this means that once `as-name` or `fallback`
+    ; becomes non-false, you can't use `change` to revert them.
+    ; But so far I haven't needed to do that, so wait for a real need before
+    ; worrying about that.
     #;(change #:cast [type type]
               #:as [as-name as-name]
               #:null [nullability nullability]
@@ -51,20 +56,25 @@
       (hasher (equal-content)))
     ))
 
-(define-syntax (>> stx)
-  (syntax-parse stx
-    [(_ token
-        (~alt (~optional (~seq #:cast Type))
-              (~optional (~seq #:as as-name))
-              (~optional (~seq #:null nullability))
-              (~optional (~seq #:fallback fallback))) ...)
-     #:declare Type (expr/c #'type?)
-     #:declare as-name (expr/c #'(or/c symbol? string?))
-     #:declare nullability (expr/c #'nullability?)
-     #:declare fallback (expr/c #'fallback?)
-     (syntax/loc stx
-       (send token change
-             (~? (~@ #:cast Type.c))
-             (~? (~@ #:as as-name.c))
-             (~? (~@ #:null nullability.c))
-             (~? (~@ #:fallback fallback.c))))]))
+; Unfortunately not every Token? is a changeable-token? right now.
+; (Specifically, queries and joins are not.)
+(define (changeable-token? x)
+  (is-a? x token%))
+
+; The contract of >>
+(define contract:>>
+  (->* (changeable-token?)
+       (#:cast type? #:as (or/c symbol? string?)
+        #:null nullability? #:fallback fallback?)
+       changeable-token?))
+
+(define (>> token
+            #:cast [type #f]
+            #:as [as-name #f]
+            #:null [nullability #f]
+            #:fallback [fallback #f])
+  (send token change
+        #:cast type
+        #:as as-name
+        #:null nullability
+        #:fallback fallback))

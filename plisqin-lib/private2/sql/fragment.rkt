@@ -15,19 +15,19 @@
                 reducer)
     (super-new)
 
-    (define/override (change #:cast [type type]
-                             #:as [as-name as-name]
-                             #:null [nullability nullability]
-                             #:fallback [fallback fallback])
+    (define/override (change #:cast [:type type]
+                             #:as [:as-name as-name]
+                             #:null [:nullability nullability]
+                             #:fallback [:fallback fallback])
       (new fragment%
            [kind kind]
            [id id]
            [content content]
            [reducer reducer]
-           [type type]
-           [as-name as-name]
-           [nullability nullability]
-           [fallback fallback]))
+           [type (or :type type)]
+           [as-name (or :as-name as-name)]
+           [nullability (or :nullability nullability)]
+           [fallback (or :fallback fallback)]))
 
     ; sql-token<%>
     (define/override (token-kind) kind)
