@@ -7,6 +7,7 @@
          (submod "from.rkt" define-schema-helper)
          (for-syntax syntax/parse)
          "_null.rkt"
+         "_types.rkt"
          (submod "_null.rkt" more)
          (prefix-in %% (only-in (submod "./sql/frags.rkt" unsafe)
                                 scalar sql)))
@@ -49,21 +50,44 @@
   [(define (write-proc me port mode)
      (write-string (table-name me) port))])
 
+(define (do-column this column-sym table-sym
+                   as-name type nullability dbname)
+  ; Using macro contracts increases code size by about 4x, so compromise and
+  ; do the validation here instead.
+  (define (validate value contract keyword)
+    (when (not (contract value))
+      (raise-arguments-error
+       'define-schema
+       "contract violation (noticed late, backtrace might be misleading)"
+       "table" table-sym
+       "column" column-sym
+       "keyword" keyword
+       "expected" contract
+       "given" value)))
+  (validate as-name (or/c symbol? string?) '#:as)
+  ; because `(or/c type?)` prints better than `type?`
+  (validate type (or/c type?) '#:type)
+  (validate nullability (or/c #f nullability?) '#:null)
+  (validate dbname (or/c symbol? string?) '#:dbname)
+
+  (define a (%%sql "." dbname))
+  ; The nullability of the entire expression will be inferred from
+  ; whatever `this` is plus this fragment:
+  (define b (if nullability
+                (>> a #:null nullability)
+                a))
+  (define c (%%scalar this b))
+  (>> c #:cast type #:as as-name))
+
 (define-syntax (handle-column stx)
   (syntax-parse stx
-    [(_ col:column-spec)
+    [(_ table-id:id col:column-spec)
      (quasisyntax/loc stx
-       (>> (%%scalar this
-                     ; The nullability of the entire expression will be inferred from
-                     ; whatever `this` is plus this fragment:
-                     (>> (%%sql (~? (~@ "." col.dbname)
-                                    (~@ "." 'col.column-id)))
-                         (~? (~@ #:null col.nullability)
-                             (~@))))
-           (~? (~@ #:cast col.Type)
-               (~@))
-           (~? (~@ #:as col.asname)
-               (~@ #:as 'col.column-id))))]))
+       (do-column this 'col.column-id 'table-id
+                  (~? col.asname 'col.column-id)
+                  (~? col.Type Scalar?)
+                  (~? col.nullability #f)
+                  (~? col.dbname 'col.column-id)))]))
 
 (define-syntax (handle-property stx)
   (syntax-parse stx
@@ -178,7 +202,7 @@
             (kw? #'b))
        (parse2 dict cond-id #'(b rest ...))]
       [(#:column [id options ...] rest ...)
-       (parse2 (add dict #'id cond-id #'(handle-column [id options ...]))
+       (parse2 (add dict #'id cond-id #`(handle-column #,cond-id [id options ...]))
                cond-id
                #'(#:column rest ...))]
       [(#:column id rest ...)
