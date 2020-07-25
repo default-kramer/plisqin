@@ -5,15 +5,6 @@
 
 @title{Read Me First}
 
-@section{Project Status}
-@bold{Warning!!} Even this documentation is not ready yet.
-Check back next week.
-
-@bold{Plisqin is still unstable and may introduce breaking changes at any time.}
-If you want a stable release, please
-@hyperlink["https://github.com/default-kramer/plisqin"]{open an issue}
-and I will probably be happy to provide one.
-
 @section{What is Plisqin?}
 @(itemlist
   @item{Plisqin is a Racket library that helps you rearrange fragments of
@@ -79,6 +70,8 @@ I always end up duplicating fragments of queries and joins all over the place.
 Using Plisqin allows me to reduce duplication to what I suspect is the theoretical minimum.
 
 @section{Project Scope}
+Plisqin is now stable but incomplete.
+
 Plisqin's ideal scope includes all "application-level SQL", basically equivalent
 to the CRUD operations (create, read, update, delete).
 All "DBA-level SQL", such as creating tables, indexes, logins, etc... is

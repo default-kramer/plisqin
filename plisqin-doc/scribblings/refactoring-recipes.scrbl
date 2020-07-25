@@ -118,7 +118,8 @@ It is a candidate for being moved into @(racket define-schema) assuming that:
 First we need to decide which keyword is appropriate based on what this
 procedure returns. Choose from:
 @(itemlist
-  @item{@(racket #:property) if the return value is a @(racket Scalar?)}
+  @item{@(racket #:property) if the return value is a @(racket Scalar?)
+ (or one of its subtypes)}
   @item{@(racket #:has-group) if the return value is a singular grouped join.
  "Singular" means that adding the join to a query of TableX will not increase
  the number of rows that will be returned in the result set.

@@ -287,6 +287,9 @@ But at least some of the records have dbnull for their ProductSubcategoryID.
 This means that not every Product belongs to a ProductSubcategory.
 We create a join and use @(racket (join-type 'left)) to avoid eliminating
 these Products from the result set:
+@margin-note{The code @(racket (?? expr /void)) says that "if expr is null, it
+ should not be considered equal to anything."
+ You can read more about this at @(secref "Nullability").}
 @(racketblock
   (from prd Product
         (limit 5)
@@ -296,9 +299,6 @@ these Products from the result set:
                            (?? (ProductSubcategoryID prd) /void))))))
 
 Now we need to add some select clauses:
-@margin-note{The code @(racket (?? expr /void)) says that "if expr is null, it
- should not be considered equal to anything."
- You can read more about this at @(secref "Nullability").}
 @(repl-query
   (aw:show-table
    (from prd Product
