@@ -2,7 +2,8 @@
 
 @(begin
    (require (for-label "standard-label.rkt"))
-   (require scribble/example)
+   (require scribble/example
+            "helpers.rkt")
    )
 
 @title[#:tag "research-language"]{Plisqin as a Research Language}
@@ -179,3 +180,192 @@ avoid typecheck and nullcheck errors without using @(racket define-schema).
   (aw:show-table
    (from x the-query
          (limit 3))))
+
+@section{Open Questions and Shortcomings}
+Plisqin is closer to my ideal query language than anything else I've tried.
+But there are still some rough edges that could be improved.
+
+@subsection{The Limit/Offset Problem}
+See @hyperlink["https://github.com/default-kramer/plisqin/issues/12"]{this issue}.
+
+This problem highlights the fact that a scalar is more than just a data type
+(such as @(racket Number?)) and a nullability (such as @(racket no)).
+There is at least one more aspect, which I called "static" in the Github issue,
+which is relevant here.
+But can we always know whether an expression is "static", or does it depend
+on where it is being used...?
+
+An easy way around this is to add @tech{unsafe} versions of @(racket limit)
+and @(racket offset), but that is not interesting from a research perspective.
+
+@subsection{Nominal vs Structural Typing}
+Plisqin currently satisfies the Rule of Polymorphism using nominal typing.
+Specifically, it uses @(racket instanceof) to dispatch:
+@(racketblock
+  (define (CategoryName x)
+    (cond
+      [((instanceof ProductCategory) x)
+       (%%scalar x".Name")]
+      [((instanceof ProductSubcategory) x)
+       (code:comment "presumably (ProductCategory x) is returning a join here")
+       (CategoryName (ProductCategory x))])))
+
+As long as you have an instance of @(racket ProductCategory) or
+@(racket ProductSubcategory), the previous function works fine.
+But the following example will not work:
+@(racketblock
+  (from x (subquery (from pc ProductCategory
+                          (%%select "42 as Blah")))
+        (select (CategoryName x))))
+
+Should @(racket x) be considered an @(racket (instanceof ProductCategory))?
+Absolutely not!
+It has none of the columns that we expect an instance of ProductCategory to have.
+That was a silly example, so consider another one:
+@(racketblock
+  (from x (subquery (from pc ProductCategory
+                          (select (Name pc))))
+        (select (CategoryName x))))
+
+This time, the previous example would actually work if we consider @(racket x)
+to be an @(racket (instanceof ProductCategory)).
+This highlights the problem.
+A subquery might have some but not all of the columns that a normal instance
+of the same table would have.
+
+This turns out not to be a big problem because the query composition techniques
+that Plisqin encourages make subqueries less common.
+Still, my ideal query language probably needs an answer to this problem.
+
+@subsubsection{Basic Structural Typing is not Good Enough}
+In theory, a structural type system could notice that the subquery and the
+ProductCategory table are structurally identical.
+That is, they have the same column names and types.
+But a purely structural approach makes dispatch awkward.
+How would we redefine @(racket CategoryName) using structural typing?
+@(racketblock
+  (define (CategoryName x)
+    (cond
+      [(looks-like-a-category? x)
+       (%%scalar x".Name")]
+      [else
+       (CategoryName (ProductCategory x))])))
+
+I omitted the definition of @(racket looks-like-a-category?) because I don't
+think there is a good answer.
+We could check that it has a numeric ProductCategoryID column and a string
+Name column, but that is probably not accurate.
+After all, the ProductSubcategory table might also have those two columns, but
+its Name is not the same as a ProductCategory's Name.
+(This problem could be avoided by renaming the columns to CategoryName and
+SubcategoryName, but this places constraints on the design of the database
+schema, which Plisqin does not want to do.)
+
+@subsubsection{A Hybrid Approach?}
+One possibility is to allow something like the following
+@(racketblock
+  (%%subquery #:instanceof ProductCategory
+              "select *, 'hello world' as Greeting from ProductCategory"))
+
+This would mean that when that subquery is used as a queryable, the instance
+would be an @(racket (instanceof ProductCategory)).
+And based on what we know about SQL, this would work just fine (assuming that
+ProductCategory table does not already have a Greeting column).
+
+Now consider the following:
+@(racketblock
+  (subquery #:instanceof ProductCategory
+            (from pc ProductCategory
+                  (select (ProductCategoryID pc))
+                  (select (Name pc)))))
+
+The previous subquery can pass for an @(racket (instanceof ProductCategory)) as
+long as we only ever attempt to access its ProductCategoryID and Name columns.
+If we attempt to access any other column, it will be an error.
+This might be reasonable behavior and possible to make well-defined.
+
+Basically, we use @(racket #:instanceof) to guide the dispatcher, but we
+accept that we might still encounter a structural type error later if we
+dispatch into some code that needs a column that is missing from the instance.
+
+@subsection{Lateral Joins}
+Currently Plisqin has no support for lateral joins
+(aka "cross apply" / "outer apply" in SQL Server).
+Adding support won't be hard, but there is a decision that needs to be made.
+
+The following join should be a lateral join.
+This is because the @(racket %%where) clause contains a "foreign instance"
+(namely @(racket x)) that comes from an outer scope.
+@margin-note{
+ There is nothing special about @(racket %%where) here.
+ It is more accurate to say that @(racket join-on) is special in that it
+ does not exhibit this behavior.
+}
+@(repl
+  (define lateral-example
+    (from x 'X
+          (join y 'Y
+                (join-type 'left)
+                (%%where y".foo = "x".foo"))))
+  (code:comment "This SQL is invalid because Plisqin has no support for lateral joins:")
+  (displayln (to-sql lateral-example)))
+
+Plisqin could easily detect the "foreign instance" in the previous example,
+and automatically generate a lateral join.
+Should it?
+I think...
+@(itemlist
+  @item{If the user explicitly says "lateral join", then generate a lateral join.}
+  @item{If the user explicitly says "non-lateral join", then generate a normal
+ join. Raise an error if a foreign instance is detected.}
+  @item{If the user does not say anything, generate a lateral join when
+ necessary and a normal join otherwise.})
+
+A user who doesn't like that decision should be able to easily redefine
+@(racket join) to be non-lateral by default.
+
+@subsection{Nullability and @(racket exists)}
+From this section: @secref["Task_3__Products_with_Non-Zero_Sales"]
+
+We define the equivalent of this procedure
+@(racketblock
+  (define/contract (HasSales? prd)
+    (-> (instanceof Product) Boolish?)
+    (exists (from dtl SalesOrderDetail
+                  (where (.= (ProductID dtl)
+                             (ProductID prd)))))))
+
+But the problem is, what if the given @(racket prd) is a left join?
+We will fail with a nullability error.
+So we could add a fallback, but even that doesn't feel right.
+This feels like one of the rare times when we want to preserve the unknown
+boolean value.
+
+I think we want the call-site pattern to be as follows:
+@(racketblock
+  (where (coalesce (HasSales? product)
+                   (val #f))))
+
+The caller could also choose not to coalesce at all if it knows that that
+the instance it passes in is not a left join.
+
+But how to implement this?
+There are a couple of problems.
+First, if we switch to @(racket %%=) the nullability of the where clause will be
+@(racket yes), but the queries do not have a notion of nullability.
+If they did, what does it mean for a query to be nullable?
+Does it only affect @(racket exists)?
+Is a query nullable when any of its clauses are nullable?
+
+Second, even if we have a well-defined way to make the @(racket (exists ....))
+token nullable, that doesn't seem to help because in SQL "exists" never returns
+the unknown boolean value.
+This would make SQL generation very difficult or maybe impossible.
+Reconsider the following call site:
+@(racketblock
+  (where (coalesce (HasSales? product)
+                   (val #f))))
+
+What SQL should be generated?
+Do you have an answer that generalizes?
+If so, please let me know, because I'm stumped.
