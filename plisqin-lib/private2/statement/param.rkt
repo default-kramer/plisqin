@@ -51,19 +51,19 @@
     (init-field index id kw default)
     (super-new)
 
-    (define/override (change #:cast [type type]
-                             #:as [as-name as-name]
-                             #:null [nullability nullability]
-                             #:fallback [fallback fallback])
+    (define/override (change #:cast [:type type]
+                             #:as [:as-name as-name]
+                             #:null [:nullability nullability]
+                             #:fallback [:fallback fallback])
       (new param%
            [index index]
            [id id]
            [kw kw]
            [default default]
-           [type type]
-           [as-name as-name]
-           [nullability nullability]
-           [fallback fallback]))
+           [type (or :type type)]
+           [as-name (or :as-name as-name)]
+           [nullability (or :nullability nullability)]
+           [fallback (or :fallback fallback)]))
 
     ; sql-token<%>
     (define/override (token-kind)

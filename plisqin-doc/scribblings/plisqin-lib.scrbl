@@ -435,17 +435,12 @@
            (select (foo Tbl))))))
 }
 
-@defform[(>> token modification ...)
-         #:grammar
-         [(modification (code:line #:cast Type)
-                        (code:line #:as as-name)
-                        (code:line #:null nullability)
-                        (code:line #:fallback /fallback))]
-         #:contracts
-         ([Type type?]
-          [as-name (or/c symbol? string?)]
-          [nullability nullability?]
-          [/fallback fallback?])]{
+@defproc[(>> [token Token?]
+             [#:type Type type? <no-change>]
+             [#:as as-name (or/c symbol? string?) <no-change>]
+             [#:null nullability nullability? <no-change>]
+             [#:fallback /fallback fallback? <no-change>])
+         Token?]{
  Returns a copy of the given @(racket token) with the specified modifications.
 
  The @(racket #:cast) option assigns a new type:
