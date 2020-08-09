@@ -369,3 +369,42 @@ Reconsider the following call site:
 What SQL should be generated?
 Do you have an answer that generalizes?
 If so, please let me know, because I'm stumped.
+
+@section{Other Random Thoughts}
+@subsection{Cardinality}
+For example, I would like to be able to assert "this query should return at
+most one row per ProductCategory" and have Plisqin error if it can prove that I
+wrong or warn if it cannot prove that I am correct.
+
+A very unsophisticated solution works similar to nullability, where we need the
+user to give us hints like @(racket #:has-one) so we know that a join is singular.
+I wonder if such an unsophisticated soluation would be useful at all, or if it
+just means that the user makes the same mistake in a different place.
+
+A sophisticated solution requires deep knowledge of the database schema.
+Which columns are unique keys of each table?
+Which comparison expressions are guaranteed to match exactly one row?
+This gets super tricky when you think about collation.
+
+@subsection{Separating Specification from Implementation}
+Barring tremendous leaps in query optimizers (which are already amazing IMO),
+I think many projects would benefit from having two database languages.
+A "specification language", something like Plisqin, would be used by application
+developers to define what result set they need from the DB.
+The "implementation language" would be used by DBAs to tell the database how a
+certain query from the specification language should be implemented.
+Things like query hints obviously belong in the implementation language,
+but so do decisions like choosing between a negative join or "not exists".
+
+SQL (and therefore Plisqin) combine specification and implementation.
+In other words, from a certain level SQL is not actually declarative.
+I don't think this is a huge flaw of SQL.
+Forcing users to write a specification and an implementation for every
+single query would not be a good language design.
+A good language would be able to support both workflows.
+
+@link["http://cosette.cs.washington.edu/"]{Cosette} looks promising.
+For example, an application developer uses Plisqin as the specification language.
+Plisqin generates SQL which might be very inefficient.
+A DBA hand-crafts SQL that is acceptably efficient.
+Cosette ensures that the hand-written SQL is equivalent to Plisqin's SQL.

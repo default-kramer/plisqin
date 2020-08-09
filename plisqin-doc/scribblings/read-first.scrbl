@@ -102,6 +102,29 @@ unsafe variant only when the strict variant fails you.
 But using only the unsafe variant is also a valid approach, especially in
 situations where SQL injection is impossible such as static SQL generation.
 
+@section{Usage Patterns}
+When and how does Plisqin generate SQL?
+What am I supposed to do with the SQL after it is generated?
+Plisqin is flexible, and can be used:
+@(itemlist
+  @item{As a static SQL generator.
+ Simply use Plisqin's @(racket to-sql) and Racket's file IO to generate SQL files,
+ then do whatever you want with those SQL files.
+ Any application that consumes the SQL isn't even aware that Plisqin exists.}
+  @item{As a "Racket-aware" static SQL generator.
+ Use @(racket compile-statements) to generate the SQL and hide it inside a
+ normal Racket procedure. This procedure cooperates with the
+ @link["https://docs.racket-lang.org/db/index.html"]{db module}
+ so that your Racket application can fetch data at runtime.}
+  @item{As a dynamic SQL generator.
+ In this situation, you construct queries and call @(racket to-sql) at runtime.
+ I have not tested this usage pattern and don't recommend it,
+ but sometimes it is unavoidable.
+ Be very careful -- even using the @tech{strict} variant to avoid SQL injection
+ does not guarantee that you are safe.
+ For example, an attacker might be able to construct a computationally expensive
+ query that renders your database unresponsive.})
+
 @section{What Should I Read Next?}
 You might want to peek at @(secref "modules-and-prefixes") to get the lay of
 the land and see some other prefix conventions that this documentation uses.
